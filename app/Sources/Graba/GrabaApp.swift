@@ -1,0 +1,272 @@
+import AVFoundation
+import AppKit
+
+/// Graba: graba tu pantalla con tu cámara (como Loom), transcribe en tu Mac y tu IA te deja notas, guion para YouTube,
+/// títulos, descripción, capítulos y subtítulos. Vive en la barra de menú; la ventana es la interfaz web de ui/.
+@main
+@MainActor
+final class GrabaApp: NSObject, NSApplicationDelegate {
+    static func main() {
+        let app = NSApplication.shared
+        let delegado = GrabaApp()
+        app.delegate = delegado
+        app.setActivationPolicy(.accessory)
+        app.run()
+    }
+
+    func applicationDidFinishLaunching(_ aviso: Notification) {
+        try? FileManager.default.createDirectory(at: Rutas.interno, withIntermediateDirectories: true)
+        Grabaciones.repararCortadas()
+        BarraMenu.shared.instalar()
+        // La primera vez (o si falta algo para funcionar) se abre la ventana con el asistente.
+        if Config.texto("ia").isEmpty || !Modelos.lista.contains(where: Modelos.existe) { Ventana.shared.mostrar() }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        Ventana.shared.mostrar()
+        return true
+    }
+}
+
+// MARK: - Grabación
+
+@MainActor
+enum Estado {
+    enum Fase: String { case inactiva, cuenta, grabando, terminando }
+    static var fase = Fase.inactiva { didSet { BarraMenu.shared.actualizar() } }
+    static var segundos = 0
+    private static let grabadora = Grabadora()
+    private static var carpeta: URL?
+    private static var reloj: Timer?
+    private static var cancelada = false
+
+    static func grabar() {
+        guard fase == .inactiva else { return }
+        guard CGPreflightScreenCaptureAccess() else {
+            Permisos.pedir("pantalla") {}
+            Ventana.shared.mostrar()
+            return
+        }
+        let pantalla = Grabadora.pantallaActiva()
+        let microfono = Config.bool("microfono") && AVCaptureDevice.authorizationStatus(for: .audio) != .denied
+        Ventana.shared.ocultar()
+        if Config.bool("camara") { Burbuja.shared.mostrar(en: pantalla) }
+        Controles.shared.estado.segundos = 0
+        Controles.shared.mostrar(en: pantalla, detener: { detener() }, cancelar: { cancelar() })
+        fase = .cuenta
+        cancelada = false
+        Task { @MainActor in
+            for n in stride(from: 3, through: 1, by: -1) {
+                Controles.shared.estado.cuenta = n
+                try? await Task.sleep(for: .seconds(1))
+                if cancelada { return }
+            }
+            Controles.shared.estado.cuenta = 0
+            let c = Grabaciones.nueva()
+            carpeta = c
+            do {
+                try await grabadora.empezar(en: c.appendingPathComponent("video.mp4"),
+                                            excluyendo: [Controles.shared.ventana].compactMap { $0 }, microfono: microfono)
+                grabadora.alFallar = { mensaje in Task { @MainActor in fallo(mensaje) } }
+                fase = .grabando
+                segundos = 0
+                reloj = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+                    Task { @MainActor in
+                        segundos += 1
+                        Controles.shared.estado.segundos = segundos
+                        BarraMenu.shared.actualizar()
+                    }
+                }
+            } catch {
+                fallo(error.localizedDescription)
+            }
+        }
+    }
+
+    static func detener() {
+        guard fase == .grabando, let c = carpeta else { if fase == .cuenta { cancelar() }; return }
+        fase = .terminando
+        reloj?.invalidate()
+        Controles.shared.ocultar()
+        Burbuja.shared.ocultar()
+        Task { @MainActor in
+            let duracion = await grabadora.detener()
+            fase = .inactiva
+            carpeta = nil
+            guard duracion >= 1 else {
+                try? FileManager.default.removeItem(at: c)
+                Ventana.shared.mostrar(aviso: Idioma.t("La grabación quedó vacía."))
+                return
+            }
+            Grabaciones.actualizarMeta(c, ["duracion_seg": Int(duracion.rounded())])
+            Grabaciones.escribirEstado(c.path, ["estado": "procesando", "paso": 0, "total": 3, "texto": "Preparando el audio…"])
+            Ventana.shared.mostrar(seleccionar: c.path)
+            _ = try? await Grabadora.extraerAudio(de: c.appendingPathComponent("video.mp4"), a: c.appendingPathComponent("audio.wav"))
+            Procesador.encolar(c.path) { Ventana.shared.enviarEstado() }
+            Ventana.shared.enviarEstado()
+        }
+    }
+
+    static func cancelar() {
+        cancelada = true
+        let c = carpeta
+        let estaba = fase
+        fase = .terminando
+        reloj?.invalidate()
+        Controles.shared.ocultar()
+        Burbuja.shared.ocultar()
+        Task { @MainActor in
+            if estaba == .grabando { _ = await grabadora.detener() }
+            if let c { try? FileManager.default.removeItem(at: c) }
+            carpeta = nil
+            fase = .inactiva
+        }
+    }
+
+    private static func fallo(_ mensaje: String) {
+        let c = carpeta
+        cancelada = true
+        reloj?.invalidate()
+        Controles.shared.ocultar()
+        Burbuja.shared.ocultar()
+        Task { @MainActor in
+            _ = await grabadora.detener()
+            if let c { try? FileManager.default.removeItem(at: c) }
+            carpeta = nil
+            fase = .inactiva
+            Ventana.shared.mostrar(aviso: Idioma.t("No pude grabar:") + " " + mensaje)
+        }
+    }
+}
+
+// MARK: - Grabaciones en disco (~/Graba/<fecha - título>/)
+
+@MainActor
+enum Grabaciones {
+    static func nueva() -> URL {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HHmmss"
+        let c = Rutas.base.appendingPathComponent(f.string(from: Date()) + " - " + Idioma.t("Grabando"))
+        try? FileManager.default.createDirectory(at: c, withIntermediateDirectories: true)
+        let iso = DateFormatter()
+        iso.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        actualizarMeta(c, ["inicio": iso.string(from: Date()), "app": "mac"])
+        escribirEstado(c.path, ["estado": "grabando"])
+        return c
+    }
+
+    static func leerJSON(_ url: URL) -> [String: Any] {
+        guard let d = try? Data(contentsOf: url), let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { return [:] }
+        return j
+    }
+
+    static func escribirJSON(_ url: URL, _ datos: [String: Any]) {
+        if let d = try? JSONSerialization.data(withJSONObject: datos, options: [.prettyPrinted, .sortedKeys]) { try? d.write(to: url, options: .atomic) }
+    }
+
+    static func actualizarMeta(_ c: URL, _ cambios: [String: Any]) {
+        let url = c.appendingPathComponent("meta.json")
+        var m = leerJSON(url)
+        m.merge(cambios) { _, nuevo in nuevo }
+        escribirJSON(url, m)
+    }
+
+    static func escribirEstado(_ carpeta: String, _ datos: [String: Any]) {
+        escribirJSON(URL(fileURLWithPath: carpeta).appendingPathComponent("estado.json"), datos)
+    }
+
+    /// Si la app se cerró en medio de una grabación o de un procesamiento, lo deja como error recuperable.
+    static func repararCortadas() {
+        for t in listar() {
+            let e = (t["estado"] as? [String: Any])?["estado"] as? String
+            if e == "grabando" || e == "procesando" {
+                escribirEstado(t["ruta"] as! String, ["estado": "error", "error": Idioma.t("Se interrumpió. Puedes volver a procesarla.")])
+            }
+        }
+    }
+
+    static func listar() -> [[String: Any]] {
+        let fm = FileManager.default
+        let carpetas = (try? fm.contentsOfDirectory(at: Rutas.base, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
+        var lista: [[String: Any]] = []
+        for c in carpetas where !c.lastPathComponent.hasPrefix(".") {
+            let meta = leerJSON(c.appendingPathComponent("meta.json"))
+            guard !meta.isEmpty else { continue }
+            let video = c.appendingPathComponent("video.mp4")
+            let md = try? String(contentsOf: c.appendingPathComponent("grabacion.md"), encoding: .utf8)
+            let srt = c.appendingPathComponent("subtitulos.srt")
+            lista.append(["ruta": c.path, "nombre": c.lastPathComponent, "meta": meta,
+                          "estado": leerJSON(c.appendingPathComponent("estado.json")),
+                          "video": fm.fileExists(atPath: video.path) ? video.absoluteString : NSNull(),
+                          "md": md ?? NSNull(),
+                          "srt": fm.fileExists(atPath: srt.path) ? srt.path : NSNull(),
+                          "audio": fm.fileExists(atPath: c.appendingPathComponent("audio.wav").path)])
+        }
+        return lista.sorted { (($0["meta"] as? [String: Any])?["inicio"] as? String ?? "") > (($1["meta"] as? [String: Any])?["inicio"] as? String ?? "") }
+    }
+}
+
+// MARK: - Barra de menú
+
+@MainActor
+final class BarraMenu: NSObject, NSMenuDelegate {
+    static let shared = BarraMenu()
+    private var item: NSStatusItem?
+
+    func instalar() {
+        let i = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        let menu = NSMenu()
+        menu.delegate = self
+        i.menu = menu
+        item = i
+        actualizar()
+    }
+
+    func actualizar() {
+        guard let boton = item?.button else { return }
+        let grabando = Estado.fase == .grabando
+        let img = NSImage(systemSymbolName: grabando ? "record.circle.fill" : "record.circle", accessibilityDescription: "Graba")
+        img?.isTemplate = !grabando
+        boton.image = grabando ? img?.withSymbolConfiguration(.init(paletteColors: [.systemRed])) : img
+        boton.title = grabando ? " " + reloj(Estado.segundos) : ""
+        boton.imagePosition = .imageLeading
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
+        func agregar(_ titulo: String, _ accion: Selector, tecla: String = "", marca: Bool? = nil) {
+            let m = NSMenuItem(title: Idioma.t(titulo), action: accion, keyEquivalent: tecla)
+            m.target = self
+            if let marca { m.state = marca ? .on : .off }
+            menu.addItem(m)
+        }
+        switch Estado.fase {
+        case .grabando, .cuenta:
+            agregar("Terminar grabación", #selector(terminar))
+            agregar("Descartar grabación", #selector(descartar))
+        case .terminando:
+            menu.addItem(NSMenuItem(title: Idioma.t("Guardando…"), action: nil, keyEquivalent: ""))
+        case .inactiva:
+            agregar("Grabar pantalla", #selector(grabar), tecla: "r")
+            agregar("Cámara", #selector(alternarCamara), marca: Config.bool("camara"))
+            agregar("Micrófono", #selector(alternarMicrofono), marca: Config.bool("microfono"))
+        }
+        menu.addItem(.separator())
+        agregar("Abrir Graba", #selector(abrir), tecla: "o")
+        agregar("Abrir la carpeta de grabaciones", #selector(carpeta))
+        menu.addItem(.separator())
+        agregar("Salir de Graba", #selector(salir), tecla: "q")
+    }
+
+    @objc func grabar() { Estado.grabar() }
+    @objc func terminar() { Estado.detener() }
+    @objc func descartar() { Estado.cancelar() }
+    @objc func alternarCamara() { Config.guardar(["camara": !Config.bool("camara")]); Ventana.shared.enviarEstado() }
+    @objc func alternarMicrofono() { Config.guardar(["microfono": !Config.bool("microfono")]); Ventana.shared.enviarEstado() }
+    @objc func abrir() { Ventana.shared.mostrar() }
+    @objc func carpeta() { NSWorkspace.shared.open(Rutas.base) }
+    @objc func salir() {
+        if Estado.fase == .grabando { Estado.detener() }
+        NSApp.terminate(nil)
+    }
+}

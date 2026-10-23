@@ -1,0 +1,106 @@
+{
+ "fase": "inactiva",
+ "config": {
+  "ia": "claude",
+  "modelo": "turbo",
+  "idioma_audio": "auto",
+  "idioma_ui": "",
+  "camara": true,
+  "microfono": true
+ },
+ "ias": [
+  {
+   "id": "claude",
+   "nombre": "Claude",
+   "instalada": true
+  },
+  {
+   "id": "codex",
+   "nombre": "ChatGPT (Codex)",
+   "instalada": true
+  },
+  {
+   "id": "gemini",
+   "nombre": "Gemini",
+   "instalada": false
+  }
+ ],
+ "modelos": {
+  "recomendado": "turbo",
+  "lista": [
+   {
+    "id": "turbo",
+    "nombre": "Preciso",
+    "mb": 574,
+    "detalle": "El mejor resultado; recomendado con 8 GB de RAM o más.",
+    "listo": true
+   },
+   {
+    "id": "small",
+    "nombre": "Liviano",
+    "mb": 190,
+    "detalle": "Más rápido y pequeño; para Macs con poca memoria.",
+    "listo": false
+   }
+  ]
+ },
+ "permisos": {
+  "pantalla": true,
+  "camara": true,
+  "microfono": false
+ },
+ "carpeta": "~/Graba",
+ "version": "0.1.0",
+ "procesando": "/demo/2026-10-21 0930 - Grabando",
+ "grabaciones": [
+  {
+   "ruta": "/demo/2026-10-21 0930 - Grabando",
+   "nombre": "2026-10-21 0930 - Grabando",
+   "meta": {
+    "inicio": "2026-10-21T09:30:00",
+    "duracion_seg": 95
+   },
+   "estado": {
+    "estado": "procesando",
+    "paso": 2,
+    "total": 3,
+    "texto": "Tu IA está escribiendo las notas y el guion…"
+   },
+   "video": null,
+   "md": null,
+   "srt": null,
+   "audio": false
+  },
+  {
+   "ruta": "/demo/2026-10-20 1015 - Cómo armar un presupuesto en planilla",
+   "nombre": "2026-10-20 1015 - Cómo armar un presupuesto en planilla",
+   "meta": {
+    "inicio": "2026-10-20T10:15:00",
+    "duracion_seg": 312
+   },
+   "estado": {
+    "estado": "lista"
+   },
+   "video": null,
+   "md": "---\nfecha: 2026-10-20\nhora: 10:15\nduracion_seg: 312\ntitulo: \"Cómo armar un presupuesto en planilla\"\nia: claude\ntags: [graba]\n---\n# Cómo armar un presupuesto en planilla\n\n## Resumen\nAna muestra cómo armar un presupuesto mensual en una planilla, desde las categorías hasta el gráfico final. Sirve para quien quiere ordenar sus gastos sin aplicaciones extra.\n\n## Notas\n- Crear una hoja con tres columnas: categoría, monto planificado y monto real.\n- Usar **SUMA** al final de cada columna para ver el total.\n- Agregar una columna de diferencia y pintarla en rojo cuando es negativa.\n- Insertar un gráfico de barras para comparar lo planificado con lo real.\n- Revisar la planilla una vez por semana.\n\n## Guion para YouTube\n### Gancho\n¿Se te va la plata y no sabes en qué? En cinco minutos armamos un presupuesto que te lo muestra de un vistazo.\n### Introducción\nHola, soy Ana. Hoy vamos a crear un presupuesto desde cero en una planilla gratuita.\n### Desarrollo\n1. Abre una planilla nueva y escribe tus categorías. [mostrar la columna A]\n2. Agrega lo que planeas gastar y lo que realmente gastaste. [mostrar columnas B y C]\n3. Calcula la diferencia y dale color. [mostrar formato condicional]\n4. Inserta el gráfico. [mostrar el gráfico]\n### Cierre\nCon esto ya ves dónde se va tu plata. Si te sirvió, suscríbete y cuéntame en los comentarios qué categoría te sorprendió.\n\n## Para publicar\n### Títulos\n1. Presupuesto mensual en planilla en 5 minutos\n2. Ordena tus gastos con una planilla gratis\n3. Cómo hacer un presupuesto fácil (paso a paso)\n### Descripción\nAprende a armar un presupuesto mensual en una planilla gratuita: categorías, totales, diferencias con color y un gráfico para comparar.\n\nIdeal si quieres ordenar tus gastos sin instalar nada.\n### Capítulos\n00:00 Por qué hacer un presupuesto\n00:41 Categorías\n01:52 Planificado vs. real\n03:10 Diferencias con color\n04:20 Gráfico final\n### Etiquetas\npresupuesto, finanzas personales, planilla, excel, google sheets, ahorro, gastos, tutorial\n\n## Transcripción\n[00:00] Hola, soy Ana y hoy vamos a ordenar los gastos del mes.\n[00:41] Primero escribo las categorías: arriendo, comida, transporte.\n[01:52] Ahora pongo lo que planeo gastar y lo que gasté de verdad.\n[03:10] La diferencia la pinto en rojo cuando me pasé.\n[04:20] Y para terminar, un gráfico de barras.\n",
+   "srt": "subtitulos.srt",
+   "audio": false
+  },
+  {
+   "ruta": "/demo/2026-10-18 1640 - Graba",
+   "nombre": "2026-10-18 1640 - Graba",
+   "meta": {
+    "inicio": "2026-10-18T16:40:00",
+    "duracion_seg": 48
+   },
+   "estado": {
+    "estado": "error",
+    "error": "Claude no respondió. ¿Tiene la sesión iniciada?"
+   },
+   "video": null,
+   "md": null,
+   "srt": null,
+   "audio": true
+  }
+ ]
+}
