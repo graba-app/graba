@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graba — graba tu pantalla y tu IA te deja el guion para YouTube | Gratis y privado</title>
+<meta name="description" content="Graba tu pantalla con tu cámara, como Loom, pero todo en tu computador. Tu propia IA (Claude, ChatGPT o Gemini) escribe notas, guion para YouTube, títulos, descripción con capítulos y subtítulos. Gratis y de código abierto.">
+<link rel="canonical" href="https://graba-app.github.io/graba/">
+<meta name="theme-color" content="#0d0c12">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Graba">
+<meta property="og:url" content="https://graba-app.github.io/graba/">
+<meta property="og:locale" content="es_CL"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="Graba — graba tu pantalla y tu IA te deja el guion">
+<meta property="og:description" content="Pantalla + cámara + voz. Transcribe en tu computador y tu IA escribe notas, guion, títulos, capítulos y subtítulos. Gratis y open source.">
+<meta property="og:image" content="https://graba-app.github.io/graba/img/compartir.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "SoftwareApplication",
+   "name": "Graba",
+   "url": "https://graba-app.github.io/graba/",
+   "image": "https://graba-app.github.io/graba/img/compartir.png",
+   "description": "Grabador de pantalla con cámara que transcribe en tu computador y usa tu propia IA para escribir notas, guion para YouTube, títulos, descripción con capítulos y subtítulos.",
+   "applicationCategory": "MultimediaApplication",
+   "operatingSystem": "macOS 15",
+   "license": "https://opensource.org/licenses/MIT",
+   "isAccessibleForFree": true,
+   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+   "codeRepository": "https://github.com/graba-app/graba",
+   "inLanguage": ["es", "en"]
+  },
+  {
+   "@type": "FAQPage",
+   "mainEntity": [
+    { "@type": "Question", "name": "¿Es una alternativa gratis a Loom?", "acceptedAnswer": { "@type": "Answer", "text": "Para grabar tu pantalla con tu cámara y tener el texto listo, sí: Graba es gratis, de código abierto y todo queda en tu computador. Si necesitas compartir un link al instante para que otros comenten, Loom sigue siendo mejor para eso." } },
+    { "@type": "Question", "name": "¿Sube mi video a algún lado?", "acceptedAnswer": { "@type": "Answer", "text": "No. El video y la transcripción quedan en tu computador. A tu IA solo le llega el texto de la transcripción, con tu cuenta, igual que si lo pegaras en su chat." } },
+    { "@type": "Question", "name": "¿Qué IA necesito?", "acceptedAnswer": { "@type": "Answer", "text": "La que ya tengas: Claude Code (Claude Pro o Max), Codex (cualquier plan de ChatGPT) o Antigravity CLI (Gemini). Se instala una vez y Graba la usa por ti." } }
+   ]
+  }
+ ]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --titulo: "Bricolage Grotesque", Inter, system-ui, sans-serif; --fondo: #0d0c12; --fondo2: #14131b; --panel: #1b1a24; --linea: #2c2b38;
+    --texto: #f3f1ec; --suave: #a7a4b2; --acento: #b9b0ff; --acento2: #6d5dfc; --rojo: #ff5d5d; --verde: #3ddc84; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  html[lang="es"] [data-en], html[lang="en"] [data-es] { display: none !important; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 16.5px/1.65 Inter, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: var(--acento); } :focus-visible { outline: 2px solid var(--acento); outline-offset: 3px; border-radius: 6px; }
+  img { max-width: 100%; height: auto; display: block; }
+  h1, h2, h3 { font-family: var(--titulo); line-height: 1.08; margin: 0; letter-spacing: -0.01em; }
+  .ancho { width: min(1120px, 100% - 32px); margin: 0 auto; }
+  .barra { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(14px); background: color-mix(in srgb, var(--fondo) 80%, transparent); border-bottom: 1px solid var(--linea); }
+  .barra .ancho { display: flex; align-items: center; gap: 16px; height: 60px; }
+  .marca { display: flex; align-items: center; gap: 9px; font-family: var(--titulo); font-weight: 800; font-size: 20px; text-decoration: none; color: var(--texto); }
+  .marca img { width: 28px; height: 28px; }
+  .barra nav { display: flex; gap: 18px; margin-left: auto; font-size: 14px; } .barra nav a { color: var(--suave); text-decoration: none; } .barra nav a:hover { color: var(--texto); }
+  .idioma { border: 1px solid var(--linea); background: none; color: var(--texto); border-radius: 999px; padding: 5px 11px; font: 600 12px Inter, sans-serif; cursor: pointer; }
+  .boton { display: inline-flex; align-items: center; gap: 9px; padding: 13px 20px; border-radius: 12px; font-weight: 600; text-decoration: none; border: 1px solid var(--linea); color: var(--texto); background: var(--fondo2); }
+  .boton.principal { background: var(--acento2); color: #fff; border-color: transparent; }
+  .boton.principal:hover { filter: brightness(1.1); }
+  .rec { width: 11px; height: 11px; border-radius: 50%; background: var(--rojo); box-shadow: 0 0 0 3px rgba(255,255,255,.9); }
+
+  .heroe { padding: 76px 0 30px; text-align: center; }
+  .heroe h1 { font-size: clamp(38px, 6.4vw, 72px); max-width: 15ch; margin: 0 auto; }
+  .heroe h1 em { font-style: normal; color: var(--acento); }
+  .heroe p.sub { color: var(--suave); font-size: 19px; max-width: 60ch; margin: 20px auto 28px; }
+  .acciones { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .sellos { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 18px; color: var(--suave); font-size: 14px; }
+  .sellos > span::before { content: "✓ "; color: var(--verde); font-weight: 700; }
+  .aviso-so { color: var(--suave); font-size: 14px; margin-top: 12px; }
+  .captura { display: block; margin: 44px auto 0; border-radius: 16px; border: 1px solid var(--linea); overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.03); max-width: 1000px; }
+
+  section { padding: 80px 0; }
+  section h2 { font-size: clamp(30px, 4.4vw, 46px); margin-bottom: 12px; }
+  .bajada { color: var(--suave); font-size: 18px; max-width: 62ch; margin: 0 0 34px; }
+  .pasos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .paso { background: var(--fondo2); border: 1px solid var(--linea); border-radius: 18px; padding: 22px; }
+  .paso .esc { height: 130px; border-radius: 12px; background: var(--panel); margin-bottom: 18px; position: relative; overflow: hidden; }
+  .paso h3 { font-size: 22px; margin-bottom: 6px; } .paso p { color: var(--suave); margin: 0; }
+  /* Escena 1: pantalla + burbuja + REC */
+  .pantalla { position: absolute; inset: 18px 22px 30px 22px; border: 3px solid var(--acento); border-radius: 8px; }
+  .pantalla i { position: absolute; top: 9px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: var(--rojo); animation: latido 1.2s infinite; }
+  .burbuja { position: absolute; left: 12px; bottom: 10px; width: 46px; height: 46px; border-radius: 50%; background: var(--acento2); border: 3px solid var(--panel); animation: flota 3s ease-in-out infinite; }
+  @keyframes latido { 50% { opacity: .25; } } @keyframes flota { 50% { transform: translateY(-5px); } }
+  /* Escena 2: ondas → texto */
+  .ondas { position: absolute; left: 22px; top: 50%; transform: translateY(-50%); display: flex; gap: 4px; align-items: center; }
+  .ondas b { width: 5px; border-radius: 3px; background: var(--acento); animation: onda 1s ease-in-out infinite; }
+  .ondas b:nth-child(2n) { animation-delay: .2s } .ondas b:nth-child(3n) { animation-delay: .4s }
+  @keyframes onda { 0%, 100% { height: 10px } 50% { height: 46px } }
+  .lineas { position: absolute; right: 22px; top: 30px; display: grid; gap: 9px; width: 50%; }
+  .lineas i { height: 8px; border-radius: 4px; background: var(--linea); position: relative; overflow: hidden; }
+  .lineas i::after { content: ""; position: absolute; inset: 0; background: var(--suave); transform-origin: left; animation: escribe 3s ease-in-out infinite; }
+  .lineas i:nth-child(2)::after { animation-delay: .5s } .lineas i:nth-child(3)::after { animation-delay: 1s } .lineas i:nth-child(4)::after { animation-delay: 1.5s }
+  @keyframes escribe { 0% { transform: scaleX(0) } 60%, 100% { transform: scaleX(1) } }
+  /* Escena 3: tarjetas */
+  .fichas { position: absolute; inset: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .fichas span { border-radius: 8px; background: var(--fondo2); border: 1px solid var(--linea); display: grid; place-items: center; font-size: 22px; animation: aparece 3.6s infinite; opacity: 0; }
+  .fichas span:nth-child(2) { animation-delay: .3s } .fichas span:nth-child(3) { animation-delay: .6s } .fichas span:nth-child(4) { animation-delay: .9s } .fichas span:nth-child(5) { animation-delay: 1.2s } .fichas span:nth-child(6) { animation-delay: 1.5s }
+  @keyframes aparece { 0% { opacity: 0; transform: scale(.8) } 15%, 85% { opacity: 1; transform: none } 100% { opacity: 0 } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } .fichas span { opacity: 1; } .lineas i::after { transform: none; } }
+
+  .recibes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 36px; align-items: center; }
+  .lista-recibes { display: grid; gap: 12px; }
+  .lista-recibes div { display: flex; gap: 14px; padding: 14px 16px; background: var(--fondo2); border: 1px solid var(--linea); border-radius: 14px; }
+  .lista-recibes .ico { font-size: 22px; } .lista-recibes b { display: block; } .lista-recibes small { color: var(--suave); font-size: 14.5px; }
+  .captura2 { border-radius: 14px; border: 1px solid var(--linea); overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+
+  .tuyo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 30px; align-items: start; }
+  pre { margin: 0; background: var(--fondo2); border: 1px solid var(--linea); border-radius: 14px; padding: 18px; overflow-x: auto; font: 13.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: #d9d6e3; }
+  .puntos { margin: 0; padding-left: 20px; color: var(--suave); } .puntos li { margin: 8px 0; } .puntos b { color: var(--texto); }
+
+  .instalar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .carta { background: var(--fondo2); border: 1px solid var(--linea); border-radius: 18px; padding: 22px; }
+  .carta h3 { font-size: 21px; margin-bottom: 8px; } .carta p { color: var(--suave); margin: 0 0 14px; }
+  .cmd { display: flex; gap: 8px; align-items: stretch; }
+  .cmd code { flex: 1; min-width: 0; background: var(--fondo); border: 1px solid var(--linea); border-radius: 10px; padding: 11px 12px; font-size: 13px; overflow-x: auto; white-space: nowrap; color: #d9d6e3; }
+  .cmd button { border: 1px solid var(--linea); background: var(--panel); color: var(--texto); border-radius: 10px; padding: 0 14px; font: 600 13px Inter, sans-serif; cursor: pointer; }
+
+  details { border-bottom: 1px solid var(--linea); padding: 16px 0; max-width: 820px; }
+  summary { cursor: pointer; font-weight: 600; font-size: 17.5px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  summary::after { content: "+"; color: var(--acento); font-size: 22px; line-height: 1; } details[open] summary::after { content: "–"; }
+  details p { color: var(--suave); margin: 10px 0 0; }
+
+  .comunidad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .comunidad a { display: block; text-decoration: none; color: var(--texto); padding: 20px; border-radius: 16px; background: var(--fondo2); border: 1px solid var(--linea); transition: transform .15s, border-color .15s; }
+  .comunidad a:hover { transform: translateY(-2px); border-color: var(--acento); }
+  .comunidad b { display: block; font-family: var(--titulo); font-size: 19px; margin: 8px 0 4px; } .comunidad small { color: var(--suave); font-size: 14.5px; }
+  .final { text-align: center; padding: 90px 0; } .final h2 { font-size: clamp(32px, 5vw, 52px); margin-bottom: 22px; }
+  footer { border-top: 1px solid var(--linea); padding: 26px 0; color: var(--suave); font-size: 14px; }
+  footer .ancho { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+
+  @media (max-width: 860px) {
+    .barra nav { display: none; }
+    .pasos, .recibes, .tuyo, .instalar { grid-template-columns: minmax(0, 1fr); }
+    .comunidad { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    section { padding: 56px 0; } .heroe { padding-top: 48px; }
+  }
+  @media (max-width: 480px) { .comunidad { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<header class="barra"><div class="ancho">
+  <a class="marca" href="./"><img src="img/logo-512.png" alt="">Graba</a>
+  <nav><a href="#como"><span data-es>Cómo funciona</span><span data-en>How it works</span></a><a href="#recibes"><span data-es>Qué recibes</span><span data-en>What you get</span></a><a href="#instalar"><span data-es>Instalar</span><span data-en>Install</span></a><a href="#preguntas"><span data-es>Preguntas</span><span data-en>FAQ</span></a><a href="#comunidad"><span data-es>Comunidad</span><span data-en>Community</span></a></nav>
+  <button class="idioma" id="idioma" aria-label="Idioma / Language">EN</button>
+</div></header>
+
+<main>
+<div class="heroe"><div class="ancho">
+  <h1><span data-es>Graba tu pantalla. <em>Tu IA te deja el guion.</em></span><span data-en>Record your screen. <em>Your AI writes the script.</em></span></h1>
+  <p class="sub"><span data-es>Pantalla, cámara y voz, como Loom. Al terminar, Graba transcribe en tu computador y tu propia IA escribe notas, un guion para YouTube, títulos, descripción con capítulos y subtítulos.</span><span data-en>Screen, camera and voice, like Loom. When you finish, Graba transcribes on your computer and your own AI writes notes, a YouTube script, titles, a description with chapters and subtitles.</span></p>
+  <div class="acciones">
+    <a class="boton principal" id="descargar" href="#instalar"><span class="rec"></span><span data-es>Descargar para Mac</span><span data-en>Download for Mac</span></a>
+    <a class="boton" href="https://github.com/graba-app/graba"><span data-es>Ver el código</span><span data-en>View the code</span></a>
+  </div>
+  <p class="aviso-so" id="aviso-so" hidden><span data-es>Por ahora Graba es para Mac. Windows y Linux vienen en camino:</span><span data-en>For now Graba is for Mac. Windows and Linux are on the way:</span> <a href="https://github.com/graba-app/graba/discussions"><span data-es>avísame</span><span data-en>keep me posted</span></a></p>
+  <div class="sellos"><span><span data-es>Gratis</span><span data-en>Free</span></span><span><span data-es>Código abierto</span><span data-en>Open source</span></span><span><span data-es>Nada se sube a ningún servidor</span><span data-en>Nothing is uploaded</span></span></div>
+  <picture class="captura"><source srcset="img/app-oscuro.jpg"><img src="img/app-oscuro.jpg" alt="Graba mostrando títulos, descripción con capítulos y etiquetas para YouTube de una grabación" width="2360" height="1520"></picture>
+</div></div>
+
+<section id="como"><div class="ancho">
+  <h2><span data-es>Así de simple</span><span data-en>That simple</span></h2>
+  <p class="bajada"><span data-es>Tres pasos y nada que configurar cada vez.</span><span data-en>Three steps, nothing to set up each time.</span></p>
+  <div class="pasos">
+    <div class="paso"><div class="esc" aria-hidden="true"><div class="pantalla"><i></i></div><div class="burbuja"></div></div>
+      <h3><span data-es>1. Graba</span><span data-en>1. Record</span></h3><p><span data-es>Tu pantalla con tu cara en una burbuja y tu voz. La barrita para terminar no sale en el video.</span><span data-en>Your screen with your face in a bubble and your voice. The stop bar doesn't show up in the video.</span></p></div>
+    <div class="paso"><div class="esc" aria-hidden="true"><div class="ondas"><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div><div class="lineas"><i></i><i></i><i></i><i></i></div></div>
+      <h3><span data-es>2. Transcribe aquí</span><span data-en>2. Transcribes here</span></h3><p><span data-es>Tu voz se vuelve texto dentro de tu computador, con whisper. Sin subir el video.</span><span data-en>Your voice becomes text on your computer, with whisper. Without uploading the video.</span></p></div>
+    <div class="paso"><div class="esc" aria-hidden="true"><div class="fichas"><span>📝</span><span>🎬</span><span>🏷️</span><span>⏱️</span><span>💬</span><span>✨</span></div></div>
+      <h3><span data-es>3. Tu IA escribe</span><span data-en>3. Your AI writes</span></h3><p><span data-es>Claude, ChatGPT o Gemini, con tu cuenta, te deja todo listo para publicar.</span><span data-en>Claude, ChatGPT or Gemini, with your account, gets everything ready to publish.</span></p></div>
+  </div>
+</div></section>
+
+<section id="recibes"><div class="ancho recibes">
+  <div>
+    <h2><span data-es>Lo que recibes</span><span data-en>What you get</span></h2>
+    <p class="bajada"><span data-es>De cada grabación, con un botón para copiar cada cosa.</span><span data-en>From every recording, with a copy button for each part.</span></p>
+    <div class="lista-recibes">
+      <div><span class="ico">📝</span><span><b><span data-es>Notas</span><span data-en>Notes</span></b><small><span data-es>Un resumen y los puntos clave en orden.</span><span data-en>A summary and the key points in order.</span></small></span></div>
+      <div><span class="ico">🎬</span><span><b><span data-es>Guion para YouTube</span><span data-en>YouTube script</span></b><small><span data-es>Gancho, introducción, desarrollo con lo que hay que mostrar en pantalla, y cierre.</span><span data-en>Hook, intro, body with what to show on screen, and closing.</span></small></span></div>
+      <div><span class="ico">🏷️</span><span><b><span data-es>Títulos y etiquetas</span><span data-en>Titles and tags</span></b><small><span data-es>Tres opciones de título y etiquetas para buscar.</span><span data-en>Three title options and tags for search.</span></small></span></div>
+      <div><span class="ico">⏱️</span><span><b><span data-es>Descripción con capítulos</span><span data-en>Description with chapters</span></b><small><span data-es>Con los tiempos reales del video y el primero en 00:00, como pide YouTube.</span><span data-en>With the video's real times and the first one at 00:00, as YouTube requires.</span></small></span></div>
+      <div><span class="ico">💬</span><span><b><span data-es>Subtítulos .srt</span><span data-en>.srt subtitles</span></b><small><span data-es>Listos para subir a YouTube Studio.</span><span data-en>Ready to upload to YouTube Studio.</span></small></span></div>
+    </div>
+  </div>
+  <img class="captura2" src="img/app-oscuro-guion.jpg" alt="Guion para YouTube generado por la IA en Graba" width="2360" height="1520" loading="lazy">
+</div></section>
+
+<section id="tuyo"><div class="ancho tuyo">
+  <div>
+    <h2><span data-es>Tus videos son tuyos</span><span data-en>Your videos are yours</span></h2>
+    <p class="bajada"><span data-es>Todo queda en una carpeta normal de tu computador. Sin cuentas, sin nube, sin límites de largo.</span><span data-en>Everything stays in a normal folder on your computer. No accounts, no cloud, no length limits.</span></p>
+    <ul class="puntos">
+      <li><span data-es><b>El video no sale de tu computador.</b> A tu IA solo le llega el texto, con tu cuenta.</span><span data-en><b>The video never leaves your computer.</b> Your AI only gets the text, with your account.</span></li>
+      <li><span data-es><b>Archivos abiertos:</b> MP4, Markdown y SRT. Ábrelos con lo que quieras o arma tus propios scripts.</span><span data-en><b>Open files:</b> MP4, Markdown and SRT. Open them with anything or build your own scripts.</span></li>
+      <li><span data-es><b>Código abierto (MIT):</b> puedes ver exactamente qué hace.</span><span data-en><b>Open source (MIT):</b> you can see exactly what it does.</span></li>
+    </ul>
+  </div>
+  <pre aria-label="Carpeta de una grabación">~/Graba/
+  2026-10-20 1015 - Presupuesto en planilla/
+    video.mp4
+    grabacion.md      <span style="color:var(--suave)"># notas, guion, títulos…</span>
+    subtitulos.srt
+    transcripcion.json</pre>
+</div></section>
+
+<section id="instalar"><div class="ancho">
+  <h2><span data-es>Instalar</span><span data-en>Install</span></h2>
+  <p class="bajada"><span data-es>Mac con chip Apple y macOS 15 o posterior. La primera vez, Graba te ayuda a elegir tu IA y descarga el transcriptor (una sola vez).</span><span data-en>Mac with Apple chip and macOS 15 or later. The first time, Graba helps you choose your AI and downloads the transcriber (once).</span></p>
+  <div class="instalar">
+    <div class="carta"><h3><span data-es>Con un comando</span><span data-en>With one command</span></h3><p><span data-es>Abre la Terminal (⌘ Espacio, escribe «Terminal») y pega esto. Descarga la última versión, verifica su huella y la abre.</span><span data-en>Open Terminal (⌘ Space, type “Terminal”) and paste this. It downloads the latest version, verifies it and opens it.</span></p>
+      <div class="cmd"><code id="cmd-mac">curl -fsSL https://raw.githubusercontent.com/graba-app/graba/main/instalar.sh | bash</code><button data-copiar="cmd-mac"><span data-es>Copiar</span><span data-en>Copy</span></button></div></div>
+    <div class="carta"><h3><span data-es>O descargando la app</span><span data-en>Or by downloading</span></h3><p><span data-es>Descomprime y arrastra Graba a Aplicaciones. Como aún no está firmada por Apple, la primera vez ve a Ajustes del Sistema → Privacidad y seguridad y toca «Abrir igualmente».</span><span data-en>Unzip and drag Graba to Applications. Since it isn't signed by Apple yet, the first time go to System Settings → Privacy &amp; Security and click “Open Anyway”.</span></p>
+      <a class="boton principal" href="https://github.com/graba-app/graba/releases/latest/download/Graba-macOS.zip"><span data-es>Descargar para Mac</span><span data-en>Download for Mac</span></a></div>
+  </div>
+  <p class="aviso-so" style="margin-top:18px"><span data-es>¿No tienes una IA instalada? <a href="ia.html">Guía sin tecnicismos para Claude, ChatGPT o Gemini</a>.</span><span data-en>No AI installed yet? <a href="ia.html">Plain-language guide for Claude, ChatGPT or Gemini</a>.</span></p>
+</div></section>
+
+<section id="preguntas"><div class="ancho">
+  <h2><span data-es>Preguntas</span><span data-en>Questions</span></h2>
+  <details><summary><span data-es>¿Es una alternativa gratis a Loom?</span><span data-en>Is it a free alternative to Loom?</span></summary><p><span data-es>Para grabar tu pantalla con tu cámara y tener el texto listo, sí. Si necesitas compartir un link al instante para que otros vean y comenten, Loom sigue siendo mejor para eso: Graba deja el video en tu computador y tú decides dónde publicarlo.</span><span data-en>For recording your screen with your camera and getting the text ready, yes. If you need to share a link instantly for others to watch and comment, Loom is still better at that: Graba keeps the video on your computer and you decide where to publish it.</span></p></details>
+  <details><summary><span data-es>¿Sube mi video a algún lado?</span><span data-en>Does it upload my video anywhere?</span></summary><p><span data-es>No. El video y la transcripción quedan en tu computador. A tu IA solo le llega el texto de la transcripción, con tu cuenta, igual que si lo pegaras en su chat.</span><span data-en>No. The video and transcript stay on your computer. Your AI only gets the transcript text, with your account, just as if you pasted it into its chat.</span></p></details>
+  <details><summary><span data-es>¿Qué IA necesito?</span><span data-en>Which AI do I need?</span></summary><p><span data-es>La que ya tengas: Claude Code (Claude Pro o Max), Codex (cualquier plan de ChatGPT, incluso el gratis con límites) o Antigravity CLI (Gemini). Se instala una vez; <a href="ia.html">aquí está la guía</a>.</span><span data-en>The one you already have: Claude Code (Claude Pro or Max), Codex (any ChatGPT plan, even free with limits) or Antigravity CLI (Gemini). You install it once; <a href="ia.html">here's the guide</a>.</span></p></details>
+  <details><summary><span data-es>¿Por qué mi Mac dice que no puede verificar la app?</span><span data-en>Why does my Mac say it can't verify the app?</span></summary><p><span data-es>Porque Graba todavía no paga el certificado de Apple que quita ese aviso: es un proyecto gratis. El código es abierto, cada versión se compila en GitHub a la vista de todos y el instalador de un comando revisa la huella (SHA-256). Para abrirla: Ajustes del Sistema → Privacidad y seguridad → «Abrir igualmente». Con el comando de la Terminal no aparece.</span><span data-en>Because Graba doesn't pay yet for the Apple certificate that removes that warning: it's a free project. The code is open, every version is built on GitHub in public and the one-command installer checks the fingerprint (SHA-256). To open it: System Settings → Privacy &amp; Security → “Open Anyway”. The Terminal command skips it.</span></p></details>
+  <details><summary><span data-es>¿Funciona en Windows o Linux?</span><span data-en>Does it work on Windows or Linux?</span></summary><p><span data-es>Todavía no: vienen en camino con la misma interfaz. Si quieres ayudar a probarlas, pásate por la <a href="https://github.com/graba-app/graba/discussions">comunidad</a>.</span><span data-en>Not yet: they're on the way with the same interface. If you want to help test them, drop by the <a href="https://github.com/graba-app/graba/discussions">community</a>.</span></p></details>
+  <details><summary><span data-es>¿En qué idiomas funciona?</span><span data-en>Which languages does it support?</span></summary><p><span data-es>La app está en español e inglés. La transcripción reconoce muchos idiomas y la IA escribe en el mismo idioma en que hablas.</span><span data-en>The app is in Spanish and English. Transcription recognizes many languages and the AI writes in the same language you speak.</span></p></details>
+</div></section>
+
+<section id="comunidad"><div class="ancho">
+  <h2><span data-es>Hagámosla entre todos</span><span data-en>Let's build it together</span></h2>
+  <p class="bajada"><span data-es>Graba es gratis y abierta. Hay lugar para cualquiera, programes o no.</span><span data-en>Graba is free and open. There's room for everyone, coder or not.</span></p>
+  <div class="comunidad">
+    <a href="https://github.com/graba-app/graba/discussions">💬<b><span data-es>Conversa</span><span data-en>Chat</span></b><small><span data-es>Dudas, ideas y lo que armaste.</span><span data-en>Questions, ideas and what you built.</span></small></a>
+    <a href="https://github.com/graba-app/graba/labels/probar">🧪<b><span data-es>Pruébala</span><span data-en>Test it</span></b><small><span data-es>Cuéntanos cómo anda en tu equipo.</span><span data-en>Tell us how it runs on your machine.</span></small></a>
+    <a href="https://github.com/graba-app/graba/labels/good%20first%20issue">🌱<b><span data-es>Tu primer aporte</span><span data-en>Your first contribution</span></b><small><span data-es>Tareas pensadas para empezar.</span><span data-en>Tasks made for getting started.</span></small></a>
+    <a href="https://github.com/graba-app/graba/blob/main/CONTRIBUTING.md">🛠️<b><span data-es>Cómo aportar</span><span data-en>How to contribute</span></b><small><span data-es>Con o sin IA, paso a paso.</span><span data-en>With or without AI, step by step.</span></small></a>
+  </div>
+</div></section>
+
+<div class="final"><div class="ancho">
+  <h2><span data-es>Tu próximo video, con el guion listo.</span><span data-en>Your next video, script included.</span></h2>
+  <a class="boton principal" href="#instalar"><span class="rec"></span><span data-es>Descargar Graba</span><span data-en>Download Graba</span></a>
+</div></div>
+</main>
+
+<footer><div class="ancho">
+  <span>Graba · <span data-es>Licencia MIT</span><span data-en>MIT License</span> · <a href="https://github.com/graba-app/graba"><span data-es>Código</span><span data-en>Code</span></a> · <span data-es>Hermana de</span><span data-en>Sister of</span> <a href="https://minuta-app.github.io/minuta/">Minuta</a></span>
+  <span><span data-es>Loom, Claude, ChatGPT, Codex, Gemini y YouTube son marcas de sus dueños. Graba es un proyecto independiente.</span><span data-en>Loom, Claude, ChatGPT, Codex, Gemini and YouTube are trademarks of their owners. Graba is an independent project.</span></span>
+</div></footer>
+
+<script>
+  const html = document.documentElement, boton = document.getElementById("idioma");
+  const TITULOS = { es: "Graba — graba tu pantalla y tu IA te deja el guion para YouTube | Gratis y privado", en: "Graba — record your screen and your AI writes the YouTube script | Free and private" };
+  let guardado = null; try { guardado = localStorage.getItem("graba-idioma"); } catch (e) {}
+  const poner = (l) => { html.lang = l; boton.textContent = l === "es" ? "EN" : "ES"; document.title = TITULOS[l]; };
+  poner(guardado || ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en"));
+  boton.onclick = () => { const l = html.lang === "es" ? "en" : "es"; poner(l); try { localStorage.setItem("graba-idioma", l); } catch (e) {} };
+  // En Windows o Linux todavía no hay descarga: se avisa en vez de bajar algo que no sirve.
+  if (/Windows|Linux|X11/i.test(navigator.userAgent) && !/Android/i.test(navigator.userAgent)) document.getElementById("aviso-so").hidden = false;
+  document.querySelectorAll("[data-copiar]").forEach((b) => b.onclick = async () => {
+    try { await navigator.clipboard.writeText(document.getElementById(b.dataset.copiar).textContent); } catch (e) {}
+    const antes = b.innerHTML; b.textContent = html.lang === "es" ? "¡Copiado!" : "Copied!"; setTimeout(() => (b.innerHTML = antes), 1600);
+  });
+</script>
+</body>
+</html>
