@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 import WebKit
 
 /// Ventana principal: la interfaz web (ui/) dentro de un WKWebView. La interfaz llama `host.enviar(accion, datos)`
@@ -150,6 +151,31 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
                 if let c = r["carpeta"] as? String { Ventana.shared.pendiente["seleccionar"] = c }
                 Ventana.shared.enviarEstado()
             }
+        case "elegirArchivos":
+            // Presentación, documentos o imágenes para que la IA escriba el guion (solo se leen, no se mueven).
+            let panel = NSOpenPanel()
+            panel.allowsMultipleSelection = true
+            panel.canChooseDirectories = false
+            panel.allowedContentTypes = [.pdf, .plainText, .image, .presentation, .text, .rtf]
+                + ["pptx", "key", "docx", "md"].compactMap { UTType(filenameExtension: $0) }
+            panel.message = Idioma.t("Elige tu presentación, documentos o imágenes")
+            if let v = ventana {
+                panel.beginSheetModal(for: v) { r in
+                    guard r == .OK else { return }
+                    Ventana.shared.llamar("archivosElegidos", panel.urls.map { ["ruta": $0.path, "nombre": $0.lastPathComponent] })
+                }
+            }
+        case "crearGuion":
+            let entrada = FileManager.default.temporaryDirectory.appendingPathComponent("graba-guion-\(UUID().uuidString).json")
+            Grabaciones.escribirJSON(entrada, d)
+            Procesador.correrJSON("guion.py", [entrada.path]) { r in
+                try? FileManager.default.removeItem(at: entrada)
+                Ventana.shared.llamar("guionCreado", r)
+            }
+        case "grabarConGuion":
+            // El guion queda en el teleprompter y se abre la barra para grabar: llegar y grabar.
+            Config.guardar(["teleprompter_texto": d["texto"] as? String ?? "", "teleprompter": true])
+            Estado.grabar()
         case "teleprompter":
             // El guion de una grabación queda listo en el teleprompter para la próxima (solo lo ve la persona).
             Config.guardar(["teleprompter_texto": d["texto"] as? String ?? "", "teleprompter": true])

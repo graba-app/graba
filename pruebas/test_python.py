@@ -220,6 +220,38 @@ class Corregir(unittest.TestCase):
             self.assertEqual(f.read(), antes)
 
 
+class Guion(unittest.TestCase):
+    def test_lee_pptx_y_escribe_guion(self):
+        import zipfile
+        import guion
+        pptx = os.path.join(DATOS, "charla.pptx")
+        with zipfile.ZipFile(pptx, "w") as z:
+            z.writestr("ppt/slides/slide2.xml", "<p:sld><a:t>Segunda</a:t><a:t>idea</a:t></p:sld>")
+            z.writestr("ppt/slides/slide1.xml", "<p:sld><a:t>Presupuesto &amp; ahorro</a:t></p:sld>")
+        self.assertEqual(guion.texto_de(pptx), "Diapositiva 1: Presupuesto & ahorro\nDiapositiva 2: Segunda · idea")
+        ia_falsa("TITULO: Presupuesto en 3 minutos\n===GUION===\nHola, soy Ana.\n\n[muestra la diapositiva 1]\n\nHoy armamos un presupuesto.")
+        entrada = os.path.join(DATOS, "g.json")
+        with open(entrada, "w") as f:
+            json.dump({"idea": "presupuesto", "minutos": 3, "archivos": [pptx]}, f)
+        salida = os.path.join(DATOS, "gs.json")
+        subprocess.run([sys.executable, os.path.join(RAIZ, "bin", "guion.py"), entrada, salida], check=True, env=os.environ)
+        with open(salida) as f:
+            r = json.load(f)
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["titulo"], "Presupuesto en 3 minutos")
+        self.assertEqual(r["palabras"], 7)  # las indicaciones [entre corchetes] no se cuentan
+        self.assertIn("[muestra la diapositiva 1]", r["guion"])
+
+    def test_sin_idea_ni_archivos(self):
+        entrada = os.path.join(DATOS, "g2.json")
+        with open(entrada, "w") as f:
+            json.dump({"idea": " ", "minutos": 3}, f)
+        salida = os.path.join(DATOS, "gs2.json")
+        subprocess.run([sys.executable, os.path.join(RAIZ, "bin", "guion.py"), entrada, salida], check=True, env=os.environ)
+        with open(salida) as f:
+            self.assertFalse(json.load(f)["ok"])
+
+
 class Alucinaciones(unittest.TestCase):
     def test_frases_de_silencio(self):
         for t in [" Thank you.", "Gracias.", "¡Suscríbete!", "Subtítulos realizados por la comunidad de Amara.org"]:

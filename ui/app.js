@@ -159,6 +159,7 @@
           <button class="alternar" data-alternar="camara" aria-pressed="${!!E.config.camara}">📷 <span>Cámara</span></button>
           <button class="alternar" data-alternar="microfono" aria-pressed="${!!E.config.microfono}">🎙️ <span>Micrófono</span></button>
         </div>
+        <button class="boton secundario-ancho" data-accion="guion-nuevo">✨ <span>Preparar un guion</span></button>
       </div>
       <nav class="lista" aria-label="Grabaciones">${E.grabaciones.length ? `<h2>Tus grabaciones</h2>${items}` : ""}</nav>
     </aside>`;
@@ -275,7 +276,42 @@
   }
   const IDIOMAS_AUDIO = [["auto", "Detectar solo"], ["es", "Español"], ["en", "Inglés"], ["pt", "Portugués"], ["fr", "Francés"], ["de", "Alemán"], ["it", "Italiano"]];
 
+  const DURACIONES = [1, 2, 3, 5, 8, 10, 15];
+  function dialogoGuion() {
+    const g = E.guion;
+    const cab = `<h2 id="t-guion">Preparar un guion</h2>`;
+    if (g.paso === "creando") {
+      return `${cab}<p>Tu IA está escribiendo el guion…</p><div class="barra indef"><i></i></div>
+        <div class="pie-dialogo"><button class="boton" data-accion="cerrar-guion">Cerrar</button></div>`;
+    }
+    if (g.paso === "listo") {
+      const palabras = (g.texto || "").replace(/\[[^\]]*\]/g, " ").split(/\s+/).filter(Boolean).length;
+      return `${cab}<p data-sin-traducir><b>${esc(g.titulo || "")}</b></p>
+        <textarea id="guion-texto" rows="12" data-sin-traducir>${esc(g.texto || "")}</textarea>
+        <p class="nota-guion">Unas ${palabras} palabras · cerca de ${Math.max(1, Math.round(palabras / 140))} min. Puedes editarlo aquí.</p>
+        <div class="pie-dialogo"><button class="boton" data-accion="guion-otra-vez">Volver a crear</button>
+          <button class="boton" data-accion="guion-guardar">Guardar en el teleprompter</button>
+          <button class="boton principal" data-accion="guion-grabar"><span class="punto"></span><span>Grabar con este guion</span></button></div>`;
+    }
+    return `${cab}<p>Tu IA escribe lo que vas a decir, con el largo justo. Después lo lees en el teleprompter mientras grabas.</p>
+      <label class="campo"><span>¿De qué se trata?</span>
+        <textarea id="guion-idea" rows="4" placeholder="${esc(tr("Ej.: presento Graba a mi equipo: qué hace, cómo se usa y por qué es privada."))}" data-sin-traducir>${esc(g.idea || "")}</textarea></label>
+      <div class="fila-campos">
+        <label class="campo"><span>Duración</span><select id="guion-min">${DURACIONES.map((m) => `<option value="${m}" ${Number(g.minutos) === m ? "selected" : ""}>${m} min</option>`).join("")}</select></label>
+        <label class="campo"><span>Para</span><select id="guion-para">${[["youtube", "YouTube"], ["presentacion", "Una presentación"], ["tutorial", "Un tutorial"]].map(([v, n]) =>
+          `<option value="${v}" ${g.para === v ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      </div>
+      <div class="campo"><span>Archivos (opcional)</span>
+        <div class="archivos">${(g.archivos || []).map((a, i) => `<span class="chip-archivo"><span data-sin-traducir>${esc(a.nombre)}</span><button data-quitar-archivo="${i}" aria-label="Quitar" title="Quitar">✕</button></span>`).join("")}
+          <button class="boton" data-accion="guion-archivos">＋ Agregar archivos</button></div>
+        <small>PDF, PowerPoint, Word, texto o imágenes. Keynote: expórtalo a PDF primero.</small></div>
+      ${g.error ? `<p class="error-txt" data-sin-traducir>${esc(g.error)}</p>` : ""}
+      <div class="pie-dialogo"><button class="boton" data-accion="cerrar-guion">Cancelar</button>
+        <button class="boton principal" data-accion="guion-crear">Crear guion</button></div>`;
+  }
+
   function dialogos() {
+    if (E.guion) return `<div class="capa"><div class="dialogo" role="dialog" aria-modal="true" aria-labelledby="t-guion">${dialogoGuion()}</div></div>`;
     if (E.corregir) {
       const c = E.corregir;
       return `<div class="capa"><div class="dialogo" role="dialog" aria-modal="true" aria-labelledby="t-corregir">
@@ -329,7 +365,7 @@
 
   // ───────────── Eventos ─────────────
   document.addEventListener("click", (ev) => {
-    const el = ev.target.closest("[data-accion],[data-sel],[data-pestana],[data-copiar],[data-teleprompter],[data-alternar],[data-probar],[data-modelo],[data-modelo-usar],[data-permiso],[data-bv],[data-enlace],[data-ir]");
+    const el = ev.target.closest("[data-accion],[data-sel],[data-pestana],[data-copiar],[data-teleprompter],[data-quitar-archivo],[data-alternar],[data-probar],[data-modelo],[data-modelo-usar],[data-permiso],[data-bv],[data-enlace],[data-ir]");
     if (!el) return;
     const d = el.dataset;
     if (d.enlace) { ev.preventDefault(); return host.enviar("abrirEnlace", { url: d.enlace }); }
@@ -337,6 +373,7 @@
     if (d.sel) { E.sel = d.sel; return render(); }
     if (d.pestana) { E.pestana = d.pestana; return render(); }
     if (d.copiar != null) return copiar(d.copiar);
+    if (d.quitarArchivo != null) { leerCamposGuion(); E.guion.archivos.splice(Number(d.quitarArchivo), 1); return render(); }
     if (d.teleprompter != null) { host.enviar("teleprompter", { texto: d.teleprompter }); return toast("Listo: lo verás en el teleprompter al grabar"); }
     if (d.alternar) { E.config[d.alternar] = !E.config[d.alternar]; host.enviar("config", { [d.alternar]: E.config[d.alternar] }); return render(); }
     if (d.probar) { E.probando[d.probar] = true; delete E.resultadoIA[d.probar]; host.enviar("probarIA", { id: d.probar }); return render(); }
@@ -349,6 +386,20 @@
       case "grabar": return host.enviar("grabar");
       case "ajustes": E.ajustes = true; return render();
       case "cerrar": E.ajustes = false; E.borrar = null; if (!E.corregir?.enviando) E.corregir = null; return render();
+      case "guion-nuevo": E.guion = { paso: "pedir", idea: "", minutos: 3, para: "youtube", archivos: [] }; render(); return $("#guion-idea")?.focus();
+      case "cerrar-guion": E.guion = null; return render();
+      case "guion-archivos": leerCamposGuion(); return host.enviar("elegirArchivos");
+      case "guion-crear": {
+        leerCamposGuion();
+        if (!E.guion.idea.trim() && !E.guion.archivos.length) { E.guion.error = tr("Cuéntame la idea o agrega un archivo."); return render(); }
+        const { idea, minutos, para, archivos } = E.guion;
+        E.guion = { ...E.guion, paso: "creando", error: "" };
+        host.enviar("crearGuion", { idea, minutos: Number(minutos), para, archivos: archivos.map((a) => a.ruta) });
+        return render();
+      }
+      case "guion-otra-vez": E.guion = { ...E.guion, paso: "pedir" }; return render();
+      case "guion-guardar": host.enviar("teleprompter", { texto: $("#guion-texto")?.value || "" }); E.guion = null; render(); return toast("Listo: lo verás en el teleprompter al grabar");
+      case "guion-grabar": host.enviar("grabarConGuion", { texto: $("#guion-texto")?.value || "" }); E.guion = null; return render();
       case "corregir": E.corregir = { ruta: t?.ruta, texto: "" }; render(); return $("#corregir-texto")?.focus();
       case "enviar-correccion": {
         const texto = $("#corregir-texto")?.value.trim() || "";
@@ -375,7 +426,7 @@
     render();
   });
   document.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape" && (E.ajustes || E.borrar || (E.corregir && !E.corregir.enviando))) { E.ajustes = false; E.borrar = null; E.corregir = null; render(); }
+    if (ev.key === "Escape" && (E.ajustes || E.borrar || E.guion || (E.corregir && !E.corregir.enviando))) { E.ajustes = false; E.borrar = null; E.corregir = null; E.guion = null; render(); }
     if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey) && E.corregir && !E.corregir.enviando) $("[data-accion=enviar-correccion]")?.click();
   });
 
@@ -398,6 +449,18 @@
       if (e.aviso) toast(e.aviso);
       // No se repinta si nada cambió (así el video no se reinicia cada segundo).
       if (JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos]) !== antes || e.seleccionar || !$("#app").innerHTML) render();
+    },
+    archivosElegidos(lista) {
+      if (!E.guion) return;
+      leerCamposGuion();
+      const ya = new Set(E.guion.archivos.map((a) => a.ruta));
+      E.guion.archivos.push(...(lista || []).filter((a) => !ya.has(a.ruta)));
+      render();
+    },
+    guionCreado(r) {
+      if (!E.guion) return;
+      E.guion = r.ok ? { ...E.guion, paso: "listo", titulo: r.titulo, texto: r.guion } : { ...E.guion, paso: "pedir", error: r.error || tr("No se pudo crear el guion.") };
+      render();
     },
     corregido(r) {
       if (r.ok) { E.corregir = null; if (r.carpeta) E.sel = r.carpeta; toast(r.reemplazos ? "Corregido, también en los subtítulos" : "Corregido"); }
@@ -426,11 +489,23 @@
         if (p >= 1) { clearInterval(iv); DEMO.modelos.lista.find((m) => m.id === d.id).listo = true; DEMO.config.modelo = d.id; window.Graba.modeloListo({ id: d.id, ok: true }); enviar(); } }, 300);
     }
     if (accion === "permiso") { DEMO.permisos[d.tipo] = true; return enviar(); }
+    if (accion === "elegirArchivos") return window.Graba.archivosElegidos([{ ruta: "/demo/presentacion.pdf", nombre: "presentacion.pdf" }]);
+    if (accion === "crearGuion") return setTimeout(() => window.Graba.guionCreado({ ok: true, titulo: "Presupuesto en 3 minutos",
+      guion: "¿Se te va la plata y no sabes en qué? En tres minutos lo arreglamos.\n\n[muestra la diapositiva 1]\n\nHola, soy Ana. Hoy armamos un presupuesto simple." }), 800);
+    if (accion === "grabarConGuion") return toast("En la app, aquí se abre la barra para grabar");
     if (accion === "corregir") return setTimeout(() => window.Graba.corregido({ ok: true, carpeta: d.ruta, reemplazos: 1 }), 700);
     if (accion === "teleprompter") { DEMO.config.teleprompter = true; DEMO.config.teleprompter_texto = d.texto; return; }
   }
 
   const LOGO = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#17151c"/><rect x="12" y="15" width="40" height="28" rx="5" fill="none" stroke="#b9b0ff" stroke-width="4"/><circle cx="21" cy="44" r="10" fill="#6d5dfc" stroke="#17151c" stroke-width="3"/><circle cx="44" cy="22" r="3.2" fill="#ff5d5d"/></svg>`;
+
+  /** Guarda lo escrito en el formulario del guion antes de repintar (si no, se perdería). */
+  function leerCamposGuion() {
+    if (!E.guion || E.guion.paso !== "pedir") return;
+    E.guion.idea = $("#guion-idea")?.value ?? E.guion.idea;
+    E.guion.minutos = Number($("#guion-min")?.value || E.guion.minutos);
+    E.guion.para = $("#guion-para")?.value || E.guion.para;
+  }
 
   async function iniciar() {
     if (HOST === "web") {

@@ -56,10 +56,16 @@ COMANDO = next((r for r in map(shutil.which, IAS[IA][0]) if r), IAS[IA][0][0])
 ES_AGY = os.path.basename(COMANDO).lower().split(".")[0] in ("agy", "antigravity")
 
 
-def ejecutar_ia(prompt, timeout=900):
+def ejecutar_ia(prompt, timeout=900, archivos=()):
     """Le pasa el prompt a la IA del usuario y devuelve un CompletedProcess (stdout = respuesta).
-    Corre en una carpeta temporal vacía y en modo solo lectura: la IA ve solo el texto que le damos."""
+    Corre en una carpeta temporal y en modo solo lectura: la IA ve solo el texto que le damos y, si se indican, copias de
+    los archivos que la persona adjuntó (para que los lea con su propia cuenta)."""
     with tempfile.TemporaryDirectory(prefix="graba-ia-") as tmp:
+        for a in archivos:
+            try:
+                shutil.copy2(a, os.path.join(tmp, os.path.basename(a)))
+            except OSError:
+                pass
         if IA == "codex":
             salida = os.path.join(tmp, "respuesta.txt")
             cmd = [COMANDO, "exec", "--skip-git-repo-check", "-s", "read-only", "-C", tmp, "-o", salida, "-"]

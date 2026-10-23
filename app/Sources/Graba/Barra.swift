@@ -28,6 +28,7 @@ final class Barra {
         p.area = nil
         p.ventanaElegida = nil
         if p.modo != "pantalla" { p.modo = "pantalla" }  // ventana y área se eligen cada vez
+        p.teleprompter = Config.bool("teleprompter")  // puede venir activado desde "Preparar un guion"
         estado.fase = .preparando
         estado.cuenta = 0
         estado.segundos = 0
