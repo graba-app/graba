@@ -22,6 +22,16 @@ final class Preparacion: ObservableObject {
     @Published var forma = Burbuja.Forma(rawValue: Config.texto("camara_forma")) ?? .circulo
     @Published var tamano = Config.texto("camara_tamano").isEmpty ? "m" : Config.texto("camara_tamano")
     @Published var microfono = Config.bool("microfono")
+    @Published var camaraID = Config.texto("camara_id")
+    @Published var microfonoID = Config.texto("microfono_id")
+
+    /// Cámaras y micrófonos conectados (incluye externas y el iPhone como cámara).
+    static func dispositivos(_ medio: AVMediaType) -> [(id: String, nombre: String)] {
+        let tipos: [AVCaptureDevice.DeviceType] = medio == .video ? [.builtInWideAngleCamera, .external, .continuityCamera, .deskViewCamera]
+            : [.microphone, .external]
+        return AVCaptureDevice.DiscoverySession(deviceTypes: tipos, mediaType: medio, position: .unspecified).devices
+            .map { ($0.uniqueID, $0.localizedName) }
+    }
     @Published var teleprompter = Config.bool("teleprompter")
     var pantalla: NSScreen = Grabadora.pantallaActiva()
 
@@ -46,11 +56,13 @@ final class Preparacion: ObservableObject {
 
     func guardar() {
         Config.guardar(["modo": modo, "camara": camara, "camara_forma": forma.rawValue, "camara_tamano": tamano,
+                        "camara_id": camaraID, "microfono_id": microfonoID,
                         "microfono": microfono, "teleprompter": teleprompter])
     }
 
     /// Aplica en vivo la cámara y el teleprompter según lo elegido.
     func aplicar() {
+        guardar()  // primero: la burbuja lee la cámara elegida de la configuración
         if camara {
             if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
                 AVCaptureDevice.requestAccess(for: .video) { _ in Task { @MainActor in self.aplicar() } }

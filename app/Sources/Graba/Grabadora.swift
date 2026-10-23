@@ -82,6 +82,8 @@ final class Grabadora: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Se
         conf.queueDepth = 6
         if let recorte { conf.sourceRect = recorte }
         conf.captureMicrophone = microfono
+        let micElegido = Config.texto("microfono_id")
+        if microfono, !micElegido.isEmpty, AVCaptureDevice(uniqueID: micElegido) != nil { conf.microphoneCaptureDeviceID = micElegido }
 
         let w = try AVAssetWriter(outputURL: archivo, fileType: .mp4)
         let v = AVAssetWriterInput(mediaType: .video, outputSettings: [

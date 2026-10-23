@@ -218,6 +218,9 @@
   "Cuéntame la idea o agrega un archivo.": "Tell me the idea or add a file.",
   "No se pudo crear el guion.": "The script couldn't be created.",
   "Elige tu presentación, documentos o imágenes": "Choose your presentation, documents or images",
-  "En la app, aquí se abre la barra para grabar": "In the app, the recording bar opens here"
+  "En la app, aquí se abre la barra para grabar": "In the app, the recording bar opens here",
+  "Apagar el micrófono": "Turn the microphone off",
+  "Encender el micrófono": "Turn the microphone on",
+  "Cámara: cuál, forma y tamaño": "Camera: which one, shape and size"
  }
 }

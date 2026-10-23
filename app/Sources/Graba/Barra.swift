@@ -1,3 +1,4 @@
+import AVFoundation
 import AppKit
 import SwiftUI
 
@@ -167,6 +168,13 @@ private struct VistaBarra: View {
         Menu {
             Button(p.camara ? Idioma.t("Ocultar la cámara") : Idioma.t("Mostrar la cámara")) { p.camara.toggle(); p.aplicar() }
             Divider()
+            let camaras = Preparacion.dispositivos(.video)
+            if camaras.count > 1 {
+                Picker(Idioma.t("Cámara"), selection: Binding(get: { camaras.contains { $0.id == p.camaraID } ? p.camaraID : camaras[0].id },
+                                                          set: { p.camaraID = $0; p.camara = true; p.aplicar() })) {
+                    ForEach(camaras, id: \.id) { Text($0.nombre).tag($0.id) }
+                }.pickerStyle(.inline)
+            }
             Picker(Idioma.t("Forma"), selection: Binding(get: { p.forma }, set: { p.forma = $0; p.camara = true; p.aplicar() })) {
                 Label(Idioma.t("Círculo"), systemImage: "circle").tag(Burbuja.Forma.circulo)
                 Label(Idioma.t("Cuadrado"), systemImage: "square").tag(Burbuja.Forma.cuadrado)
@@ -181,10 +189,23 @@ private struct VistaBarra: View {
                 .foregroundStyle(p.camara ? Color.white : Color.white.opacity(0.45))
                 .background(RoundedRectangle(cornerRadius: 8).fill(p.camara ? Color.white.opacity(0.14) : .clear))
         }
-        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help(Idioma.t("Cámara: forma y tamaño"))
-        icono(p.microfono ? "mic.fill" : "mic.slash", p.microfono ? "Micrófono encendido" : "Micrófono apagado", activo: p.microfono) {
-            p.microfono.toggle(); p.guardar()
+        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help(Idioma.t("Cámara: cuál, forma y tamaño"))
+        Menu {
+            Button(p.microfono ? Idioma.t("Apagar el micrófono") : Idioma.t("Encender el micrófono")) { p.microfono.toggle(); p.guardar() }
+            let mics = Preparacion.dispositivos(.audio)
+            if !mics.isEmpty {
+                Divider()
+                Picker(Idioma.t("Micrófono"), selection: Binding(get: { mics.contains { $0.id == p.microfonoID } ? p.microfonoID : (AVCaptureDevice.default(for: .audio)?.uniqueID ?? mics[0].id) },
+                                                             set: { p.microfonoID = $0; p.microfono = true; p.guardar() })) {
+                    ForEach(mics, id: \.id) { Text($0.nombre).tag($0.id) }
+                }.pickerStyle(.inline)
+            }
+        } label: {
+            Image(systemName: p.microfono ? "mic.fill" : "mic.slash").font(.system(size: 14)).frame(width: 34, height: 32)
+                .foregroundStyle(p.microfono ? Color.white : Color.white.opacity(0.45))
+                .background(RoundedRectangle(cornerRadius: 8).fill(p.microfono ? Color.white.opacity(0.14) : .clear))
         }
+        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help(Idioma.t("Micrófono"))
         icono("text.alignleft", p.teleprompter ? "Ocultar el guion" : "Guion (teleprompter): solo tú lo ves", activo: p.teleprompter) {
             p.teleprompter.toggle(); p.aplicar()
         }

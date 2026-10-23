@@ -43,6 +43,7 @@ final class Burbuja: NSObject, NSWindowDelegate {
     private var sesion: AVCaptureSession?
     private var vista: NSView?
     private(set) var forma = Forma.circulo
+    private var dispositivo = ""
 
     var ventana: CGWindowID? { panel.map { CGWindowID($0.windowNumber) } }
     var visible: Bool { panel != nil }
@@ -57,6 +58,9 @@ final class Burbuja: NSObject, NSWindowDelegate {
         forma = f
         let lado = Burbuja.ladoBase(tamano), prop = Burbuja.proporcion(f)
         let tam = prop >= 1 ? NSSize(width: lado * prop, height: lado) : NSSize(width: lado, height: lado / prop)
+        // Si cambió la cámara elegida, se vuelve a abrir con la nueva.
+        let elegida = Config.texto("camara_id")
+        if panel != nil, elegida != dispositivo { ocultar() }
         if let panel {
             var marco = panel.frame
             marco.size = tam
@@ -65,7 +69,9 @@ final class Burbuja: NSObject, NSWindowDelegate {
             ajustarEsquinas()
             return
         }
-        guard let camara = AVCaptureDevice.default(for: .video), let entrada = try? AVCaptureDeviceInput(device: camara) else { return }
+        guard let camara = AVCaptureDevice(uniqueID: elegida) ?? AVCaptureDevice.default(for: .video),
+              let entrada = try? AVCaptureDeviceInput(device: camara) else { return }
+        dispositivo = elegida
         let s = AVCaptureSession()
         s.sessionPreset = .high
         guard s.canAddInput(entrada) else { return }
