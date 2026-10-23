@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+<title>Graba · cuenta</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  .n { width: 150px; height: 150px; border-radius: 50%; background: rgba(0, 0, 0, .55); color: #fff; display: flex; align-items: center; justify-content: center;
+    font: 600 72px system-ui, "Segoe UI", Ubuntu, sans-serif; font-variant-numeric: tabular-nums; }
+  .n.cambio { animation: entra .25s ease-out; }
+  @keyframes entra { from { transform: scale(1.15); opacity: .4; } to { transform: scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+<!-- Cuenta 3-2-1 grande en el centro (no recibe clics; en Windows no sale en el video). -->
+<div class="n" id="n"></div>
+<script src="cuenta.js"></script>
+</body>
+</html>

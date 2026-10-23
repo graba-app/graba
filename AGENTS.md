@@ -27,6 +27,8 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
 | `build.sh` | Empaqueta e instala en `~/Applications/Graba.app` (se niega si hay una grabación o un procesamiento en curso). |
 | `instalar.sh` | Instalador de un comando (`curl … \| bash`): última Release, verifica SHA-256, instala. |
 | `pruebas/` | `correr.sh` (todo), `test_python.py`, `contrato.py`, `interfaz.mjs`. |
+| `escritorio/` | App de **Windows y Linux** (Electron): misma `ui/` y mismo `bin/`. Ver "Windows y Linux" abajo. |
+| `instalar.ps1` | Instalador de un comando para Windows (`irm … \| iex`). |
 | `docs/` | Página pública (GitHub Pages). |
 | `.github/workflows/` | `revisar.yml` (en cada cambio y PR) y `publicar.yml` (al subir la versión en `app/Info.plist`). |
 
@@ -41,6 +43,27 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
   Los capítulos se corrigen solos (orden, duración, primero en 00:00).
 - **Datos:** `~/Graba/<AAAA-MM-DD HHMM - Título>/` y `~/Graba/.graba/` (`config.json`, `modelos/`). La carpeta `~/Graba` no
   distingue mayúsculas de `~/graba`: el checkout de desarrollo va en `~/Developer/graba`.
+
+## Windows y Linux (`escritorio/`)
+- Electron con la misma `ui/` y el mismo `bin/`. `src/main.js` hace lo de `GrabaApp.swift` + `Ventana.swift` + `Flotantes.swift`: estado
+  `Estado`, bandeja (mismo menú que la barra del Mac) y `ACCIONES` (un método por cada `host.enviar`; respuesta con `llamar("funcion", datos)`).
+  `src/servicios.js` = `Servicios.swift` (config, idioma, permisos, IA, modelos con SHA-256, `Procesador`); `src/grabaciones.js` = `Grabaciones`.
+- La UI se sirve en `graba://ui/…`, las páginas propias en `graba://app/…` y los videos en `graba://video/<ruta>` (solo dentro de `~/Graba`,
+  con rangos). La interfaz recibe `window.GRABA_HOST = "windows" | "linux"`.
+- Grabar (como en Mac): "Grabar" abre `barra.html` abajo al centro (toda la pantalla, una ventana o un área; cámara con su menú de
+  dispositivo/forma/tamaño; micrófono; guion) y nada empieza hasta su botón rojo; luego la cuenta grande `cuenta.html` y a grabar. Barra,
+  cuenta, área y `teleprompter.html` usan `setContentProtection` (en Windows no salen en el video; en Linux sí, no hay cómo). `burbuja.html`
+  (cámara) sí sale. `grabadora.html` (oculta) graba con MediaRecorder la pantalla bajo el mouse o la ventana elegida (`desktopCapturer`, hasta
+  1920 px, 30 fps) + micrófono a `captura.*` (MP4/H.264 si Chromium puede, si no WebM) y el micrófono a 16 kHz en `microfono.wav`. Al terminar,
+  el ffmpeg incluido deja `video.mp4` (H.264/AAC; un área se recorta aquí, con `.recorte.json`) y `audio.wav`; sin ffmpeg queda
+  `video.mp4`/`video.webm` tal cual y el audio del micrófono. Luego `procesar.py`. `corregir.py` y `guion.py` corren con `Procesador.correrJSON`.
+- `herramientas/preparar.sh linux|windows` arma `vendor/` (Python portátil, `whisper-cli` compilado con zig, ffmpeg estático; todo con
+  SHA-256 fijo). Empaquetar: `npx electron-builder --linux AppImage tar.gz`; `npx electron-builder --win dir && bash herramientas/instalador-windows.sh`
+  (NSIS propio, sin Wine). Versión en `escritorio/package.json` (igual que `app/Info.plist`). Nombres fijos: `Graba-Windows.exe`,
+  `Graba-Linux.AppImage`, `Graba-Linux.tar.gz` (los usan `instalar.ps1`, `instalar.sh` y `publicar.yml`).
+- Prueba en Linux sin pantalla (desde `escritorio/`): `HOME=$(mktemp -d) xvfb-run -a node pruebas/arranque.mjs <capturas>` (Playwright aparte con
+  `NODE_PATH`; `REAL=1` graba la pantalla de verdad en vez de la cámara falsa de Chromium; `GRABA_PRUEBAS=1` expone `global.grabaPruebas`).
+  Windows no se puede probar aquí.
 
 ## Puente interfaz ↔ app
 La UI llama `host.enviar(accion, datos)`; Mac lo atiende en el `switch` de `Ventana.swift` y responde con `window.Graba.<funcion>(json)`
@@ -57,8 +80,9 @@ para la vista previa. `pruebas/contrato.py` lo revisa.
 - Commits con autor `@users.noreply.github.com`. El repo es público: cada commit se ve al tiro.
 
 ## Publicar una versión
-Sube `CFBundleShortVersionString` en `app/Info.plist` (y `escritorio/package.json` cuando exista) y haz push a main: `publicar.yml`
-compila y crea el Release `vX.Y.Z` con `Graba-macOS.zip` + `.sha256` (nombres fijos: los usa `instalar.sh`).
+Sube `CFBundleShortVersionString` en `app/Info.plist` y `version` en `escritorio/package.json` y haz push a main: `publicar.yml`
+compila y crea el Release `vX.Y.Z` con `Graba-macOS.zip`, `Graba-Windows.exe`, `Graba-Linux.AppImage` y `Graba-Linux.tar.gz`, cada uno con
+su `.sha256` (nombres fijos: los usan `instalar.sh` e `instalar.ps1`).
 
 ## Desarrollo en el Mac
 `~/Developer/graba` es el checkout. Antes de reinstalar, comprobar que no esté grabando ni procesando (`build.sh` ya lo revisa).

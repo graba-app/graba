@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+<title>Graba · área</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: rgba(0, 0, 0, .25); cursor: crosshair; user-select: none; }
+  #marco { position: fixed; border: 2px solid #8f82ff; background: rgba(143, 130, 255, .12); box-shadow: 0 0 0 9999px rgba(0, 0, 0, .25); display: none; }
+  #ayuda { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(28, 28, 30, .92); color: #fff; padding: 10px 16px;
+    border-radius: 10px; font: 500 14px system-ui, "Segoe UI", Ubuntu, sans-serif; pointer-events: none; }
+</style>
+</head>
+<body>
+<!-- Elegir un área: se arrastra un rectángulo; Esc cancela. -->
+<div id="ayuda"></div><div id="marco"></div>
+<script src="area.js"></script>
+</body>
+</html>

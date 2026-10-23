@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' blob: mediastream:">
+<title>Graba · cámara</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  .burbuja { box-sizing: border-box; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; border: 3px solid rgba(255, 255, 255, .9);
+    background: #17151c; -webkit-app-region: drag; cursor: move; }
+  .burbuja.recta { border-radius: 18px; }
+  video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+</style>
+</head>
+<body>
+<!-- Burbuja de la cámara: es una ventana más de la pantalla, así que sale en el video (igual que en Mac). Se puede arrastrar. -->
+<div class="burbuja" id="burbuja"><video id="video" autoplay muted playsinline></video></div>
+<script src="burbuja.js"></script>
+</body>
+</html>

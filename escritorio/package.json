@@ -1,0 +1,97 @@
+{
+  "name": "graba",
+  "productName": "Graba",
+  "version": "0.1.0",
+  "description": "Graba tu pantalla con tu cámara; tu IA te deja notas, guion, títulos, capítulos y subtítulos.",
+  "homepage": "https://graba-app.github.io/graba/",
+  "license": "MIT",
+  "author": {
+    "name": "Graba",
+    "email": "soydavidcornejo@users.noreply.github.com"
+  },
+  "main": "src/main.js",
+  "private": true,
+  "scripts": {
+    "inicio": "electron .",
+    "preparar:linux": "bash herramientas/preparar.sh linux",
+    "preparar:windows": "bash herramientas/preparar.sh windows",
+    "empaquetar:linux": "bash herramientas/preparar.sh linux && electron-builder --linux AppImage tar.gz",
+    "empaquetar:windows": "bash herramientas/preparar.sh windows && electron-builder --win dir && bash herramientas/instalador-windows.sh"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "app.graba.escritorio",
+    "productName": "Graba",
+    "copyright": "MIT · Graba",
+    "directories": {
+      "output": "dist",
+      "buildResources": "iconos"
+    },
+    "files": [
+      "src/**",
+      "iconos/**",
+      "package.json"
+    ],
+    "asar": true,
+    "extraResources": [
+      {
+        "from": "../bin",
+        "to": "graba/bin",
+        "filter": [
+          "*.py",
+          "*.json"
+        ]
+      },
+      {
+        "from": "../ui",
+        "to": "graba/ui",
+        "filter": [
+          "**/*",
+          "!demo.json"
+        ]
+      },
+      {
+        "from": "vendor/${os}/herramientas",
+        "to": "herramientas"
+      },
+      {
+        "from": "vendor/${os}/python",
+        "to": "python"
+      },
+      {
+        "from": "iconos/graba-256.png",
+        "to": "graba.png"
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "icon": "iconos/graba.png",
+      "category": "AudioVideo",
+      "artifactName": "Graba-Linux.${ext}",
+      "synopsis": "Graba tu pantalla; tu IA te deja notas, guion y subtítulos",
+      "syncDesktopName": true,
+      "executableName": "graba"
+    },
+    "win": {
+      "target": [
+        "dir"
+      ],
+      "icon": "iconos/graba.ico",
+      "artifactName": "Graba-Windows.${ext}",
+      "signExecutable": false
+    },
+    "publish": null,
+    "compression": "maximum"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/graba-app/graba.git"
+  },
+  "desktopName": "graba.desktop"
+}
