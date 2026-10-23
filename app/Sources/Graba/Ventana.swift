@@ -84,6 +84,7 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
             "fase": Estado.fase.rawValue, "grabaciones": Grabaciones.listar(), "config": Config.leer(), "ias": IA.paraJS,
             "modelos": Modelos.paraJS, "permisos": Permisos.paraJS, "carpeta": Rutas.base.path,
             "procesando": Procesador.enCurso ?? NSNull(),
+            "actualizacion": Actualizaciones.disponible,
             "version": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "",
         ]
         e.merge(pendiente) { _, nuevo in nuevo }
@@ -176,6 +177,21 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
             // El guion queda en el teleprompter y se abre la barra para grabar: llegar y grabar.
             Config.guardar(["teleprompter_texto": d["texto"] as? String ?? "", "teleprompter": true])
             Estado.grabar()
+        case "buscarActualizacion":
+            Actualizaciones.revisar { hay, detalle in
+                Ventana.shared.llamar("actualizacionRevisada", ["hay": hay, "detalle": detalle, "sinConexion": detalle == Actualizaciones.sinConexion])
+                Ventana.shared.enviarEstado()
+            }
+        case "actualizar":
+            // Nunca en medio de una grabación o de un procesamiento: cerrar la app los cortaría.
+            guard Estado.fase == .inactiva, Procesador.enCurso == nil else {
+                llamar("actualizacionProgreso", ["paso": "error", "texto": Idioma.t("Espera a que termine la grabación o el procesamiento y vuelve a intentarlo.")])
+                return
+            }
+            Actualizaciones.seguir { Ventana.shared.llamar("actualizacionProgreso", $0) }
+            Actualizaciones.instalar { ok, error in
+                if !ok { Ventana.shared.llamar("actualizacionProgreso", ["paso": "error", "texto": error]) }
+            }
         case "teleprompter":
             // El guion de una grabación queda listo en el teleprompter para la próxima (solo lo ve la persona).
             Config.guardar(["teleprompter_texto": d["texto"] as? String ?? "", "teleprompter": true])

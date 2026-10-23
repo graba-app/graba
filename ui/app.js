@@ -6,7 +6,7 @@
   const E = {
     fase: "inactiva", grabaciones: [], config: {}, ias: [], modelos: { lista: [] }, permisos: {}, carpeta: "", version: "", procesando: null,
     sel: null, pestana: "notas", ajustes: false, bv: null, bvCerrada: false, probando: {}, resultadoIA: {}, descarga: null,
-    borrar: null, idioma: "es", textos: {},
+    borrar: null, idioma: "es", textos: {}, actualizacion: { hay: false }, act: null, buscando: null,
   };
   const ENLACES = { sitio: "https://graba-app.github.io/graba/", codigo: "https://github.com/graba-app/graba",
     comunidad: "https://github.com/graba-app/graba/discussions", guiaIA: "https://graba-app.github.io/graba/ia.html" };
@@ -135,9 +135,24 @@
   function render() {
     const raiz = $("#app");
     const scroll = $(".principal-area")?.scrollTop || 0;
-    raiz.innerHTML = `<div class="app">${lateral()}<main class="principal-area" data-pagina>${principal()}</main></div>${dialogos()}`;
+    raiz.innerHTML = `<div class="app">${lateral()}<main class="principal-area" data-pagina>${avisoActualizacion()}${principal()}</main></div>${dialogos()}`;
     traducirDOM(raiz);
     const area = $(".principal-area"); if (area) area.scrollTop = scroll;
+  }
+
+  /** Versión nueva: aviso discreto arriba (nunca una alerta del sistema) y, al actualizar, el avance por pasos. */
+  function avisoActualizacion() {
+    const a = E.act;
+    if (a) {
+      const error = a.paso === "error", pct = a.pct ?? (Number(a.paso) || 0) / 3 * 100;
+      return `<div class="aviso-act ${error ? "error" : ""}" role="status"><div class="txt"><b>${error ? "No se pudo actualizar" : "Actualizando Graba"}</b>
+        <span data-sin-traducir>${esc(a.texto || "")}</span>${error ? "" : `<div class="barra ${a.paso === "1" ? "indef" : ""}"><i style="width:${Math.round(pct)}%"></i></div>`}</div>
+        ${error ? `<button class="boton" data-accion="act-cerrar">Cerrar</button><button class="boton principal" data-accion="actualizar">Reintentar</button>` : ""}</div>`;
+    }
+    if (!E.actualizacion?.hay || E.actOculto) return "";
+    return `<div class="aviso-act" role="status"><div class="txt"><b>Hay una versión nueva de Graba</b>
+      <span data-sin-traducir>${esc((E.actualizacion.detalle || "").split("\n")[0])}</span></div>
+      <button class="boton" data-accion="act-despues">Después</button><button class="boton principal" data-accion="actualizar">Actualizar</button></div>`;
   }
 
   function lateral() {
@@ -340,6 +355,8 @@
         <div class="fila"><div class="txt"><b>Idioma de la app</b></div>${sel("idioma_ui", [["es", "Español"], ["en", "English"]])}</div>
         <div class="fila"><div class="txt"><b>Carpeta de grabaciones</b><small data-sin-traducir>${esc(E.carpeta)}</small></div><button class="boton" data-accion="carpeta-base">Abrir</button></div></div>
       <div class="seccion"><h3>Acerca de Graba</h3><p style="margin:0 0 8px;color:var(--suave)">Graba <span data-sin-traducir>${esc(E.version)}</span> · Gratis y de código abierto.</p>
+        <div class="fila"><div class="txt"><b>Actualizaciones</b><small>${E.buscando === "buscando" ? "Buscando…" : E.buscando === "alDia" ? "Estás en la última versión." : E.buscando === "sinConexion" ? "No pude revisar: ¿hay internet?" : E.actualizacion?.hay ? "Hay una versión nueva." : "Graba revisa sola cada 6 horas."}</small></div>
+          ${E.actualizacion?.hay ? `<button class="boton principal" data-accion="actualizar">Actualizar</button>` : `<button class="boton" data-accion="buscar-act" ${E.buscando === "buscando" ? "disabled" : ""}>Buscar actualizaciones</button>`}</div>
         <div class="enlaces"><a href="#" data-enlace="${ENLACES.sitio}">Sitio web</a><a href="#" data-enlace="${ENLACES.codigo}">Código</a><a href="#" data-enlace="${ENLACES.comunidad}">Comunidad</a></div></div>
       <div class="pie-dialogo"><button class="boton principal" data-accion="cerrar">Listo</button></div></div></div>`;
   }
@@ -386,6 +403,10 @@
       case "grabar": return host.enviar("grabar");
       case "ajustes": E.ajustes = true; return render();
       case "cerrar": E.ajustes = false; E.borrar = null; if (!E.corregir?.enviando) E.corregir = null; return render();
+      case "actualizar": E.act = { paso: "1", texto: tr("Descargando la versión nueva…") }; E.ajustes = false; host.enviar("actualizar"); return render();
+      case "act-cerrar": E.act = null; return render();
+      case "act-despues": E.actOculto = true; return render();
+      case "buscar-act": E.buscando = "buscando"; host.enviar("buscarActualizacion"); return render();
       case "guion-nuevo": E.guion = { paso: "pedir", idea: "", minutos: 3, para: "youtube", archivos: [] }; render(); return $("#guion-idea")?.focus();
       case "cerrar-guion": E.guion = null; return render();
       case "guion-archivos": leerCamposGuion(); return host.enviar("elegirArchivos");
@@ -433,9 +454,10 @@
   // ───────────── Lo que manda la app ─────────────
   window.Graba = {
     async estado(e) {
-      const antes = JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos]);
+      const antes = JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos, E.actualizacion]);
       Object.assign(E, { fase: e.fase, grabaciones: e.grabaciones || [], config: e.config || {}, ias: e.ias || [], modelos: e.modelos || { lista: [] },
-        permisos: e.permisos || {}, carpeta: e.carpeta || "", version: e.version || "", procesando: e.procesando });
+        permisos: e.permisos || {}, carpeta: e.carpeta || "", version: e.version || "", procesando: e.procesando,
+        actualizacion: e.actualizacion || { hay: false } });
       if (e.seleccionar) { E.sel = e.seleccionar; E.pestana = "notas"; }
       // Si la carpeta cambió de nombre al terminar (queda con el título), se sigue la misma graba.
       if (E.sel && !E.grabaciones.some((t) => t.ruta === E.sel)) {
@@ -448,8 +470,10 @@
       await cargarIdioma();
       if (e.aviso) toast(e.aviso);
       // No se repinta si nada cambió (así el video no se reinicia cada segundo).
-      if (JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos]) !== antes || e.seleccionar || !$("#app").innerHTML) render();
+      if (JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos, E.actualizacion]) !== antes || e.seleccionar || !$("#app").innerHTML) render();
     },
+    actualizacionRevisada(r) { E.buscando = r.hay ? null : r.sinConexion ? "sinConexion" : "alDia"; if (r.hay) { E.actualizacion = r; E.actOculto = false; } render(); },
+    actualizacionProgreso(d) { E.act = d; render(); },
     archivosElegidos(lista) {
       if (!E.guion) return;
       leerCamposGuion();
@@ -489,6 +513,8 @@
         if (p >= 1) { clearInterval(iv); DEMO.modelos.lista.find((m) => m.id === d.id).listo = true; DEMO.config.modelo = d.id; window.Graba.modeloListo({ id: d.id, ok: true }); enviar(); } }, 300);
     }
     if (accion === "permiso") { DEMO.permisos[d.tipo] = true; return enviar(); }
+    if (accion === "buscarActualizacion") return setTimeout(() => window.Graba.actualizacionRevisada({ hay: false }), 500);
+    if (accion === "actualizar") { let n = 1; const iv = setInterval(() => { window.Graba.actualizacionProgreso({ paso: String(n), texto: ["", "Descargando la versión nueva…", "Preparando la versión nueva…", "Instalando: Graba se cerrará y volverá a abrirse sola"][n], pct: n * 33 }); if (++n > 3) clearInterval(iv); }, 700); return; }
     if (accion === "elegirArchivos") return window.Graba.archivosElegidos([{ ruta: "/demo/presentacion.pdf", nombre: "presentacion.pdf" }]);
     if (accion === "crearGuion") return setTimeout(() => window.Graba.guionCreado({ ok: true, titulo: "Presupuesto en 3 minutos",
       guion: "¿Se te va la plata y no sabes en qué? En tres minutos lo arreglamos.\n\n[muestra la diapositiva 1]\n\nHola, soy Ana. Hoy armamos un presupuesto simple." }), 800);

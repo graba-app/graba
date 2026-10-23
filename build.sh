@@ -16,4 +16,6 @@ mkdir -p "$HOME/Applications"
 pkill -x Graba 2>/dev/null || true
 rm -rf "$APP"
 ditto "$RAIZ/dist/Graba.app" "$APP"
+# La app sabe que viene de este checkout: se actualiza con git pull (Ajustes → Buscar actualizaciones).
+mkdir -p "$HOME/Graba/.graba" && echo "$RAIZ" > "$HOME/Graba/.graba/desarrollo"
 echo "Instalada en $APP ($(du -sh "$APP" | cut -f1))"

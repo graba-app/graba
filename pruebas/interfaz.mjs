@@ -27,7 +27,7 @@ const esDato = (t) => demo.includes(t) || /^(Graba|Claude|ChatGPT \(Codex\)|Gemi
 
 const VISTAS = ["E=>{E.sel=E.grabaciones[1].ruta}", ...["notas", "guion", "youtube", "subtitulos", "transcripcion"].map((t) => `E=>{E.pestana='${t}'}`),
   "E=>{E.sel=E.grabaciones[0].ruta}", "E=>{E.sel=E.grabaciones[2].ruta}", "E=>{E.sel=E.grabaciones[1].ruta;E.corregir={ruta:E.sel,texto:''}}", "E=>{E.corregir={ruta:E.sel,texto:'x',enviando:true}}", "E=>{E.corregir=null;E.guion={paso:'pedir',idea:'',minutos:3,para:'youtube',archivos:[{ruta:'/x/a.pdf',nombre:'presentacion.pdf'}],error:'x'}}", "E=>{E.guion.paso='creando'}", "E=>{E.guion={paso:'listo',titulo:'Presupuesto',texto:'Hola, soy Ana.'}}", "E=>{E.guion=null;E.ajustes=true}", "E=>{E.ajustes=false;E.borrar='x'}",
-  "E=>{E.borrar=null;E.grabaciones=[]}"];
+  "E=>{E.borrar=null;E.actualizacion={hay:true,detalle:'Versión 0.2.0'}}", "E=>{E.act={paso:'2',texto:'Preparando la versión nueva…',pct:40}}", "E=>{E.act={paso:'error',texto:'x'}}", "E=>{E.act=null;E.buscando='alDia';E.ajustes=true}", "E=>{E.ajustes=false;E.grabaciones=[]}"];
 const navegador = await chromium.launch();
 for (const [idioma, consulta] of [["español", ""], ["inglés", "?idioma=en"]]) {
   for (const bv of [false, true]) {

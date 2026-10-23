@@ -23,6 +23,7 @@ final class GrabaApp: NSObject, NSApplicationDelegate {
             Config.guardar(["idioma_audio": ["es", "en", "pt", "fr", "de", "it"].contains(sistema) ? sistema : "auto"])
         }
         BarraMenu.shared.instalar()
+        Actualizaciones.revisarCadaRato()
         // La primera vez (o si falta algo para funcionar) se abre la ventana con el asistente.
         if Config.texto("ia").isEmpty || !Modelos.lista.contains(where: Modelos.existe) { Ventana.shared.mostrar() }
     }
@@ -281,6 +282,7 @@ final class BarraMenu: NSObject, NSMenuDelegate {
             agregar("Micrófono", #selector(alternarMicrofono), marca: Config.bool("microfono"))
         }
         menu.addItem(.separator())
+        if Actualizaciones.disponible["hay"] as? Bool == true { agregar("Hay una versión nueva: actualizar…", #selector(abrir)) }
         agregar("Abrir Graba", #selector(abrir), tecla: "o")
         agregar("Abrir la carpeta de grabaciones", #selector(carpeta))
         menu.addItem(.separator())
