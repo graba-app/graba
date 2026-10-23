@@ -9,7 +9,7 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
     private var ventana: NSWindow?
     private var web: WKWebView?
     private var lista = false
-    private var pendiente: [String: Any] = [:]
+    fileprivate(set) var pendiente: [String: Any] = [:]
     private var refresco: Timer?
 
     func mostrar(seleccionar ruta: String? = nil, aviso: String? = nil) {
@@ -138,6 +138,18 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
             }
         case "permiso":
             Permisos.pedir(d["tipo"] as? String ?? "") { Ventana.shared.enviarEstado() }
+        case "corregir":
+            // "Dice Grava y es Graba": la IA corrige todo el texto y las palabras mal transcritas también en subtítulos.
+            let texto = (d["texto"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard rutaValida, !texto.isEmpty else { return }
+            let instr = FileManager.default.temporaryDirectory.appendingPathComponent("graba-instruccion-\(UUID().uuidString).txt")
+            try? texto.write(to: instr, atomically: true, encoding: .utf8)
+            Procesador.correrJSON("corregir.py", [ruta, instr.path]) { r in
+                try? FileManager.default.removeItem(at: instr)
+                Ventana.shared.llamar("corregido", r)
+                if let c = r["carpeta"] as? String { Ventana.shared.pendiente["seleccionar"] = c }
+                Ventana.shared.enviarEstado()
+            }
         case "teleprompter":
             // El guion de una grabación queda listo en el teleprompter para la próxima (solo lo ve la persona).
             Config.guardar(["teleprompter_texto": d["texto"] as? String ?? "", "teleprompter": true])

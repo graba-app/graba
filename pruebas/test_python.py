@@ -161,6 +161,65 @@ class Procesar(unittest.TestCase):
         self.assertIn("No se escuchó voz", open(os.path.join(r["carpeta"], "grabacion.md"), encoding="utf-8").read())
 
 
+class Corregir(unittest.TestCase):
+    def preparar(self):
+        ia_falsa(RESPUESTA.replace("Ana muestra", "Ana muestra Grava"))
+        c = nueva_grabacion()
+        sys.argv = ["procesar.py", c, os.path.join(DATOS, "p.json")]
+        procesar.main()
+        with open(os.path.join(DATOS, "p.json")) as f:
+            final = json.load(f)["carpeta"]
+        # La transcripción falsa no trae "Grava": se agrega para revisar que se corrija también ahí y en los subtítulos.
+        for nombre in ("grabacion.md", "subtitulos.srt"):
+            ruta = os.path.join(final, nombre)
+            with open(ruta, encoding="utf-8") as f:
+                t = f.read()
+            with open(ruta, "w", encoding="utf-8") as f:
+                f.write(t.replace("ordenar una planilla", "ordenar una planilla en Grava"))
+        instr = os.path.join(DATOS, "instr.txt")
+        with open(instr, "w", encoding="utf-8") as f:
+            f.write("dice Grava y es Graba")
+        return final, instr
+
+    def correr(self, carpeta, instr):
+        salida = os.path.join(DATOS, "c.json")
+        subprocess.run([sys.executable, os.path.join(RAIZ, "bin", "corregir.py"), carpeta, instr, salida], check=True, env=os.environ)
+        with open(salida) as f:
+            return json.load(f)
+
+    def test_corrige_todo_y_aprende(self):
+        carpeta, instr = self.preparar()
+        cuerpo = RESPUESTA.split("\n", 2)[2].replace("Ana muestra", "Ana muestra Graba")
+        ia_falsa("REEMPLAZOS: Grava => Graba\nVOCABULARIO: Graba\nCAMBIOS: Graba bien escrito.\n===GRABACION===\n# Ordenar una planilla en Graba\n\n" + cuerpo)
+        r = self.correr(carpeta, instr)
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["reemplazos"], 1)
+        final = r["carpeta"]
+        self.assertTrue(final.endswith("Ordenar una planilla en Graba"))
+        with open(os.path.join(final, "grabacion.md"), encoding="utf-8") as f:
+            md = f.read()
+        self.assertIn('titulo: "Ordenar una planilla en Graba"', md)
+        self.assertIn("Ana muestra Graba", md)
+        self.assertIn("ordenar una planilla en Graba", md)  # transcripción
+        self.assertNotIn("Grava", md)
+        with open(os.path.join(final, "subtitulos.srt"), encoding="utf-8") as f:
+            self.assertNotIn("Grava", f.read())
+        self.assertTrue(os.listdir(os.path.join(final, ".respaldos")))
+        with open(os.path.join(DATOS, ".graba", "vocabulario.txt"), encoding="utf-8") as f:
+            self.assertIn("Graba", f.read())
+        self.assertIn("Graba", procesar.prompt_para([{"desde": 0, "hasta": 1000, "texto": "hola"}], 10))
+
+    def test_respuesta_rota_no_cambia_nada(self):
+        carpeta, instr = self.preparar()
+        with open(os.path.join(carpeta, "grabacion.md"), encoding="utf-8") as f:
+            antes = f.read()
+        ia_falsa("REEMPLAZOS: ninguno\n===GRABACION===\n# Solo un título")
+        r = self.correr(carpeta, instr)
+        self.assertFalse(r["ok"])
+        with open(os.path.join(carpeta, "grabacion.md"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), antes)
+
+
 class Ejemplos(unittest.TestCase):
     def test_respuesta_ejemplo_valida(self):
         titulo, cuerpo = procesar.interpretar(RESPUESTA, 140)

@@ -259,6 +259,29 @@ enum Procesador {
     private(set) static var enCurso: String?
     private static var cola: [(String, Bool)] = []
 
+    /// Corre otro script de bin/ (el último argumento es el JSON de salida) y devuelve lo que escribió.
+    static func correrJSON(_ script: String, _ args: [String], fin: @escaping @MainActor ([String: Any]) -> Void) {
+        let salida = FileManager.default.temporaryDirectory.appendingPathComponent("graba-\(UUID().uuidString).json")
+        let p = Process()
+        p.executableURL = Rutas.python
+        p.arguments = [Rutas.recursos.appendingPathComponent("bin/\(script)").path] + args + [salida.path]
+        var env = ProcessInfo.processInfo.environment
+        env["GRABA_RECURSOS"] = Rutas.recursos.path
+        env["GRABA_HERRAMIENTAS"] = Rutas.herramientas.path
+        env["PYTHONIOENCODING"] = "utf-8"
+        p.environment = env
+        p.standardOutput = FileHandle.nullDevice
+        p.standardError = FileHandle.nullDevice
+        p.terminationHandler = { _ in
+            Task { @MainActor in
+                let r = Grabaciones.leerJSON(salida)
+                try? FileManager.default.removeItem(at: salida)
+                fin(r.isEmpty ? ["ok": false, "error": Idioma.t("No pude terminar. Intenta de nuevo.")] : r)
+            }
+        }
+        do { try p.run() } catch { fin(["ok": false, "error": error.localizedDescription]) }
+    }
+
     static func encolar(_ carpeta: String, soloIA: Bool = false, alTerminar: @escaping @MainActor () -> Void) {
         cola.append((carpeta, soloIA))
         siguiente(alTerminar)

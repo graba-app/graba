@@ -26,7 +26,7 @@ const demo = fs.readFileSync(path.join(RAIZ, "ui", "demo.json"), "utf8");
 const esDato = (t) => demo.includes(t) || /^(Graba|Claude|ChatGPT \(Codex\)|Gemini|YouTube|English|Español|subtitulos\.srt)$/.test(t);
 
 const VISTAS = ["E=>{E.sel=E.grabaciones[1].ruta}", ...["notas", "guion", "youtube", "subtitulos", "transcripcion"].map((t) => `E=>{E.pestana='${t}'}`),
-  "E=>{E.sel=E.grabaciones[0].ruta}", "E=>{E.sel=E.grabaciones[2].ruta}", "E=>{E.ajustes=true}", "E=>{E.ajustes=false;E.borrar='x'}",
+  "E=>{E.sel=E.grabaciones[0].ruta}", "E=>{E.sel=E.grabaciones[2].ruta}", "E=>{E.sel=E.grabaciones[1].ruta;E.corregir={ruta:E.sel,texto:''}}", "E=>{E.corregir={ruta:E.sel,texto:'x',enviando:true}}", "E=>{E.corregir=null;E.ajustes=true}", "E=>{E.ajustes=false;E.borrar='x'}",
   "E=>{E.borrar=null;E.grabaciones=[]}"];
 const navegador = await chromium.launch();
 for (const [idioma, consulta] of [["español", ""], ["inglés", "?idioma=en"]]) {

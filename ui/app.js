@@ -186,6 +186,7 @@
       <div class="titulo-graba"><h1 data-sin-traducir>${esc(titulo)}</h1>
         <div class="acciones">
           <button class="icono" data-accion="carpeta" title="Mostrar en la carpeta" aria-label="Mostrar en la carpeta">📁</button>
+          ${e === "lista" ? `<button class="icono" data-accion="corregir" title="Corregir con tu IA" aria-label="Corregir con tu IA">✎</button>` : ""}
           ${e === "lista" ? `<button class="icono" data-accion="regenerar" title="Volver a escribir con la IA" aria-label="Volver a escribir con la IA">↻</button>` : ""}
           <button class="icono" data-accion="borrar" title="Borrar" aria-label="Borrar">🗑</button>
         </div></div>
@@ -275,6 +276,16 @@
   const IDIOMAS_AUDIO = [["auto", "Detectar solo"], ["es", "Español"], ["en", "Inglés"], ["pt", "Portugués"], ["fr", "Francés"], ["de", "Alemán"], ["it", "Italiano"]];
 
   function dialogos() {
+    if (E.corregir) {
+      const c = E.corregir;
+      return `<div class="capa"><div class="dialogo" role="dialog" aria-modal="true" aria-labelledby="t-corregir">
+        <h2 id="t-corregir">Corregir con tu IA</h2>
+        <p>Dile qué está mal, en tus palabras. Corrige el título, las notas, el guion, la descripción y, si una palabra quedó mal transcrita, también los subtítulos. Graba la recuerda para las próximas veces.</p>
+        <textarea id="corregir-texto" rows="4" placeholder="${esc(tr("Ej.: dice Grava y es Graba · el título tiene que hablar de presupuestos · el gancho más corto"))}" ${c.enviando ? "disabled" : ""} data-sin-traducir>${esc(c.texto || "")}</textarea>
+        ${c.error ? `<p class="error-txt" data-sin-traducir>${esc(c.error)}</p>` : ""}
+        <div class="pie-dialogo"><button class="boton" data-accion="cerrar">Cancelar</button>
+          <button class="boton principal" data-accion="enviar-correccion" ${c.enviando ? "disabled" : ""}>${c.enviando ? "Tu IA está corrigiendo…" : "Corregir"}</button></div></div></div>`;
+    }
     if (E.borrar) {
       return `<div class="capa"><div class="dialogo" role="dialog" aria-modal="true" aria-labelledby="t-borrar">
         <h2 id="t-borrar">¿Borrar esta grabación?</h2><p>Se va a la Papelera con el video, las notas y los subtítulos. Puedes recuperarla desde ahí.</p>
@@ -337,7 +348,15 @@
     switch (d.accion) {
       case "grabar": return host.enviar("grabar");
       case "ajustes": E.ajustes = true; return render();
-      case "cerrar": E.ajustes = false; E.borrar = null; return render();
+      case "cerrar": E.ajustes = false; E.borrar = null; if (!E.corregir?.enviando) E.corregir = null; return render();
+      case "corregir": E.corregir = { ruta: t?.ruta, texto: "" }; render(); return $("#corregir-texto")?.focus();
+      case "enviar-correccion": {
+        const texto = $("#corregir-texto")?.value.trim() || "";
+        if (!texto) return $("#corregir-texto")?.focus();
+        E.corregir = { ...E.corregir, texto, enviando: true, error: "" };
+        host.enviar("corregir", { ruta: E.corregir.ruta, texto });
+        return render();
+      }
       case "carpeta": return host.enviar("abrirCarpeta", { ruta: t?.ruta || "" });
       case "carpeta-base": return host.enviar("abrirCarpeta", {});
       case "regenerar": if (t) { host.enviar("procesar", { ruta: t.ruta, soloIA: true }); toast("Volviendo a escribir…"); } return;
@@ -356,7 +375,8 @@
     render();
   });
   document.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape" && (E.ajustes || E.borrar)) { E.ajustes = false; E.borrar = null; render(); }
+    if (ev.key === "Escape" && (E.ajustes || E.borrar || (E.corregir && !E.corregir.enviando))) { E.ajustes = false; E.borrar = null; E.corregir = null; render(); }
+    if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey) && E.corregir && !E.corregir.enviando) $("[data-accion=enviar-correccion]")?.click();
   });
 
   // ───────────── Lo que manda la app ─────────────
@@ -378,6 +398,11 @@
       if (e.aviso) toast(e.aviso);
       // No se repinta si nada cambió (así el video no se reinicia cada segundo).
       if (JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos]) !== antes || e.seleccionar || !$("#app").innerHTML) render();
+    },
+    corregido(r) {
+      if (r.ok) { E.corregir = null; if (r.carpeta) E.sel = r.carpeta; toast(r.reemplazos ? "Corregido, también en los subtítulos" : "Corregido"); }
+      else E.corregir = { ...(E.corregir || {}), enviando: false, error: r.error || "No se pudo corregir." };
+      render();
     },
     iaProbada(r) { delete E.probando[r.id]; E.resultadoIA[r.id] = r; if (r.ok) { E.config.ia = r.id; toast("Lista para usar"); } render(); },
     modeloProgreso(r) { E.descarga = { id: r.id, pct: r.pct }; render(); },
@@ -401,6 +426,7 @@
         if (p >= 1) { clearInterval(iv); DEMO.modelos.lista.find((m) => m.id === d.id).listo = true; DEMO.config.modelo = d.id; window.Graba.modeloListo({ id: d.id, ok: true }); enviar(); } }, 300);
     }
     if (accion === "permiso") { DEMO.permisos[d.tipo] = true; return enviar(); }
+    if (accion === "corregir") return setTimeout(() => window.Graba.corregido({ ok: true, carpeta: d.ruta, reemplazos: 1 }), 700);
     if (accion === "teleprompter") { DEMO.config.teleprompter = true; DEMO.config.teleprompter_texto = d.texto; return; }
   }
 

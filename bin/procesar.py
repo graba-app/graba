@@ -73,6 +73,15 @@ def segmentos(carpeta):
     return lista
 
 
+def vocabulario():
+    """Palabras que la persona corrigió antes (corregir.py): ayudan a transcribir y a escribir bien nombres y términos."""
+    try:
+        with open(os.path.join(ia.INTERNO, "vocabulario.txt"), encoding="utf-8") as f:
+            return [l.strip() for l in f if l.strip()][-60:]
+    except OSError:
+        return []
+
+
 def transcribir(carpeta):
     audio = os.path.join(carpeta, "audio.wav")
     if not os.path.exists(audio):
@@ -86,6 +95,8 @@ def transcribir(carpeta):
     hilos = str(max(2, min(8, (os.cpu_count() or 4) - 1)))
     cmd = [binario, "-m", modelo, "-l", ia.C.get("idioma_audio") or "auto", "-t", hilos, "-f", audio, "-oj",
            "-of", os.path.join(carpeta, "transcripcion"), "-np"]
+    if vocabulario():
+        cmd += ["--prompt", ", ".join(vocabulario()[-40:])]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=4 * 3600)
     if r.returncode != 0 or not os.path.exists(os.path.join(carpeta, "transcripcion.json")):
         raise RuntimeError("La transcripción falló: " + (r.stderr or "")[-300:])
@@ -105,7 +116,7 @@ def prompt_para(segs, duracion):
 con la pantalla y la cámara: alguien muestra y explica algo. Dura {reloj(duracion)}.
 
 Escribe TODO en el mismo idioma en que se habla en la transcripción. Respeta la voz de quien habla: claro, cercano y sin exagerar.
-No inventes datos que no estén en la transcripción. Responde SOLO con este formato, sin nada antes ni después
+No inventes datos que no estén en la transcripción.{(" Estas palabras y nombres se escriben así (si la transcripción los trae mal escritos, corrígelos): " + ", ".join(vocabulario()) + ".") if vocabulario() else ""} Responde SOLO con este formato, sin nada antes ni después
 (los títulos de sección van exactamente así, en español, aunque el contenido esté en otro idioma):
 
 TITULO: <título corto y claro de la grabación, máximo 8 palabras>

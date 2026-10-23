@@ -165,6 +165,16 @@
   "Teleprompter": "Teleprompter",
   "Solo tú lo ves: no sale en el video.": "Only you see it: it doesn't show up in the video.",
   "Empezar a grabar": "Start recording",
-  "Preparando la grabación…": "Preparing the recording…"
+  "Preparando la grabación…": "Preparing the recording…",
+  "Velocidad": "Speed",
+  "Corregir con tu IA": "Fix with your AI",
+  "Corregir": "Fix",
+  "Dile qué está mal, en tus palabras. Corrige el título, las notas, el guion, la descripción y, si una palabra quedó mal transcrita, también los subtítulos. Graba la recuerda para las próximas veces.": "Tell it what's wrong, in your own words. It fixes the title, notes, script, description and, if a word was transcribed wrong, the subtitles too. Graba remembers it for next time.",
+  "Ej.: dice Grava y es Graba · el título tiene que hablar de presupuestos · el gancho más corto": "E.g.: it says Grava and it's Graba · the title should be about budgets · a shorter hook",
+  "Tu IA está corrigiendo…": "Your AI is fixing it…",
+  "Corregido, también en los subtítulos": "Fixed, in the subtitles too",
+  "Corregido": "Fixed",
+  "No se pudo corregir.": "It couldn't be fixed.",
+  "No pude terminar. Intenta de nuevo.": "I couldn't finish. Try again."
  }
 }
