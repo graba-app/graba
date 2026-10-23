@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Graba — graba tu pantalla y tu IA te deja el guion para YouTube | Gratis y privado</title>
-<meta name="description" content="Graba tu pantalla con tu cámara, como Loom, pero todo en tu computador. Tu propia IA (Claude, ChatGPT o Gemini) escribe notas, guion para YouTube, títulos, descripción con capítulos y subtítulos. Gratis y de código abierto.">
+<meta name="description" content="Graba tu pantalla con tu cámara, como Loom, pero todo en tu computador. Tu IA prepara el guion para el teleprompter y después escribe notas, títulos, descripción con capítulos y subtítulos. Gratis, open source y sin fines de lucro. Mac, Windows y Linux.">
 <link rel="canonical" href="https://graba-app.github.io/graba/">
 <meta name="theme-color" content="#0d0c12">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -29,7 +29,7 @@
    "image": "https://graba-app.github.io/graba/img/compartir.png",
    "description": "Grabador de pantalla con cámara que transcribe en tu computador y usa tu propia IA para escribir notas, guion para YouTube, títulos, descripción con capítulos y subtítulos.",
    "applicationCategory": "MultimediaApplication",
-   "operatingSystem": "macOS 15",
+   "operatingSystem": "macOS 15, Windows 10, Windows 11, Linux",
    "license": "https://opensource.org/licenses/MIT",
    "isAccessibleForFree": true,
    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -41,6 +41,7 @@
    "mainEntity": [
     { "@type": "Question", "name": "¿Es una alternativa gratis a Loom?", "acceptedAnswer": { "@type": "Answer", "text": "Para grabar tu pantalla con tu cámara y tener el texto listo, sí: Graba es gratis, de código abierto y todo queda en tu computador. Si necesitas compartir un link al instante para que otros comenten, Loom sigue siendo mejor para eso." } },
     { "@type": "Question", "name": "¿Sube mi video a algún lado?", "acceptedAnswer": { "@type": "Answer", "text": "No. El video y la transcripción quedan en tu computador. A tu IA solo le llega el texto de la transcripción, con tu cuenta, igual que si lo pegaras en su chat." } },
+    { "@type": "Question", "name": "¿Por qué Graba es gratis?", "acceptedAnswer": { "@type": "Answer", "text": "Porque es un proyecto open source sin fines de lucro: no hay versión de pago, anuncios ni inversionistas. La mantiene su comunidad y la licencia es MIT." } },
     { "@type": "Question", "name": "¿Qué IA necesito?", "acceptedAnswer": { "@type": "Answer", "text": "La que ya tengas: Claude Code (Claude Pro o Max), Codex (cualquier plan de ChatGPT) o Antigravity CLI (Gemini). Se instala una vez y Graba la usa por ti." } }
    ]
   }
@@ -127,6 +128,13 @@
   .cmd code { flex: 1; min-width: 0; background: var(--fondo); border: 1px solid var(--linea); border-radius: 10px; padding: 11px 12px; font-size: 13px; overflow-x: auto; white-space: nowrap; color: #d9d6e3; }
   .cmd button { border: 1px solid var(--linea); background: var(--panel); color: var(--texto); border-radius: 10px; padding: 0 14px; font: 600 13px Inter, sans-serif; cursor: pointer; }
 
+  .instalar.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .carta.tuyo-so { border-color: var(--acento); }
+  .carta .chico { font-size: 14px; margin: 12px 0; }
+  .carta .boton { margin-top: auto; }
+  .carta { display: flex; flex-direction: column; }
+  .valor { padding: 20px; border-radius: 16px; background: var(--fondo2); border: 1px solid var(--linea); }
+  .valor b { display: block; font-family: var(--titulo); font-size: 19px; margin: 8px 0 4px; } .valor small { color: var(--suave); font-size: 14.5px; }
   details { border-bottom: 1px solid var(--linea); padding: 16px 0; max-width: 820px; }
   summary { cursor: pointer; font-weight: 600; font-size: 17.5px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
   summary::after { content: "+"; color: var(--acento); font-size: 22px; line-height: 1; } details[open] summary::after { content: "–"; }
@@ -142,7 +150,7 @@
 
   @media (max-width: 860px) {
     .barra nav { display: none; }
-    .pasos, .recibes, .tuyo, .instalar { grid-template-columns: minmax(0, 1fr); }
+    .pasos, .recibes, .tuyo, .instalar, .instalar.tres { grid-template-columns: minmax(0, 1fr); }
     .comunidad { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     section { padding: 56px 0; } .heroe { padding-top: 48px; }
   }
@@ -152,20 +160,20 @@
 <body>
 <header class="barra"><div class="ancho">
   <a class="marca" href="./"><img src="img/logo-512.png" alt="">Graba</a>
-  <nav><a href="#como"><span data-es>Cómo funciona</span><span data-en>How it works</span></a><a href="#recibes"><span data-es>Qué recibes</span><span data-en>What you get</span></a><a href="#instalar"><span data-es>Instalar</span><span data-en>Install</span></a><a href="#preguntas"><span data-es>Preguntas</span><span data-en>FAQ</span></a><a href="#comunidad"><span data-es>Comunidad</span><span data-en>Community</span></a></nav>
+  <nav><a href="#como"><span data-es>Cómo funciona</span><span data-en>How it works</span></a><a href="#recibes"><span data-es>Qué recibes</span><span data-en>What you get</span></a><a href="#instalar"><span data-es>Instalar</span><span data-en>Install</span></a><a href="#libre"><span data-es>Sin fines de lucro</span><span data-en>Non-profit</span></a><a href="#preguntas"><span data-es>Preguntas</span><span data-en>FAQ</span></a><a href="#comunidad"><span data-es>Comunidad</span><span data-en>Community</span></a></nav>
   <button class="idioma" id="idioma" aria-label="Idioma / Language">EN</button>
 </div></header>
 
 <main>
 <div class="heroe"><div class="ancho">
   <h1><span data-es>Graba tu pantalla. <em>Tu IA te deja el guion.</em></span><span data-en>Record your screen. <em>Your AI writes the script.</em></span></h1>
-  <p class="sub"><span data-es>Pantalla, cámara y voz, como Loom. Al terminar, Graba transcribe en tu computador y tu propia IA escribe notas, un guion para YouTube, títulos, descripción con capítulos y subtítulos.</span><span data-en>Screen, camera and voice, like Loom. When you finish, Graba transcribes on your computer and your own AI writes notes, a YouTube script, titles, a description with chapters and subtitles.</span></p>
+  <p class="sub"><span data-es>Pantalla, cámara y voz, como Loom. Tu IA prepara el guion y lo lees en un teleprompter que no sale en el video. Al terminar, Graba transcribe en tu computador y te deja notas, títulos, descripción con capítulos y subtítulos.</span><span data-en>Screen, camera and voice, like Loom. Your AI prepares the script and you read it on a teleprompter that doesn't show in the video. When you finish, Graba transcribes on your computer and gives you notes, titles, a description with chapters and subtitles.</span></p>
   <div class="acciones">
-    <a class="boton principal" id="descargar" href="#instalar"><span class="rec"></span><span data-es>Descargar para Mac</span><span data-en>Download for Mac</span></a>
+    <a class="boton principal" id="descargar" href="https://github.com/graba-app/graba/releases/latest/download/Graba-macOS.zip"><span class="rec"></span><span data-es>Descargar para <b class="so-nombre">Mac</b></span><span data-en>Download for <b class="so-nombre">Mac</b></span></a>
     <a class="boton" href="https://github.com/graba-app/graba"><span data-es>Ver el código</span><span data-en>View the code</span></a>
   </div>
-  <p class="aviso-so" id="aviso-so" hidden><span data-es>Por ahora Graba es para Mac. Windows y Linux vienen en camino:</span><span data-en>For now Graba is for Mac. Windows and Linux are on the way:</span> <a href="https://github.com/graba-app/graba/discussions"><span data-es>avísame</span><span data-en>keep me posted</span></a></p>
-  <div class="sellos"><span><span data-es>Gratis</span><span data-en>Free</span></span><span><span data-es>Código abierto</span><span data-en>Open source</span></span><span><span data-es>Nada se sube a ningún servidor</span><span data-en>Nothing is uploaded</span></span></div>
+  <p class="aviso-so"><span data-es>Para Mac, Windows y Linux ·</span><span data-en>For Mac, Windows and Linux ·</span> <a href="#instalar"><span data-es>otras formas de instalar</span><span data-en>other ways to install</span></a></p>
+  <div class="sellos"><span><span data-es>Gratis para siempre</span><span data-en>Free forever</span></span><span><span data-es>Open source</span><span data-en>Open source</span></span><span><span data-es>Sin fines de lucro</span><span data-en>Non-profit</span></span><span><span data-es>Nada sale de tu computador</span><span data-en>Nothing leaves your computer</span></span></div>
   <picture class="captura"><source srcset="img/app-oscuro.jpg"><img src="img/app-oscuro.jpg" alt="Graba mostrando títulos, descripción con capítulos y etiquetas para YouTube de una grabación" width="2360" height="1520"></picture>
 </div></div>
 
@@ -182,6 +190,19 @@
   </div>
 </div></section>
 
+<section id="guion"><div class="ancho recibes">
+  <img class="captura2" src="img/app-guion-ia.jpg" alt="Preparar un guion en Graba: idea, duración y archivos" width="2360" height="1520" loading="lazy">
+  <div>
+    <h2><span data-es>Llega y graba</span><span data-en>Just show up and record</span></h2>
+    <p class="bajada"><span data-es>Cuéntale a tu IA la idea, cuánto debe durar y súmale tu presentación. Te escribe lo que vas a decir, con el largo justo.</span><span data-en>Tell your AI the idea, how long it should be and add your slides. It writes what you'll say, at just the right length.</span></p>
+    <div class="lista-recibes">
+      <div><span class="ico">✨</span><span><b><span data-es>Guion con tu IA</span><span data-en>Script with your AI</span></b><small><span data-es>De una idea, un PDF, un PowerPoint o tus notas. Con indicaciones como [pasa a la diapositiva 3].</span><span data-en>From an idea, a PDF, a PowerPoint or your notes. With cues like [go to slide 3].</span></small></span></div>
+      <div><span class="ico">📜</span><span><b><span data-es>Teleprompter invisible</span><span data-en>Invisible teleprompter</span></b><small><span data-es>Avanza solo mientras grabas, cerca de la cámara. Tú lo ves; el video no.</span><span data-en>It scrolls by itself while you record, near the camera. You see it; the video doesn't.</span></small></span></div>
+      <div><span class="ico">🎛️</span><span><b><span data-es>Graba lo que quieras</span><span data-en>Record what you want</span></b><small><span data-es>Toda la pantalla, una ventana o un área. Cámara en círculo, cuadrada, horizontal o vertical, del tamaño que quieras.</span><span data-en>Whole screen, a window or an area. Camera as a circle, square, landscape or portrait, any size.</span></small></span></div>
+    </div>
+  </div>
+</div></section>
+
 <section id="recibes"><div class="ancho recibes">
   <div>
     <h2><span data-es>Lo que recibes</span><span data-en>What you get</span></h2>
@@ -192,6 +213,8 @@
       <div><span class="ico">🏷️</span><span><b><span data-es>Títulos y etiquetas</span><span data-en>Titles and tags</span></b><small><span data-es>Tres opciones de título y etiquetas para buscar.</span><span data-en>Three title options and tags for search.</span></small></span></div>
       <div><span class="ico">⏱️</span><span><b><span data-es>Descripción con capítulos</span><span data-en>Description with chapters</span></b><small><span data-es>Con los tiempos reales del video y el primero en 00:00, como pide YouTube.</span><span data-en>With the video's real times and the first one at 00:00, as YouTube requires.</span></small></span></div>
       <div><span class="ico">💬</span><span><b><span data-es>Subtítulos .srt</span><span data-en>.srt subtitles</span></b><small><span data-es>Listos para subir a YouTube Studio.</span><span data-en>Ready to upload to YouTube Studio.</span></small></span></div>
+      <div><span class="ico">✎</span><span><b><span data-es>Corrige con tus palabras</span><span data-en>Fix it in your own words</span></b><small><span data-es>"Dice Grava y es Graba": tu IA lo arregla en todo, también en los subtítulos, y lo aprende.</span><span data-en>"It says Grava and it's Graba": your AI fixes it everywhere, subtitles included, and learns it.</span></small></span></div>
+      <div><span class="ico">▶️</span><span><b><span data-es>Directo a YouTube</span><span data-en>Straight to YouTube</span></b><small><span data-es>Conecta tu canal y sube con título, capítulos, etiquetas y subtítulos, o que se suba solo al terminar. (Muy pronto)</span><span data-en>Connect your channel and upload with title, chapters, tags and subtitles, or have it upload by itself. (Coming soon)</span></small></span></div>
     </div>
   </div>
   <img class="captura2" src="img/app-oscuro-guion.jpg" alt="Guion para YouTube generado por la IA en Graba" width="2360" height="1520" loading="lazy">
@@ -215,14 +238,33 @@
     transcripcion.json</pre>
 </div></section>
 
+<section id="libre"><div class="ancho">
+  <h2><span data-es>Open source y sin fines de lucro</span><span data-en>Open source and non-profit</span></h2>
+  <p class="bajada"><span data-es>Graba no es una empresa. No hay versión de pago, ni anuncios, ni inversionistas, ni datos que vender. La hacemos entre todos y es de todos.</span><span data-en>Graba isn't a company. There's no paid version, no ads, no investors, no data to sell. We build it together and it belongs to everyone.</span></p>
+  <div class="comunidad">
+    <div class="valor">💸<b><span data-es>Gratis para siempre</span><span data-en>Free forever</span></b><small><span data-es>Todas las funciones, sin límites de largo ni marcas de agua.</span><span data-en>Every feature, no length limits, no watermarks.</span></small></div>
+    <div class="valor">🔒<b><span data-es>Sin nube ni rastreo</span><span data-en>No cloud, no tracking</span></b><small><span data-es>Ni cuentas, ni telemetría. Tus videos no salen de tu computador.</span><span data-en>No accounts, no telemetry. Your videos stay on your computer.</span></small></div>
+    <div class="valor">📖<b><span data-es>Código abierto (MIT)</span><span data-en>Open source (MIT)</span></b><small><span data-es>Cualquiera puede ver, revisar y mejorar lo que hace.</span><span data-en>Anyone can read, review and improve what it does.</span></small></div>
+    <div class="valor">🤝<b><span data-es>Hecho en comunidad</span><span data-en>Community-made</span></b><small><span data-es>Ideas, pruebas, traducciones y código de quien quiera sumarse.</span><span data-en>Ideas, testing, translations and code from anyone who joins.</span></small></div>
+  </div>
+</div></section>
+
 <section id="instalar"><div class="ancho">
   <h2><span data-es>Instalar</span><span data-en>Install</span></h2>
-  <p class="bajada"><span data-es>Mac con chip Apple y macOS 15 o posterior. La primera vez, Graba te ayuda a elegir tu IA y descarga el transcriptor (una sola vez).</span><span data-en>Mac with Apple chip and macOS 15 or later. The first time, Graba helps you choose your AI and downloads the transcriber (once).</span></p>
-  <div class="instalar">
-    <div class="carta"><h3><span data-es>Con un comando</span><span data-en>With one command</span></h3><p><span data-es>Abre la Terminal (⌘ Espacio, escribe «Terminal») y pega esto. Descarga la última versión, verifica su huella y la abre.</span><span data-en>Open Terminal (⌘ Space, type “Terminal”) and paste this. It downloads the latest version, verifies it and opens it.</span></p>
-      <div class="cmd"><code id="cmd-mac">curl -fsSL https://raw.githubusercontent.com/graba-app/graba/main/instalar.sh | bash</code><button data-copiar="cmd-mac"><span data-es>Copiar</span><span data-en>Copy</span></button></div></div>
-    <div class="carta"><h3><span data-es>O descargando la app</span><span data-en>Or by downloading</span></h3><p><span data-es>Descomprime y arrastra Graba a Aplicaciones. Como aún no está firmada por Apple, la primera vez ve a Ajustes del Sistema → Privacidad y seguridad y toca «Abrir igualmente».</span><span data-en>Unzip and drag Graba to Applications. Since it isn't signed by Apple yet, the first time go to System Settings → Privacy &amp; Security and click “Open Anyway”.</span></p>
-      <a class="boton principal" href="https://github.com/graba-app/graba/releases/latest/download/Graba-macOS.zip"><span data-es>Descargar para Mac</span><span data-en>Download for Mac</span></a></div>
+  <p class="bajada"><span data-es>La primera vez, Graba te ayuda a elegir tu IA y descarga el transcriptor (una sola vez). Después se actualiza sola: te avisa dentro de la app.</span><span data-en>The first time, Graba helps you pick your AI and downloads the transcriber (once). After that it updates itself: it lets you know inside the app.</span></p>
+  <div class="instalar tres">
+    <div class="carta" data-so="mac"><h3>🍎 Mac</h3><p><span data-es>Chip Apple y macOS 15 o posterior. En la Terminal:</span><span data-en>Apple chip and macOS 15 or later. In Terminal:</span></p>
+      <div class="cmd"><code id="cmd-mac">curl -fsSL https://raw.githubusercontent.com/graba-app/graba/main/instalar.sh | bash</code><button data-copiar="cmd-mac"><span data-es>Copiar</span><span data-en>Copy</span></button></div>
+      <p class="chico"><span data-es>O descarga la app, arrástrala a Aplicaciones y la primera vez ve a Ajustes del Sistema → Privacidad y seguridad → «Abrir igualmente».</span><span data-en>Or download the app, drag it to Applications and the first time go to System Settings → Privacy &amp; Security → “Open Anyway”.</span></p>
+      <a class="boton" href="https://github.com/graba-app/graba/releases/latest/download/Graba-macOS.zip"><span data-es>Descargar para Mac</span><span data-en>Download for Mac</span></a></div>
+    <div class="carta" data-so="windows"><h3>🪟 Windows</h3><p><span data-es>Windows 10 u 11. En PowerShell:</span><span data-en>Windows 10 or 11. In PowerShell:</span></p>
+      <div class="cmd"><code id="cmd-win">irm https://raw.githubusercontent.com/graba-app/graba/main/instalar.ps1 | iex</code><button data-copiar="cmd-win"><span data-es>Copiar</span><span data-en>Copy</span></button></div>
+      <p class="chico"><span data-es>O con el instalador. Si aparece «Windows protegió tu PC»: «Más información» → «Ejecutar de todas formas».</span><span data-en>Or with the installer. If “Windows protected your PC” shows up: “More info” → “Run anyway”.</span></p>
+      <a class="boton" href="https://github.com/graba-app/graba/releases/latest/download/Graba-Windows.exe"><span data-es>Descargar para Windows</span><span data-en>Download for Windows</span></a></div>
+    <div class="carta" data-so="linux"><h3>🐧 Linux</h3><p><span data-es>x86_64 con PulseAudio o PipeWire. En una terminal:</span><span data-en>x86_64 with PulseAudio or PipeWire. In a terminal:</span></p>
+      <div class="cmd"><code id="cmd-linux">curl -fsSL https://raw.githubusercontent.com/graba-app/graba/main/instalar.sh | bash</code><button data-copiar="cmd-linux"><span data-es>Copiar</span><span data-en>Copy</span></button></div>
+      <p class="chico"><span data-es>O el AppImage: dale permiso de ejecución y ábrelo (necesita FUSE).</span><span data-en>Or the AppImage: make it executable and open it (needs FUSE).</span></p>
+      <a class="boton" href="https://github.com/graba-app/graba/releases/latest/download/Graba-Linux.AppImage"><span data-es>Descargar AppImage</span><span data-en>Download AppImage</span></a></div>
   </div>
   <p class="aviso-so" style="margin-top:18px"><span data-es>¿No tienes una IA instalada? <a href="ia.html">Guía sin tecnicismos para Claude, ChatGPT o Gemini</a>.</span><span data-en>No AI installed yet? <a href="ia.html">Plain-language guide for Claude, ChatGPT or Gemini</a>.</span></p>
 </div></section>
@@ -233,7 +275,9 @@
   <details><summary><span data-es>¿Sube mi video a algún lado?</span><span data-en>Does it upload my video anywhere?</span></summary><p><span data-es>No. El video y la transcripción quedan en tu computador. A tu IA solo le llega el texto de la transcripción, con tu cuenta, igual que si lo pegaras en su chat.</span><span data-en>No. The video and transcript stay on your computer. Your AI only gets the transcript text, with your account, just as if you pasted it into its chat.</span></p></details>
   <details><summary><span data-es>¿Qué IA necesito?</span><span data-en>Which AI do I need?</span></summary><p><span data-es>La que ya tengas: Claude Code (Claude Pro o Max), Codex (cualquier plan de ChatGPT, incluso el gratis con límites) o Antigravity CLI (Gemini). Se instala una vez; <a href="ia.html">aquí está la guía</a>.</span><span data-en>The one you already have: Claude Code (Claude Pro or Max), Codex (any ChatGPT plan, even free with limits) or Antigravity CLI (Gemini). You install it once; <a href="ia.html">here's the guide</a>.</span></p></details>
   <details><summary><span data-es>¿Por qué mi Mac dice que no puede verificar la app?</span><span data-en>Why does my Mac say it can't verify the app?</span></summary><p><span data-es>Porque Graba todavía no paga el certificado de Apple que quita ese aviso: es un proyecto gratis. El código es abierto, cada versión se compila en GitHub a la vista de todos y el instalador de un comando revisa la huella (SHA-256). Para abrirla: Ajustes del Sistema → Privacidad y seguridad → «Abrir igualmente». Con el comando de la Terminal no aparece.</span><span data-en>Because Graba doesn't pay yet for the Apple certificate that removes that warning: it's a free project. The code is open, every version is built on GitHub in public and the one-command installer checks the fingerprint (SHA-256). To open it: System Settings → Privacy &amp; Security → “Open Anyway”. The Terminal command skips it.</span></p></details>
-  <details><summary><span data-es>¿Funciona en Windows o Linux?</span><span data-en>Does it work on Windows or Linux?</span></summary><p><span data-es>Todavía no: vienen en camino con la misma interfaz. Si quieres ayudar a probarlas, pásate por la <a href="https://github.com/graba-app/graba/discussions">comunidad</a>.</span><span data-en>Not yet: they're on the way with the same interface. If you want to help test them, drop by the <a href="https://github.com/graba-app/graba/discussions">community</a>.</span></p></details>
+  <details><summary><span data-es>¿Funciona en Windows y Linux?</span><span data-en>Does it work on Windows and Linux?</span></summary><p><span data-es>Sí: es la misma app con la misma interfaz. En Windows y Linux la transcripción usa el procesador (en Mac, el chip gráfico), así que puede ser algo más lenta; el modelo «Liviano» va bien en casi cualquier computador.</span><span data-en>Yes: same app, same interface. On Windows and Linux transcription runs on the CPU (on Mac, the GPU), so it can be a bit slower; the “Light” model runs well on almost any computer.</span></p></details>
+  <details><summary><span data-es>¿Por qué es gratis? ¿Quién la mantiene?</span><span data-en>Why is it free? Who maintains it?</span></summary><p><span data-es>Porque Graba es un proyecto open source sin fines de lucro: no vende nada ni a nadie. La mantiene una comunidad de personas que la usan; cualquiera puede sumar ideas, pruebas, traducciones o código. La licencia es MIT.</span><span data-en>Because Graba is a non-profit open-source project: it doesn't sell anything to anyone. It's maintained by a community of people who use it; anyone can add ideas, testing, translations or code. The license is MIT.</span></p></details>
+  <details><summary><span data-es>¿Cómo se actualiza?</span><span data-en>How does it update?</span></summary><p><span data-es>Sola: Graba revisa si hay una versión nueva al abrirse y cada 6 horas, y te avisa dentro de la app. Tocas Actualizar y listo; tus grabaciones no se tocan.</span><span data-en>By itself: Graba checks for a new version when it opens and every 6 hours, and lets you know inside the app. Click Update and you're done; your recordings aren't touched.</span></p></details>
   <details><summary><span data-es>¿En qué idiomas funciona?</span><span data-en>Which languages does it support?</span></summary><p><span data-es>La app está en español e inglés. La transcripción reconoce muchos idiomas y la IA escribe en el mismo idioma en que hablas.</span><span data-en>The app is in Spanish and English. Transcription recognizes many languages and the AI writes in the same language you speak.</span></p></details>
 </div></section>
 
@@ -266,8 +310,14 @@
   const poner = (l) => { html.lang = l; boton.textContent = l === "es" ? "EN" : "ES"; document.title = TITULOS[l]; };
   poner(guardado || ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en"));
   boton.onclick = () => { const l = html.lang === "es" ? "en" : "es"; poner(l); try { localStorage.setItem("graba-idioma", l); } catch (e) {} };
-  // En Windows o Linux todavía no hay descarga: se avisa en vez de bajar algo que no sirve.
-  if (/Windows|Linux|X11/i.test(navigator.userAgent) && !/Android/i.test(navigator.userAgent)) document.getElementById("aviso-so").hidden = false;
+  // El botón principal descarga lo de tu sistema, y su tarjeta queda destacada.
+  const ua = navigator.userAgent;
+  const so = /Windows/i.test(ua) ? "windows" : /Linux|X11/i.test(ua) && !/Android/i.test(ua) ? "linux" : "mac";
+  const DESCARGAS = { mac: "Graba-macOS.zip", windows: "Graba-Windows.exe", linux: "Graba-Linux.AppImage" };
+  const NOMBRES = { mac: "Mac", windows: "Windows", linux: "Linux" };
+  document.getElementById("descargar").href = "https://github.com/graba-app/graba/releases/latest/download/" + DESCARGAS[so];
+  document.querySelectorAll(".so-nombre").forEach((n) => (n.textContent = NOMBRES[so]));
+  document.querySelector(`.carta[data-so="${so}"]`)?.classList.add("tuyo-so");
   document.querySelectorAll("[data-copiar]").forEach((b) => b.onclick = async () => {
     try { await navigator.clipboard.writeText(document.getElementById(b.dataset.copiar).textContent); } catch (e) {}
     const antes = b.innerHTML; b.textContent = html.lang === "es" ? "¡Copiado!" : "Copied!"; setTimeout(() => (b.innerHTML = antes), 1600);
