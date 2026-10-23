@@ -1,6 +1,6 @@
 :root {
   --fondo: #f6f5f9; --panel: #ffffff; --lateral: #efedf4; --texto: #17151c; --suave: #6b6876; --linea: #e3e0ea;
-  --acento: #6d5dfc; --sobre-acento: #ffffff; --acento-suave: rgba(109, 93, 252, 0.12); --rojo: #e5484d; --verde: #2f9e6b;
+  --acento: #5a48f5; --sobre-acento: #ffffff; --acento-suave: rgba(90, 72, 245, 0.12); --rojo: #e5484d; --verde: #2f9e6b;
   --radio: 12px; --sombra: 0 1px 2px rgba(20, 16, 40, 0.06), 0 6px 20px rgba(20, 16, 40, 0.06);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 14px; color-scheme: light dark;
 }

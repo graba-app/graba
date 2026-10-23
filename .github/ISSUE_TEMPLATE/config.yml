@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Conversar, preguntar o mostrar lo que armaste
+    url: https://github.com/graba-app/graba/discussions
+    about: Dudas de uso, ideas a medio cocinar y lo que armaste con tus grabaciones. / Questions, rough ideas and what you built with your recordings.
+  - name: 🤖 Ayuda para instalar tu IA
+    url: https://graba-app.github.io/graba/ia.html
+    about: Guía paso a paso para Claude Code, Codex o Antigravity CLI. / Step-by-step AI setup guide.
+  - name: 🌌 Universos e idiomas
+    url: https://github.com/graba-app/graba-catalogo/issues/new/choose
+    about: Proponer o comentar un universo, o ayudar con una traducción. / Propose a universe or help translate.

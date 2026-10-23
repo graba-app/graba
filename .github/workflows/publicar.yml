@@ -1,0 +1,85 @@
+# Publica una versión de Graba sola: basta con subir el número de versión en app/Info.plist (y escritorio/package.json) y hacer
+# push a main. Compila, arma cada descarga con su huella SHA-256 y crea el Release vX.Y.Z. Si la versión ya existe, no hace nada.
+name: Publicar versión
+on:
+  push:
+    branches: [main]
+    paths: ["app/Info.plist"]
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      publicar: ${{ steps.v.outputs.publicar }}
+      escritorio: ${{ steps.v.outputs.escritorio }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pruebas rápidas (no se publica una versión rota)
+        run: python3 pruebas/contrato.py && python3 pruebas/test_python.py
+      - id: v
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then V="${GITHUB_REF_NAME#v}"
+          else V=$(python3 -c "import plistlib;print(plistlib.load(open('app/Info.plist','rb'))['CFBundleShortVersionString'])"); fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          [ -f escritorio/package.json ] && echo "escritorio=true" >> "$GITHUB_OUTPUT" || echo "escritorio=false" >> "$GITHUB_OUTPUT"
+          if gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "publicar=false" >> "$GITHUB_OUTPUT"; echo "v$V ya está publicada: nada que hacer."
+          else echo "publicar=true" >> "$GITHUB_OUTPUT"; echo "Se publicará v$V"; fi
+
+  macos:
+    needs: version
+    if: needs.version.outputs.publicar == 'true'
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Versión en Info.plist
+        run: /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ needs.version.outputs.version }}" app/Info.plist
+      - name: Empaquetar
+        run: bash herramientas/empaquetar.sh
+      - uses: actions/upload-artifact@v4
+        with: { name: macos, path: "dist/Graba-macOS.zip*" }
+
+  windows-linux:
+    needs: version
+    if: needs.version.outputs.publicar == 'true' && needs.version.outputs.escritorio == 'true'
+    runs-on: ubuntu-24.04
+    defaults: { run: { working-directory: escritorio } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Herramientas
+        run: sudo apt-get update && sudo apt-get install -y nsis cmake && python3 -m pip install --user --break-system-packages ziglang
+      - name: Versión
+        run: npm version --no-git-tag-version --allow-same-version "${{ needs.version.outputs.version }}"
+      - run: npm ci
+      - name: Linux (AppImage y tar.gz)
+        run: |
+          bash herramientas/preparar.sh linux
+          npx electron-builder --linux AppImage tar.gz
+          (cd dist && sha256sum Graba-Linux.AppImage > Graba-Linux.AppImage.sha256 && sha256sum Graba-Linux.tar.gz > Graba-Linux.tar.gz.sha256)
+      - name: Windows (instalador)
+        run: |
+          bash herramientas/preparar.sh windows
+          npx electron-builder --win dir
+          bash herramientas/instalador-windows.sh
+      - uses: actions/upload-artifact@v4
+        with: { name: escritorio, path: "escritorio/dist/Graba-*" }
+
+  release:
+    needs: [version, macos, windows-linux]
+    if: always() && needs.macos.result == 'success' && needs.windows-linux.result != 'failure'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: descargas, merge-multiple: true }
+      - name: Crear el Release
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          V="v${{ needs.version.outputs.version }}"
+          gh release create "$V" descargas/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Graba $V" --generate-notes

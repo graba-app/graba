@@ -103,7 +103,7 @@
   }
   /** Markdown mínimo y seguro (todo se escapa): ### títulos, listas, **negritas** y [indicaciones en pantalla]. */
   function mdHTML(texto) {
-    const linea = (l) => esc(l).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[([^\]]{2,80})\]/g, '<span class="indicacion">[$1]</span>');
+    const linea = (l) => esc(l).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[([^\]]{2,160})\]/g, '<span class="indicacion">[$1]</span>');
     let html = "", lista = null;
     const cerrar = () => { if (lista) { html += `</${lista}>`; lista = null; } };
     for (const l of String(texto || "").split("\n")) {
@@ -216,7 +216,7 @@
     } else if (E.pestana === "subtitulos") {
       html = `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Subtítulos (.srt)</h3>
         <button class="boton" data-accion="carpeta">Mostrar el archivo</button></div>
-        <p>El archivo <b>subtitulos.srt</b> está en la carpeta de esta grabación. En YouTube Studio: Subtítulos → Agregar idioma → Subir archivo → "Con sincronización".</p></section>`;
+        <p>El archivo subtitulos.srt está en la carpeta de esta grabación. En YouTube Studio: Subtítulos → Agregar idioma → Subir archivo → "Con sincronización".</p></section>`;
     } else {
       const lineas = (s["Transcripción"] || "").split("\n").filter(Boolean).map((l) => {
         const m = l.match(/^\[((?:\d+:)?\d{1,2}:\d{2})\]\s*(.*)$/);
@@ -233,8 +233,8 @@
       <h1>Haz tu primera grabación</h1>
       <p>Graba tu pantalla con tu cámara y tu voz. Al terminar, la app transcribe en tu computador y tu IA te deja todo listo.</p>
       <div class="pasos-vacio">
-        <div><b>1</b><span>Toca <b>Grabar</b> (o el ícono ● de la barra de menú) y explica lo que quieras mostrar.</span></div>
-        <div><b>2</b><span>Toca <b>Terminar</b>. Graba transcribe en tu computador, sin subir nada.</span></div>
+        <div><b>1</b><span>Toca Grabar (o el ícono ● de la barra de menú) y explica lo que quieras mostrar.</span></div>
+        <div><b>2</b><span>Toca Terminar: Graba transcribe en tu computador, sin subir nada.</span></div>
         <div><b>3</b><span>Recibes notas, un guion para YouTube, títulos, descripción con capítulos y subtítulos.</span></div>
       </div>
       <button class="boton principal" data-accion="grabar" ${E.fase === "inactiva" ? "" : "disabled"}><span class="punto"></span><span>Grabar</span></button></div>`;
