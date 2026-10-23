@@ -117,6 +117,8 @@
     cerrar();
     return html;
   }
+  /** El guion como texto corrido para leer: sin títulos de sección, viñetas ni negritas (las indicaciones [entre corchetes] quedan). */
+  const paraTeleprompter = (t) => String(t || "").replace(/^#{1,6}\s+.*$/gm, "").replace(/^\s*(\d+[.)]|[-*•])\s+/gm, "").replace(/\*\*/g, "").replace(/\n{3,}/g, "\n\n").trim();
   const reloj = (s) => { s = Math.max(0, Math.round(s || 0)); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
     return h ? `${h}:${String(m).padStart(2, "0")}:${String(x).padStart(2, "0")}` : `${String(m).padStart(2, "0")}:${String(x).padStart(2, "0")}`; };
   const aSegundos = (t) => t.split(":").reduce((a, p) => a * 60 + Number(p), 0);
@@ -203,7 +205,10 @@
     if (E.pestana === "notas") {
       html = bloque("Resumen", mdHTML(s["Resumen"]), s["Resumen"] || "") + (s["Notas"] ? bloque("Notas", mdHTML(s["Notas"]), s["Notas"]) : "");
     } else if (E.pestana === "guion") {
-      html = bloque("Guion para YouTube", mdHTML(s["Guion para YouTube"]), s["Guion para YouTube"] || "");
+      const guion = s["Guion para YouTube"] || "";
+      html = `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Guion para YouTube</h3>
+        <button class="boton" data-teleprompter="${esc(paraTeleprompter(guion))}" title="Para regrabarlo leyendo: solo tú lo ves">Usar en el teleprompter</button>
+        <button class="boton" data-copiar="${esc(guion)}">Copiar</button></div><div class="md" data-sin-traducir>${mdHTML(guion)}</div></section>`;
     } else if (E.pestana === "youtube") {
       const titulos = (pub["Títulos"] || "").split("\n").map((l) => l.replace(/^\s*(\d+[.)]|[-*•])\s*/, "").trim()).filter(Boolean);
       const capitulos = pub["Capítulos"] || "", descripcion = pub["Descripción"] || "";
@@ -313,7 +318,7 @@
 
   // ───────────── Eventos ─────────────
   document.addEventListener("click", (ev) => {
-    const el = ev.target.closest("[data-accion],[data-sel],[data-pestana],[data-copiar],[data-alternar],[data-probar],[data-modelo],[data-modelo-usar],[data-permiso],[data-bv],[data-enlace],[data-ir]");
+    const el = ev.target.closest("[data-accion],[data-sel],[data-pestana],[data-copiar],[data-teleprompter],[data-alternar],[data-probar],[data-modelo],[data-modelo-usar],[data-permiso],[data-bv],[data-enlace],[data-ir]");
     if (!el) return;
     const d = el.dataset;
     if (d.enlace) { ev.preventDefault(); return host.enviar("abrirEnlace", { url: d.enlace }); }
@@ -321,6 +326,7 @@
     if (d.sel) { E.sel = d.sel; return render(); }
     if (d.pestana) { E.pestana = d.pestana; return render(); }
     if (d.copiar != null) return copiar(d.copiar);
+    if (d.teleprompter != null) { host.enviar("teleprompter", { texto: d.teleprompter }); return toast("Listo: lo verás en el teleprompter al grabar"); }
     if (d.alternar) { E.config[d.alternar] = !E.config[d.alternar]; host.enviar("config", { [d.alternar]: E.config[d.alternar] }); return render(); }
     if (d.probar) { E.probando[d.probar] = true; delete E.resultadoIA[d.probar]; host.enviar("probarIA", { id: d.probar }); return render(); }
     if (d.modelo) { E.descarga = { id: d.modelo, pct: 0 }; host.enviar("descargarModelo", { id: d.modelo }); return render(); }
@@ -362,7 +368,7 @@
       if (e.seleccionar) { E.sel = e.seleccionar; E.pestana = "notas"; }
       // Si la carpeta cambió de nombre al terminar (queda con el título), se sigue la misma graba.
       if (E.sel && !E.grabaciones.some((t) => t.ruta === E.sel)) {
-        const prefijo = E.sel.split("/").pop().slice(0, 10);
+        const prefijo = E.sel.split(/[\\/]/).pop().slice(0, 10); // en Windows las rutas van con barra invertida
         E.sel = E.grabaciones.find((t) => t.nombre.startsWith(prefijo))?.ruta || E.grabaciones[0]?.ruta || null;
       }
       if (!E.sel && E.grabaciones.length) E.sel = E.grabaciones[0].ruta;
@@ -377,7 +383,7 @@
     modeloProgreso(r) { E.descarga = { id: r.id, pct: r.pct }; render(); },
     modeloListo(r) { E.descarga = null; if (r.ok) { E.config.modelo = r.id; toast("Descargado"); } else toast(r.error || "No se pudo descargar"); render(); },
     _probar(f) { f(E); render(); },
-    _pruebas: { parsearGrabacion, mdHTML, reloj },
+    _pruebas: { parsearGrabacion, mdHTML, reloj, paraTeleprompter },
   };
 
   // ───────────── Vista previa en el navegador (datos ficticios de demo.json) ─────────────
@@ -395,6 +401,7 @@
         if (p >= 1) { clearInterval(iv); DEMO.modelos.lista.find((m) => m.id === d.id).listo = true; DEMO.config.modelo = d.id; window.Graba.modeloListo({ id: d.id, ok: true }); enviar(); } }, 300);
     }
     if (accion === "permiso") { DEMO.permisos[d.tipo] = true; return enviar(); }
+    if (accion === "teleprompter") { DEMO.config.teleprompter = true; DEMO.config.teleprompter_texto = d.texto; return; }
   }
 
   const LOGO = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#17151c"/><rect x="12" y="15" width="40" height="28" rx="5" fill="none" stroke="#b9b0ff" stroke-width="4"/><circle cx="21" cy="44" r="10" fill="#6d5dfc" stroke="#17151c" stroke-width="3"/><circle cx="44" cy="22" r="3.2" fill="#ff5d5d"/></svg>`;

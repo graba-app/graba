@@ -138,6 +138,9 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
             }
         case "permiso":
             Permisos.pedir(d["tipo"] as? String ?? "") { Ventana.shared.enviarEstado() }
+        case "teleprompter":
+            // El guion de una grabación queda listo en el teleprompter para la próxima (solo lo ve la persona).
+            Config.guardar(["teleprompter_texto": d["texto"] as? String ?? "", "teleprompter": true])
         case "abrirEnlace":
             if let u = URL(string: d["url"] as? String ?? ""), u.scheme == "https" { NSWorkspace.shared.open(u) }
         default:

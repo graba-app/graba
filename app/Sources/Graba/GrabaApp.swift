@@ -32,7 +32,7 @@ final class GrabaApp: NSObject, NSApplicationDelegate {
 
 @MainActor
 enum Estado {
-    enum Fase: String { case inactiva, cuenta, grabando, terminando }
+    enum Fase: String { case inactiva, preparando, cuenta, grabando, terminando }
     static var fase = Fase.inactiva { didSet { BarraMenu.shared.actualizar() } }
     static var segundos = 0
     private static let grabadora = Grabadora()
@@ -40,6 +40,7 @@ enum Estado {
     private static var reloj: Timer?
     private static var cancelada = false
 
+    /// Primero se elige qué grabar (pantalla, ventana o área), la cámara y el teleprompter; después viene la cuenta 3-2-1.
     static func grabar() {
         guard fase == .inactiva else { return }
         guard CGPreflightScreenCaptureAccess() else {
@@ -47,10 +48,26 @@ enum Estado {
             Ventana.shared.mostrar()
             return
         }
-        let pantalla = Grabadora.pantallaActiva()
-        let microfono = Config.bool("microfono") && AVCaptureDevice.authorizationStatus(for: .audio) != .denied
         Ventana.shared.ocultar()
-        if Config.bool("camara") { Burbuja.shared.mostrar(en: pantalla) }
+        fase = .preparando
+        Preparar.shared.mostrar(empezar: { iniciar($0) }, cancelar: { fase = .inactiva })
+    }
+
+    private static func iniciar(_ p: Preparacion) {
+        let pantalla = p.pantalla
+        let microfono = p.microfono && AVCaptureDevice.authorizationStatus(for: .audio) != .denied
+        let fuente: Grabadora.Fuente
+        switch p.modo {
+        case "ventana":
+            guard let id = p.ventanaElegida else { fase = .inactiva; return }
+            fuente = .ventana(id)
+            if let v = p.ventanas.first(where: { $0.id == id }) { NSRunningApplication(processIdentifier: v.pid)?.activate() }
+        case "area":
+            guard let r = p.area else { fase = .inactiva; return }
+            fuente = .area(pantalla, r)
+        default:
+            fuente = .pantalla(pantalla)
+        }
         Controles.shared.estado.segundos = 0
         Controles.shared.mostrar(en: pantalla, detener: { detener() }, cancelar: { cancelar() })
         fase = .cuenta
@@ -65,11 +82,14 @@ enum Estado {
             let c = Grabaciones.nueva()
             carpeta = c
             do {
-                try await grabadora.empezar(en: c.appendingPathComponent("video.mp4"),
-                                            excluyendo: [Controles.shared.ventana].compactMap { $0 }, microfono: microfono)
+                // Lo que solo ve la persona (controles, teleprompter, marco del área) queda fuera; la cámara siempre entra.
+                let fuera = [Controles.shared.ventana, Teleprompter.shared.ventana, MarcoArea.shared.id].compactMap { $0 }
+                try await grabadora.empezar(en: c.appendingPathComponent("video.mp4"), fuente: fuente, excluyendo: fuera,
+                                            incluyendo: [Burbuja.shared.ventana].compactMap { $0 }, microfono: microfono)
                 grabadora.alFallar = { mensaje in Task { @MainActor in fallo(mensaje) } }
                 fase = .grabando
                 segundos = 0
+                if p.teleprompter { Teleprompter.shared.empezar() }
                 reloj = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
                     Task { @MainActor in
                         segundos += 1
@@ -83,12 +103,19 @@ enum Estado {
         }
     }
 
+    /// Cierra todo lo que flota sobre la pantalla.
+    private static func limpiarFlotantes() {
+        Controles.shared.ocultar()
+        Burbuja.shared.ocultar()
+        Teleprompter.shared.ocultar()
+        MarcoArea.shared.ocultar()
+    }
+
     static func detener() {
         guard fase == .grabando, let c = carpeta else { if fase == .cuenta { cancelar() }; return }
         fase = .terminando
         reloj?.invalidate()
-        Controles.shared.ocultar()
-        Burbuja.shared.ocultar()
+        limpiarFlotantes()
         Task { @MainActor in
             let duracion = await grabadora.detener()
             fase = .inactiva
@@ -113,8 +140,7 @@ enum Estado {
         let estaba = fase
         fase = .terminando
         reloj?.invalidate()
-        Controles.shared.ocultar()
-        Burbuja.shared.ocultar()
+        limpiarFlotantes()
         Task { @MainActor in
             if estaba == .grabando { _ = await grabadora.detener() }
             if let c { try? FileManager.default.removeItem(at: c) }
@@ -127,8 +153,7 @@ enum Estado {
         let c = carpeta
         cancelada = true
         reloj?.invalidate()
-        Controles.shared.ocultar()
-        Burbuja.shared.ocultar()
+        limpiarFlotantes()
         Task { @MainActor in
             _ = await grabadora.detener()
             if let c { try? FileManager.default.removeItem(at: c) }
@@ -244,8 +269,8 @@ final class BarraMenu: NSObject, NSMenuDelegate {
         case .grabando, .cuenta:
             agregar("Terminar grabación", #selector(terminar))
             agregar("Descartar grabación", #selector(descartar))
-        case .terminando:
-            menu.addItem(NSMenuItem(title: Idioma.t("Guardando…"), action: nil, keyEquivalent: ""))
+        case .terminando, .preparando:
+            menu.addItem(NSMenuItem(title: Idioma.t(Estado.fase == .preparando ? "Preparando la grabación…" : "Guardando…"), action: nil, keyEquivalent: ""))
         case .inactiva:
             agregar("Grabar pantalla", #selector(grabar), tecla: "r")
             agregar("Cámara", #selector(alternarCamara), marca: Config.bool("camara"))

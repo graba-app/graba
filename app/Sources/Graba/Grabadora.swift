@@ -22,22 +22,56 @@ final class Grabadora: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Se
         return NSScreen.screens.first { NSMouseInRect(m, $0.frame, false) } ?? NSScreen.main ?? NSScreen.screens[0]
     }
 
-    @MainActor
-    func empezar(en archivo: URL, excluyendo ventanas: [CGWindowID], microfono: Bool) async throws {
-        let pantalla = Grabadora.pantallaActiva()
-        let id = (pantalla.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? CGMainDisplayID()
-        let contenido = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        guard let display = contenido.displays.first(where: { $0.displayID == id }) ?? contenido.displays.first else {
-            throw NSError(domain: "Graba", code: 1, userInfo: [NSLocalizedDescriptionKey: Idioma.t("No encontré la pantalla para grabar.")])
-        }
-        let excluidas = contenido.windows.filter { ventanas.contains($0.windowID) }
-        let filtro = SCContentFilter(display: display, excludingWindows: excluidas)
+    /// Qué se graba: toda una pantalla, una ventana (con la burbuja encima) o un área dibujada (coordenadas de Cocoa).
+    enum Fuente {
+        case pantalla(NSScreen)
+        case ventana(CGWindowID)
+        case area(NSScreen, CGRect)
+    }
 
-        // Hasta 1920 px de ancho (como un video de YouTube en 1080p), conservando la proporción y en números pares.
+    @MainActor
+    func empezar(en archivo: URL, fuente: Fuente, excluyendo ventanas: [CGWindowID], incluyendo extra: [CGWindowID], microfono: Bool) async throws {
+        let contenido = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        func displayDe(_ s: NSScreen) -> SCDisplay? {
+            let id = (s.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? CGMainDisplayID()
+            return contenido.displays.first { $0.displayID == id } ?? contenido.displays.first
+        }
+        let noEncontre = NSError(domain: "Graba", code: 1, userInfo: [NSLocalizedDescriptionKey: Idioma.t("No encontré lo que querías grabar.")])
+        let excluidas = contenido.windows.filter { ventanas.contains($0.windowID) }
+        var pantalla = Grabadora.pantallaActiva()
+        let display: SCDisplay
+        let filtro: SCContentFilter
+        var recorte: CGRect?  // en puntos, relativo a la pantalla, origen arriba a la izquierda
+        switch fuente {
+        case .pantalla(let s):
+            pantalla = s
+            guard let d = displayDe(s) else { throw noEncontre }
+            display = d
+            filtro = SCContentFilter(display: d, excludingWindows: excluidas)
+        case .area(let s, let r):
+            pantalla = s
+            guard let d = displayDe(s) else { throw noEncontre }
+            display = d
+            filtro = SCContentFilter(display: d, excludingWindows: excluidas)
+            recorte = CGRect(x: r.minX - s.frame.minX, y: s.frame.maxY - r.maxY, width: r.width, height: r.height)
+        case .ventana(let id):
+            guard let w = contenido.windows.first(where: { $0.windowID == id }) else { throw noEncontre }
+            let centro = CGPoint(x: w.frame.midX, y: w.frame.midY)
+            guard let d = contenido.displays.first(where: { $0.frame.contains(centro) }) ?? contenido.displays.first else { throw noEncontre }
+            display = d
+            pantalla = NSScreen.screens.first { ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == d.displayID } ?? pantalla
+            // Solo esa ventana y la burbuja de la cámara: lo que pase por encima no sale en el video.
+            let incluidas = [w] + contenido.windows.filter { extra.contains($0.windowID) }
+            filtro = SCContentFilter(display: d, including: incluidas)
+            recorte = w.frame.offsetBy(dx: -d.frame.minX, dy: -d.frame.minY).intersection(CGRect(x: 0, y: 0, width: d.frame.width, height: d.frame.height))
+        }
+
+        // Hasta 1920 px por lado (como un video de YouTube en 1080p), conservando la proporción y en números pares.
         let escala = pantalla.backingScaleFactor
-        let anchoNativo = Double(display.width) * escala, altoNativo = Double(display.height) * escala
-        let factor = min(1, 1920 / anchoNativo)
-        let ancho = Int(anchoNativo * factor) / 2 * 2, alto = Int(altoNativo * factor) / 2 * 2
+        let base = recorte?.size ?? CGSize(width: display.width, height: display.height)
+        let anchoNativo = Double(base.width) * escala, altoNativo = Double(base.height) * escala
+        let factor = min(1, 1920 / anchoNativo, 1920 / altoNativo)
+        let ancho = max(2, Int(anchoNativo * factor) / 2 * 2), alto = max(2, Int(altoNativo * factor) / 2 * 2)
 
         let conf = SCStreamConfiguration()
         conf.width = ancho
@@ -46,6 +80,7 @@ final class Grabadora: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Se
         conf.pixelFormat = kCVPixelFormatType_32BGRA
         conf.showsCursor = true
         conf.queueDepth = 6
+        if let recorte { conf.sourceRect = recorte }
         conf.captureMicrophone = microfono
 
         let w = try AVAssetWriter(outputURL: archivo, fileType: .mp4)
