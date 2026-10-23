@@ -17,6 +17,11 @@ final class GrabaApp: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ aviso: Notification) {
         try? FileManager.default.createDirectory(at: Rutas.interno, withIntermediateDirectories: true)
         Grabaciones.repararCortadas()
+        // El idioma en que se habla parte igual al del sistema: con poca voz, "detectar solo" puede confundirse.
+        if Grabaciones.leerJSON(Rutas.config)["idioma_audio"] == nil {
+            let sistema = String((Locale.preferredLanguages.first ?? "es").prefix(2))
+            Config.guardar(["idioma_audio": ["es", "en", "pt", "fr", "de", "it"].contains(sistema) ? sistema : "auto"])
+        }
         BarraMenu.shared.instalar()
         // La primera vez (o si falta algo para funcionar) se abre la ventana con el asistente.
         if Config.texto("ia").isEmpty || !Modelos.lista.contains(where: Modelos.existe) { Ventana.shared.mostrar() }

@@ -220,6 +220,13 @@ class Corregir(unittest.TestCase):
             self.assertEqual(f.read(), antes)
 
 
+class Alucinaciones(unittest.TestCase):
+    def test_frases_de_silencio(self):
+        for t in [" Thank you.", "Gracias.", "¡Suscríbete!", "Subtítulos realizados por la comunidad de Amara.org"]:
+            self.assertTrue(procesar.es_alucinacion(t), t)
+        self.assertFalse(procesar.es_alucinacion("Gracias por venir a esta demo de planillas"))
+
+
 class Ejemplos(unittest.TestCase):
     def test_respuesta_ejemplo_valida(self):
         titulo, cuerpo = procesar.interpretar(RESPUESTA, 140)

@@ -63,12 +63,26 @@ def tiempo_srt(ms):
 
 
 # ───────────── Transcripción ─────────────
+# Frases que whisper inventa cuando hay silencio o ruido (créditos de subtítulos de los videos con que se entrenó).
+ALUCINACIONES = {
+    "thank you", "thanks for watching", "thank you for watching", "thank you very much", "bye", "you",
+    "gracias", "muchas gracias", "gracias por ver", "gracias por ver el video", "suscríbete", "suscríbete al canal",
+    "subtítulos realizados por la comunidad de amara.org", "subtítulos por la comunidad de amara.org", "amara.org",
+    "obrigado", "merci", "danke",
+}
+
+
+def es_alucinacion(texto):
+    t = re.sub(r"[^\w\s.]", "", texto.lower()).strip(" .")
+    return t in ALUCINACIONES or "amara.org" in t
+
+
 def segmentos(carpeta):
     datos = leer_json(os.path.join(carpeta, "transcripcion.json"), {}) or {}
     lista = []
     for s in datos.get("transcription", []):
         texto = (s.get("text") or "").strip()
-        if texto and not re.fullmatch(r"\[.*\]|\(.*\)", texto):  # whisper marca silencios como [música], (ruido)…
+        if texto and not re.fullmatch(r"\[.*\]|\(.*\)", texto) and not es_alucinacion(texto):  # [música], (ruido), "Thank you."…
             lista.append({"desde": s["offsets"]["from"], "hasta": s["offsets"]["to"], "texto": texto})
     return lista
 
