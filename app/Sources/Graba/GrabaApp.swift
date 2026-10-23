@@ -55,7 +55,7 @@ enum Estado {
         }
         Ventana.shared.ocultar()
         fase = .preparando
-        Preparar.shared.mostrar(empezar: { iniciar($0) }, cancelar: { fase = .inactiva })
+        Barra.shared.mostrar(grabar: { iniciar($0) }, terminar: { detener() }, cancelar: { cancelar() })
     }
 
     private static func iniciar(_ p: Preparacion) {
@@ -73,32 +73,30 @@ enum Estado {
         default:
             fuente = .pantalla(pantalla)
         }
-        Controles.shared.estado.segundos = 0
-        Controles.shared.mostrar(en: pantalla, detener: { detener() }, cancelar: { cancelar() })
         fase = .cuenta
         cancelada = false
         Task { @MainActor in
             for n in stride(from: 3, through: 1, by: -1) {
-                Controles.shared.estado.cuenta = n
+                Barra.shared.cuenta(n)
                 try? await Task.sleep(for: .seconds(1))
                 if cancelada { return }
             }
-            Controles.shared.estado.cuenta = 0
             let c = Grabaciones.nueva()
             carpeta = c
             do {
                 // Lo que solo ve la persona (controles, teleprompter, marco del área) queda fuera; la cámara siempre entra.
-                let fuera = [Controles.shared.ventana, Teleprompter.shared.ventana, MarcoArea.shared.id].compactMap { $0 }
+                let fuera = [Barra.shared.ventana, Teleprompter.shared.ventana, MarcoArea.shared.id].compactMap { $0 }
                 try await grabadora.empezar(en: c.appendingPathComponent("video.mp4"), fuente: fuente, excluyendo: fuera,
                                             incluyendo: [Burbuja.shared.ventana].compactMap { $0 }, microfono: microfono)
                 grabadora.alFallar = { mensaje in Task { @MainActor in fallo(mensaje) } }
                 fase = .grabando
                 segundos = 0
+                Barra.shared.grabando()
                 if p.teleprompter { Teleprompter.shared.empezar() }
                 reloj = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
                     Task { @MainActor in
                         segundos += 1
-                        Controles.shared.estado.segundos = segundos
+                        Barra.shared.estado.segundos = segundos
                         BarraMenu.shared.actualizar()
                     }
                 }
@@ -110,7 +108,7 @@ enum Estado {
 
     /// Cierra todo lo que flota sobre la pantalla.
     private static func limpiarFlotantes() {
-        Controles.shared.ocultar()
+        Barra.shared.ocultar()
         Burbuja.shared.ocultar()
         Teleprompter.shared.ocultar()
         MarcoArea.shared.ocultar()
@@ -140,6 +138,7 @@ enum Estado {
     }
 
     static func cancelar() {
+        if fase == .preparando { limpiarFlotantes(); fase = .inactiva; return }
         cancelada = true
         let c = carpeta
         let estaba = fase

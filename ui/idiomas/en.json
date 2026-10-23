@@ -175,6 +175,26 @@
   "Corregido, también en los subtítulos": "Fixed, in the subtitles too",
   "Corregido": "Fixed",
   "No se pudo corregir.": "It couldn't be fixed.",
-  "No pude terminar. Intenta de nuevo.": "I couldn't finish. Try again."
+  "No pude terminar. Intenta de nuevo.": "I couldn't finish. Try again.",
+  "Empieza en {n}…": "Starts in {n}…",
+  "Terminar y guardar": "Finish and save",
+  "Toda la pantalla": "Whole screen",
+  "Una ventana": "A window",
+  "Un área": "An area",
+  "Ocultar la cámara": "Hide the camera",
+  "Mostrar la cámara": "Show the camera",
+  "Forma": "Shape",
+  "Cámara: forma y tamaño": "Camera: shape and size",
+  "Micrófono encendido": "Microphone on",
+  "Micrófono apagado": "Microphone off",
+  "Ocultar el guion": "Hide the script",
+  "Guion (teleprompter): solo tú lo ves": "Script (teleprompter): only you see it",
+  "Elige una ventana primero": "Choose a window first",
+  "Elige una ventana": "Choose a window",
+  "Cerrar": "Close",
+  "Escribe o pega tu guion aquí.": "Type or paste your script here.",
+  "Leer": "Read",
+  "Más lento": "Slower",
+  "Más rápido": "Faster"
  }
 }

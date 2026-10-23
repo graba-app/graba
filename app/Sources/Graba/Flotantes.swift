@@ -114,69 +114,6 @@ final class Burbuja: NSObject, NSWindowDelegate {
     }
 }
 
-// MARK: - Controles mientras se graba (no salen en el video)
-
-@MainActor
-final class EstadoControles: ObservableObject {
-    @Published var cuenta = 0       // 3, 2, 1 antes de empezar; 0 = grabando
-    @Published var segundos = 0
-}
-
-@MainActor
-final class Controles {
-    static let shared = Controles()
-    let estado = EstadoControles()
-    private var panel: PanelFlotante?
-
-    var ventana: CGWindowID? { panel.map { CGWindowID($0.windowNumber) } }
-
-    func mostrar(en pantalla: NSScreen, detener: @escaping () -> Void, cancelar: @escaping () -> Void) {
-        let p = PanelFlotante(tamano: NSSize(width: 250, height: 52))
-        p.contentView = HostPrimerClic(rootView: VistaControles(estado: estado, detener: detener, cancelar: cancelar))
-        noGrabar(p)
-        let f = pantalla.visibleFrame
-        p.setFrameOrigin(NSPoint(x: f.midX - 125, y: f.minY + 24))
-        p.orderFrontRegardless()
-        panel = p
-    }
-
-    func ocultar() {
-        panel?.orderOut(nil)
-        panel = nil
-    }
-}
-
-private struct VistaControles: View {
-    @ObservedObject var estado: EstadoControles
-    let detener: () -> Void
-    let cancelar: () -> Void
-
-    var body: some View {
-        HStack(spacing: 10) {
-            if estado.cuenta > 0 {
-                Text(Idioma.f("Grabando en {n}…", estado.cuenta)).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-            } else {
-                Circle().fill(Color.red).frame(width: 10, height: 10)
-                Text(reloj(estado.segundos)).font(.system(size: 14, weight: .semibold).monospacedDigit()).foregroundStyle(.white)
-                Spacer(minLength: 4)
-                Button(action: detener) {
-                    Label(Idioma.t("Terminar"), systemImage: "stop.fill").font(.system(size: 13, weight: .semibold))
-                        .padding(.horizontal, 12).padding(.vertical, 7)
-                        .background(Capsule().fill(Color.red)).foregroundStyle(.white)
-                }.buttonStyle(.plain).keyboardShortcut(.defaultAction)
-            }
-            Button(action: cancelar) {
-                Image(systemName: "xmark").font(.system(size: 12, weight: .bold)).foregroundStyle(.white.opacity(0.8))
-                    .frame(width: 26, height: 26).background(Circle().fill(Color.white.opacity(0.12)))
-            }.buttonStyle(.plain).help(Idioma.t("Descartar la grabación"))
-        }
-        .padding(.horizontal, 14)
-        .frame(width: 250, height: 52)
-        .background(Capsule().fill(Color(red: 0.09, green: 0.09, blue: 0.11).opacity(0.94)))
-    }
-}
-
 func reloj(_ s: Int) -> String {
     s >= 3600 ? String(format: "%d:%02d:%02d", s / 3600, s % 3600 / 60, s % 60) : String(format: "%02d:%02d", s / 60, s % 60)
 }
@@ -208,7 +145,8 @@ final class Teleprompter {
 
     func mostrar(en pantalla: NSScreen) {
         estado.texto = Config.texto("teleprompter_texto")
-        estado.editando = estado.texto.isEmpty
+        estado.editando = false
+        estado.corriendo = false
         estado.desplazamiento = 0
         guard panel == nil else { panel?.orderFrontRegardless(); return }
         let p = PanelFlotante(tamano: NSSize(width: 560, height: 230), redimensionable: true)
@@ -252,62 +190,69 @@ private struct VistaTeleprompter: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if estado.editando {
-                TextEditor(text: $estado.texto)
-                    .font(.system(size: 15))
-                    .scrollContentBackground(.hidden)
-                    .padding(10)
-                    .overlay(alignment: .topLeading) {
-                        if estado.texto.isEmpty {
-                            Text(Idioma.t("Escribe o pega aquí lo que vas a decir. Solo tú lo ves: no sale en el video."))
-                                .foregroundStyle(.white.opacity(0.45)).padding(15).allowsHitTesting(false)
-                        }
+            ZStack(alignment: .topLeading) {
+                if estado.editando || estado.texto.isEmpty {
+                    TextEditor(text: $estado.texto)
+                        .font(.system(size: estado.letra, weight: .medium))
+                        .lineSpacing(estado.letra * 0.25)
+                        .scrollContentBackground(.hidden)
+                        .padding(.horizontal, 14).padding(.top, 12)
+                    if estado.texto.isEmpty {
+                        Text(Idioma.t("Escribe o pega tu guion aquí."))
+                            .font(.system(size: estado.letra, weight: .medium)).foregroundStyle(.white.opacity(0.35))
+                            .padding(.horizontal, 19).padding(.top, 12).allowsHitTesting(false)
                     }
-            } else {
-                GeometryReader { geo in
-                    Text(estado.texto)
-                        .font(.system(size: estado.letra, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .lineSpacing(estado.letra * 0.35)
-                        .multilineTextAlignment(.center)
-                        .frame(width: geo.size.width - 40)
-                        .padding(.horizontal, 20)
-                        .padding(.top, geo.size.height * 0.35)
-                        .offset(y: -estado.desplazamiento)
-                        .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
-                        .clipped()
-                }
-                .overlay(alignment: .top) {
-                    // Marca de lectura: la línea que toca leer.
-                    Rectangle().fill(Color(red: 0.43, green: 0.36, blue: 0.99).opacity(0.5)).frame(height: 2).padding(.top, 70)
+                } else {
+                    GeometryReader { geo in
+                        Text(estado.texto)
+                            .font(.system(size: estado.letra, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .lineSpacing(estado.letra * 0.35)
+                            .multilineTextAlignment(.center)
+                            .frame(width: geo.size.width - 48)
+                            .padding(.top, geo.size.height * 0.3)
+                            .offset(y: -estado.desplazamiento)
+                            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+                            .clipped()
+                            .contentShape(Rectangle())
+                            .onTapGesture { estado.corriendo.toggle() }
+                    }
                 }
             }
-            HStack(spacing: 10) {
-                Button { estado.editando.toggle(); if !estado.editando { estado.guardar() } } label: {
-                    Image(systemName: estado.editando ? "checkmark" : "pencil")
-                }.help(estado.editando ? Idioma.t("Listo") : Idioma.t("Editar el texto"))
-                if !estado.editando {
-                    Button { estado.corriendo.toggle() } label: { Image(systemName: estado.corriendo ? "pause.fill" : "play.fill") }
-                        .keyboardShortcut(.space, modifiers: [])
-                        .help(estado.corriendo ? Idioma.t("Pausar") : Idioma.t("Seguir"))
-                    Button { estado.desplazamiento = 0 } label: { Image(systemName: "backward.end.fill") }.help(Idioma.t("Volver al inicio"))
-                }
-                Image(systemName: "tortoise.fill").foregroundStyle(.white.opacity(0.6))
-                Slider(value: $estado.velocidad, in: 5...120).frame(maxWidth: 120)
-                Image(systemName: "hare.fill").foregroundStyle(.white.opacity(0.6))
-                Spacer(minLength: 6)
-                Button { estado.letra = max(14, estado.letra - 2) } label: { Image(systemName: "textformat.size.smaller") }.help(Idioma.t("Letra más chica"))
-                Button { estado.letra = min(56, estado.letra + 2) } label: { Image(systemName: "textformat.size.larger") }.help(Idioma.t("Letra más grande"))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
-            .font(.system(size: 13, weight: .semibold))
-            .padding(.horizontal, 14).padding(.vertical, 9)
-            .background(Color.black.opacity(0.25))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            controles
         }
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color(red: 0.07, green: 0.07, blue: 0.09).opacity(0.92)))
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color(white: 0.08).opacity(0.94)))
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .environment(\.colorScheme, .dark)
+    }
+
+    private var controles: some View {
+        HStack(spacing: 2) {
+            boton(estado.corriendo ? "pause.fill" : "play.fill", estado.corriendo ? "Pausar" : "Leer") {
+                estado.editando = false; estado.guardar(); estado.corriendo.toggle()
+            }.disabled(estado.texto.isEmpty)
+            boton("backward.end.fill", "Volver al inicio") { estado.desplazamiento = 0 }.disabled(estado.texto.isEmpty)
+            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 16).padding(.horizontal, 6)
+            boton("minus", "Más lento") { estado.velocidad = max(5, estado.velocidad - 8) }
+            Text(Idioma.t("Velocidad")).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.5))
+            boton("plus", "Más rápido") { estado.velocidad = min(140, estado.velocidad + 8) }
+            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 16).padding(.horizontal, 6)
+            boton("textformat.size.smaller", "Letra más chica") { estado.letra = max(14, estado.letra - 3); estado.guardar() }
+            boton("textformat.size.larger", "Letra más grande") { estado.letra = min(64, estado.letra + 3); estado.guardar() }
+            Spacer(minLength: 4)
+            boton(estado.editando ? "checkmark" : "pencil", estado.editando ? "Listo" : "Editar el texto") {
+                estado.editando.toggle(); estado.corriendo = false; estado.guardar()
+            }
+        }
+        .padding(.horizontal, 8).padding(.vertical, 6)
+        .background(Color.white.opacity(0.04))
+    }
+
+    private func boton(_ simbolo: String, _ ayuda: String, accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            Image(systemName: simbolo).font(.system(size: 13, weight: .semibold)).frame(width: 30, height: 26).contentShape(Rectangle())
+        }.buttonStyle(.plain).foregroundStyle(.white.opacity(0.85)).help(Idioma.t(ayuda))
     }
 }
 
