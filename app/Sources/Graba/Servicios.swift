@@ -260,7 +260,7 @@ enum Procesador {
     private static var cola: [(String, Bool)] = []
 
     /// Corre otro script de bin/ (el último argumento es el JSON de salida) y devuelve lo que escribió.
-    static func correrJSON(_ script: String, _ args: [String], fin: @escaping @MainActor ([String: Any]) -> Void) {
+    static func correrJSON(_ script: String, _ args: [String], entorno: [String: String] = [:], fin: @escaping @MainActor ([String: Any]) -> Void) {
         let salida = FileManager.default.temporaryDirectory.appendingPathComponent("graba-\(UUID().uuidString).json")
         let p = Process()
         p.executableURL = Rutas.python
@@ -269,6 +269,7 @@ enum Procesador {
         env["GRABA_RECURSOS"] = Rutas.recursos.path
         env["GRABA_HERRAMIENTAS"] = Rutas.herramientas.path
         env["PYTHONIOENCODING"] = "utf-8"
+        env.merge(entorno) { _, nuevo in nuevo }
         p.environment = env
         p.standardOutput = FileHandle.nullDevice
         p.standardError = FileHandle.nullDevice
@@ -304,7 +305,9 @@ enum Procesador {
         p.standardError = FileHandle.nullDevice
         p.terminationHandler = { _ in
             Task { @MainActor in
+                let r = Grabaciones.leerJSON(salida)
                 try? FileManager.default.removeItem(at: salida)
+                if r["ok"] as? Bool == true, !soloIA, Config.bool("youtube_auto"), let c = r["carpeta"] as? String { YouTube.subir(c) }
                 enCurso = nil
                 alTerminar()
                 siguiente(alTerminar)
@@ -314,6 +317,74 @@ enum Procesador {
             Grabaciones.escribirEstado(carpeta, ["estado": "error", "error": Idioma.t("No pude iniciar el procesamiento.") + " " + error.localizedDescription])
             enCurso = nil
             alTerminar()
+        }
+    }
+}
+
+// MARK: - Llavero (tokens: nunca en archivos)
+
+enum Llavero {
+    private static let servicio = "Graba"
+
+    static func guardar(_ valor: String, cuenta: String) {
+        let base: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: servicio, kSecAttrAccount as String: cuenta]
+        SecItemDelete(base as CFDictionary)
+        var nuevo = base
+        nuevo[kSecValueData as String] = Data(valor.utf8)
+        SecItemAdd(nuevo as CFDictionary, nil)
+    }
+
+    static func leer(_ cuenta: String) -> String? {
+        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: servicio,
+                                kSecAttrAccount as String: cuenta, kSecReturnData as String: true]
+        var r: CFTypeRef?
+        guard SecItemCopyMatching(q as CFDictionary, &r) == errSecSuccess, let d = r as? Data else { return nil }
+        return String(data: d, encoding: .utf8)
+    }
+
+    static func borrar(_ cuenta: String) {
+        SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: servicio, kSecAttrAccount as String: cuenta] as CFDictionary)
+    }
+}
+
+// MARK: - YouTube (bin/youtube.py; el permiso queda en el Llavero)
+
+@MainActor
+enum YouTube {
+    private(set) static var subiendo: Set<String> = []
+    static var conectado: Bool { Llavero.leer("youtube") != nil }
+    /// ¿Hay un cliente OAuth para conectar? (el del proyecto o el propio de la persona, en Ajustes).
+    static var disponible: Bool {
+        let archivo = Grabaciones.leerJSON(Rutas.recursos.appendingPathComponent("bin/youtube_cliente.json"))
+        return !((archivo["id"] as? String) ?? "").isEmpty || !Config.texto("youtube_client_id").isEmpty
+    }
+
+    static func conectar(_ fin: @escaping @MainActor ([String: Any]) -> Void) {
+        Procesador.correrJSON("youtube.py", ["conectar"]) { r in
+            var r = r
+            if r["ok"] as? Bool == true, let token = r["refresh_token"] as? String {
+                Llavero.guardar(token, cuenta: "youtube")
+                Config.guardar(["youtube_canal": r["canal"] as? String ?? ""])
+            }
+            r.removeValue(forKey: "refresh_token")  // a la interfaz nunca llega el token
+            fin(r)
+        }
+    }
+
+    static func desconectar() {
+        Llavero.borrar("youtube")
+        Config.guardar(["youtube_canal": "", "youtube_auto": false])
+    }
+
+    static func subir(_ carpeta: String, fin: (@MainActor ([String: Any]) -> Void)? = nil) {
+        guard let token = Llavero.leer("youtube"), !subiendo.contains(carpeta) else { return }
+        subiendo.insert(carpeta)
+        Grabaciones.escribirJSON(URL(fileURLWithPath: carpeta).appendingPathComponent("youtube.json"), ["estado": "subiendo", "pct": 0])
+        Procesador.correrJSON("youtube.py", ["subir", carpeta], entorno: ["GRABA_YT_TOKEN": token]) { r in
+            subiendo.remove(carpeta)
+            fin?(r)
+            Ventana.shared.llamar("youtubeSubido", r)
+            Ventana.shared.enviarEstado()
         }
     }
 }

@@ -6,7 +6,7 @@
   const E = {
     fase: "inactiva", grabaciones: [], config: {}, ias: [], modelos: { lista: [] }, permisos: {}, carpeta: "", version: "", procesando: null,
     sel: null, pestana: "notas", ajustes: false, bv: null, bvCerrada: false, probando: {}, resultadoIA: {}, descarga: null,
-    borrar: null, idioma: "es", textos: {}, actualizacion: { hay: false }, act: null, buscando: null,
+    borrar: null, idioma: "es", textos: {}, actualizacion: { hay: false }, act: null, buscando: null, youtube: { conectado: false }, conectandoYT: false,
   };
   const ENLACES = { sitio: "https://graba-app.github.io/graba/", codigo: "https://github.com/graba-app/graba",
     comunidad: "https://github.com/graba-app/graba/discussions", guiaIA: "https://graba-app.github.io/graba/ia.html" };
@@ -230,7 +230,7 @@
       const titulos = (pub["Títulos"] || "").split("\n").map((l) => l.replace(/^\s*(\d+[.)]|[-*•])\s*/, "").trim()).filter(Boolean);
       const capitulos = pub["Capítulos"] || "", descripcion = pub["Descripción"] || "";
       const todo = [descripcion, capitulos].filter(Boolean).join("\n\n");
-      html = `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Títulos</h3></div>${titulos.map((x) =>
+      html = publicarYouTube(t) + `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Títulos</h3></div>${titulos.map((x) =>
         `<div class="titulo-opcion"><span data-sin-traducir>${esc(x)}</span><small>${x.length}/100</small><button class="boton" data-copiar="${esc(x)}">Copiar</button></div>`).join("")}</section>`
         + `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Descripción con capítulos</h3><button class="boton principal" data-copiar="${esc(todo)}">Copiar</button></div>
           <pre class="bloque" data-sin-traducir>${esc(todo)}</pre></section>`
@@ -248,6 +248,32 @@
         <div class="transcripcion" data-sin-traducir>${lineas}</div></section>`;
     }
     return barra + html;
+  }
+
+  const PRIVACIDAD = [["private", "Privado"], ["unlisted", "No listado"], ["public", "Público"]];
+  const selPrivacidad = () => `<select data-config="youtube_privacidad">${PRIVACIDAD.map(([v, n]) =>
+    `<option value="${v}" ${(E.config.youtube_privacidad || "private") === v ? "selected" : ""}>${n}</option>`).join("")}</select>`;
+  /** Subir a YouTube con un clic (o ya subido / subiendo / con error). */
+  function publicarYouTube(t) {
+    const y = t.youtube || {};
+    let cuerpo;
+    if (y.estado === "lista") {
+      cuerpo = `<p><span>Publicado en YouTube</span> · <span>${(PRIVACIDAD.find(([v]) => v === y.privacidad) || ["", "Privado"])[1]}</span></p>
+        ${y.aviso ? `<p class="error-txt" data-sin-traducir>${esc(y.aviso)}</p>` : ""}
+        <div class="acciones"><button class="boton principal" data-enlace="${esc(y.url)}">Abrir en YouTube</button><button class="boton" data-copiar="${esc(y.url)}">Copiar enlace</button></div>`;
+    } else if (y.estado === "subiendo") {
+      cuerpo = `<p>Subiendo a YouTube…</p><div class="barra ${y.pct ? "" : "indef"}"><i style="width:${y.pct || 0}%"></i></div>`;
+    } else if (!E.youtube.conectado && !E.youtube.disponible) {
+      cuerpo = `<p>Muy pronto: subir directo a tu canal con un clic. Mientras, copia el título y la descripción de aquí abajo.</p>`;
+    } else if (!E.youtube.conectado) {
+      cuerpo = `<p>Conecta tu canal una vez y sube cada video con un clic: título, descripción con capítulos, etiquetas y subtítulos.</p>
+        <button class="boton" data-accion="yt-conectar" ${E.conectandoYT ? "disabled" : ""}>${E.conectandoYT ? "Abriendo tu navegador…" : "Conectar YouTube"}</button>`;
+    } else {
+      cuerpo = `${y.estado === "error" ? `<p class="error-txt" data-sin-traducir>${esc(y.error || "")}</p>` : ""}
+        <div class="acciones">${selPrivacidad()}<button class="boton principal" data-accion="yt-subir">${y.estado === "error" ? "Reintentar" : "Subir a YouTube"}</button></div>
+        <small class="nota-guion">Se sube con el primer título, la descripción con capítulos, las etiquetas y los subtítulos.</small>`;
+    }
+    return `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Publicar en YouTube</h3>${E.youtube.canal ? `<small data-sin-traducir>${esc(E.youtube.canal)}</small>` : ""}</div>${cuerpo}</section>`;
   }
 
   function vacio() {
@@ -351,6 +377,17 @@
       <div class="seccion"><h3>Transcripción</h3>${filasModelo()}
         <div class="fila"><div class="txt"><b>Idioma en que hablas</b><small>Si siempre hablas en el mismo, elegirlo mejora la transcripción.</small></div>${sel("idioma_audio", IDIOMAS_AUDIO)}</div></div>
       <div class="seccion"><h3>Permisos</h3>${filasPermisos()}</div>
+      <div class="seccion"><h3>YouTube</h3>
+        ${E.youtube.conectado ? `<div class="fila"><div class="txt"><b>Conectado</b><small data-sin-traducir>${esc(E.youtube.canal || "")}</small></div><button class="boton" data-accion="yt-desconectar">Desconectar</button></div>
+          <div class="fila"><div class="txt"><b>Privacidad al subir</b><small>Puedes cambiarla después en YouTube Studio.</small></div>${selPrivacidad()}</div>
+          <div class="fila"><div class="txt"><b>Subir sola al terminar</b><small>Cada grabación nueva se sube apenas tu IA termina de escribir.</small></div>
+            <input type="checkbox" class="interruptor" data-config-bool="youtube_auto" ${E.config.youtube_auto ? "checked" : ""} aria-label="Subir sola al terminar"></div>`
+          : `<div class="fila"><div class="txt"><b>Tu canal</b><small>${E.youtube.disponible ? "Sube directo desde tu computador, con tu permiso. Lo puedes quitar cuando quieras." : "Muy pronto: subir directo a tu canal con un clic."}</small></div>
+            ${E.youtube.disponible ? `<button class="boton" data-accion="yt-conectar" ${E.conectandoYT ? "disabled" : ""}>${E.conectandoYT ? "Abriendo tu navegador…" : "Conectar YouTube"}</button>` : ""}</div>`}
+        <details class="avanzado"><summary>Usar mi propio proyecto de Google (avanzado)</summary>
+          <p>Si subes muchos videos al día, crea un cliente OAuth de escritorio con la YouTube Data API v3 y pega sus datos aquí.</p>
+          <input class="texto" data-config-texto="youtube_client_id" placeholder="ID de cliente" value="${esc(E.config.youtube_client_id || "")}" data-sin-traducir>
+          <input class="texto" data-config-texto="youtube_client_secret" placeholder="Secreto del cliente" value="${esc(E.config.youtube_client_secret || "")}" data-sin-traducir></details></div>
       <div class="seccion"><h3>General</h3>
         <div class="fila"><div class="txt"><b>Idioma de la app</b></div>${sel("idioma_ui", [["es", "Español"], ["en", "English"]])}</div>
         <div class="fila"><div class="txt"><b>Carpeta de grabaciones</b><small data-sin-traducir>${esc(E.carpeta)}</small></div><button class="boton" data-accion="carpeta-base">Abrir</button></div></div>
@@ -403,6 +440,9 @@
       case "grabar": return host.enviar("grabar");
       case "ajustes": E.ajustes = true; return render();
       case "cerrar": E.ajustes = false; E.borrar = null; if (!E.corregir?.enviando) E.corregir = null; return render();
+      case "yt-conectar": E.conectandoYT = true; host.enviar("youtubeConectar"); return render();
+      case "yt-desconectar": host.enviar("youtubeDesconectar"); return;
+      case "yt-subir": if (t) { t.youtube = { estado: "subiendo", pct: 0 }; host.enviar("youtubeSubir", { ruta: t.ruta }); } return render();
       case "actualizar": E.act = { paso: "1", texto: tr("Descargando la versión nueva…") }; E.ajustes = false; host.enviar("actualizar"); return render();
       case "act-cerrar": E.act = null; return render();
       case "act-despues": E.actOculto = true; return render();
@@ -439,7 +479,10 @@
     }
   });
   document.addEventListener("change", async (ev) => {
-    const clave = ev.target.dataset?.config;
+    const ds = ev.target.dataset || {};
+    if (ds.configBool) { E.config[ds.configBool] = ev.target.checked; host.enviar("config", { [ds.configBool]: ev.target.checked }); return render(); }
+    if (ds.configTexto) { E.config[ds.configTexto] = ev.target.value.trim(); return host.enviar("config", { [ds.configTexto]: ev.target.value.trim() }); }
+    const clave = ds.config;
     if (!clave) return;
     E.config[clave] = ev.target.value;
     host.enviar("config", { [clave]: ev.target.value });
@@ -454,10 +497,10 @@
   // ───────────── Lo que manda la app ─────────────
   window.Graba = {
     async estado(e) {
-      const antes = JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos, E.actualizacion]);
+      const antes = JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos, E.actualizacion, E.youtube]);
       Object.assign(E, { fase: e.fase, grabaciones: e.grabaciones || [], config: e.config || {}, ias: e.ias || [], modelos: e.modelos || { lista: [] },
         permisos: e.permisos || {}, carpeta: e.carpeta || "", version: e.version || "", procesando: e.procesando,
-        actualizacion: e.actualizacion || { hay: false } });
+        actualizacion: e.actualizacion || { hay: false }, youtube: e.youtube || { conectado: false } });
       if (e.seleccionar) { E.sel = e.seleccionar; E.pestana = "notas"; }
       // Si la carpeta cambió de nombre al terminar (queda con el título), se sigue la misma graba.
       if (E.sel && !E.grabaciones.some((t) => t.ruta === E.sel)) {
@@ -470,8 +513,10 @@
       await cargarIdioma();
       if (e.aviso) toast(e.aviso);
       // No se repinta si nada cambió (así el video no se reinicia cada segundo).
-      if (JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos, E.actualizacion]) !== antes || e.seleccionar || !$("#app").innerHTML) render();
+      if (JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos, E.actualizacion, E.youtube]) !== antes || e.seleccionar || !$("#app").innerHTML) render();
     },
+    youtubeConectado(r) { E.conectandoYT = false; toast(r.ok ? "YouTube conectado" : (r.error || "No se pudo conectar")); render(); },
+    youtubeSubido(r) { toast(r.ok ? "Subido a YouTube" : (r.error || "No se pudo subir")); render(); },
     actualizacionRevisada(r) { E.buscando = r.hay ? null : r.sinConexion ? "sinConexion" : "alDia"; if (r.hay) { E.actualizacion = r; E.actOculto = false; } render(); },
     actualizacionProgreso(d) { E.act = d; render(); },
     archivosElegidos(lista) {
@@ -513,6 +558,9 @@
         if (p >= 1) { clearInterval(iv); DEMO.modelos.lista.find((m) => m.id === d.id).listo = true; DEMO.config.modelo = d.id; window.Graba.modeloListo({ id: d.id, ok: true }); enviar(); } }, 300);
     }
     if (accion === "permiso") { DEMO.permisos[d.tipo] = true; return enviar(); }
+    if (accion === "youtubeConectar") return setTimeout(() => { DEMO.youtube = { conectado: true, canal: "Canal de Ana" }; window.Graba.youtubeConectado({ ok: true }); enviar(); }, 600);
+    if (accion === "youtubeDesconectar") { DEMO.youtube = { conectado: false }; return enviar(); }
+    if (accion === "youtubeSubir") return setTimeout(() => { const g = DEMO.grabaciones.find((x) => x.ruta === d.ruta); if (g) g.youtube = { estado: "lista", url: "https://youtu.be/demo", privacidad: "private" }; window.Graba.youtubeSubido({ ok: true }); enviar(); }, 900);
     if (accion === "buscarActualizacion") return setTimeout(() => window.Graba.actualizacionRevisada({ hay: false }), 500);
     if (accion === "actualizar") { let n = 1; const iv = setInterval(() => { window.Graba.actualizacionProgreso({ paso: String(n), texto: ["", "Descargando la versión nueva…", "Preparando la versión nueva…", "Instalando: Graba se cerrará y volverá a abrirse sola"][n], pct: n * 33 }); if (++n > 3) clearInterval(iv); }, 700); return; }
     if (accion === "elegirArchivos") return window.Graba.archivosElegidos([{ ruta: "/demo/presentacion.pdf", nombre: "presentacion.pdf" }]);

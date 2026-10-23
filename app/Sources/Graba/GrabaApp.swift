@@ -230,7 +230,8 @@ enum Grabaciones {
                           "video": fm.fileExists(atPath: video.path) ? video.absoluteString : NSNull(),
                           "md": md ?? NSNull(),
                           "srt": fm.fileExists(atPath: srt.path) ? srt.path : NSNull(),
-                          "audio": fm.fileExists(atPath: c.appendingPathComponent("audio.wav").path)])
+                          "audio": fm.fileExists(atPath: c.appendingPathComponent("audio.wav").path),
+                          "youtube": leerJSON(c.appendingPathComponent("youtube.json"))])
         }
         return lista.sorted { (($0["meta"] as? [String: Any])?["inicio"] as? String ?? "") > (($1["meta"] as? [String: Any])?["inicio"] as? String ?? "") }
     }

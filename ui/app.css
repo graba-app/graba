@@ -127,6 +127,14 @@ pre.bloque { white-space: pre-wrap; font: 13px/1.6 ui-monospace, SFMono-Regular,
 textarea { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--linea); background: var(--fondo); color: var(--texto); resize: vertical; }
 textarea:focus { outline: 2px solid var(--acento); outline-offset: 0; }
 select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--linea); background: var(--panel); color: var(--texto); }
+.avanzado { margin-top: 10px; font-size: 13px; color: var(--suave); }
+.avanzado summary { cursor: pointer; }
+.avanzado p { margin: 8px 0; }
+input.texto { width: 100%; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--linea); background: var(--fondo); color: var(--texto); margin-bottom: 6px; }
+.interruptor { width: 38px; height: 22px; appearance: none; border-radius: 99px; background: var(--linea); position: relative; cursor: pointer; transition: background .15s; flex: none; }
+.interruptor::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.interruptor:checked { background: var(--acento); }
+.interruptor:checked::after { transform: translateX(16px); }
 .pie-dialogo { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .pasos-bv { display: flex; gap: 6px; margin-bottom: 18px; }
 .pasos-bv i { height: 4px; flex: 1; border-radius: 99px; background: var(--linea); }

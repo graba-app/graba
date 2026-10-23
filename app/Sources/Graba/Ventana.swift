@@ -66,7 +66,7 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
         refresco = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             Task { @MainActor in
                 guard Ventana.shared.ventana?.isVisible == true else { return }
-                if Procesador.enCurso != nil { Ventana.shared.enviarEstado() }
+                if Procesador.enCurso != nil || !YouTube.subiendo.isEmpty { Ventana.shared.enviarEstado() }
             }
         }
     }
@@ -85,6 +85,7 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
             "modelos": Modelos.paraJS, "permisos": Permisos.paraJS, "carpeta": Rutas.base.path,
             "procesando": Procesador.enCurso ?? NSNull(),
             "actualizacion": Actualizaciones.disponible,
+            "youtube": ["conectado": YouTube.conectado, "disponible": YouTube.disponible, "canal": Config.texto("youtube_canal")],
             "version": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "",
         ]
         e.merge(pendiente) { _, nuevo in nuevo }
@@ -177,6 +178,15 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
             // El guion queda en el teleprompter y se abre la barra para grabar: llegar y grabar.
             Config.guardar(["teleprompter_texto": d["texto"] as? String ?? "", "teleprompter": true])
             Estado.grabar()
+        case "youtubeConectar":
+            YouTube.conectar { r in Ventana.shared.llamar("youtubeConectado", r); Ventana.shared.enviarEstado() }
+        case "youtubeDesconectar":
+            YouTube.desconectar()
+            enviarEstado()
+        case "youtubeSubir":
+            guard rutaValida else { return }
+            YouTube.subir(ruta)
+            enviarEstado()
         case "buscarActualizacion":
             Actualizaciones.revisar { hay, detalle in
                 Ventana.shared.llamar("actualizacionRevisada", ["hay": hay, "detalle": detalle, "sinConexion": detalle == Actualizaciones.sinConexion])

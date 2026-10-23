@@ -252,6 +252,32 @@ class Guion(unittest.TestCase):
             self.assertFalse(json.load(f)["ok"])
 
 
+class YouTube(unittest.TestCase):
+    def test_metadatos_para_subir(self):
+        import youtube
+        ia_falsa(RESPUESTA)
+        c = nueva_grabacion()
+        sys.argv = ["procesar.py", c, os.path.join(DATOS, "yt.json")]
+        procesar.main()
+        with open(os.path.join(DATOS, "yt.json")) as f:
+            final = json.load(f)["carpeta"]
+        titulo, descripcion, etiquetas = youtube.metadatos(final)
+        self.assertEqual(titulo, "Ordena tu planilla en 2 minutos")  # el primero de "### Títulos"
+        self.assertTrue(descripcion.startswith("Aprende a ordenar una planilla."))
+        self.assertIn("00:00 Inicio\n01:05 Columnas", descripcion)  # capítulos al final de la descripción
+        self.assertEqual(etiquetas, ["planilla", "tutorial"])
+
+    def test_errores_legibles(self):
+        import youtube
+        self.assertIn("límite diario", youtube.mensaje_error({"error": {"errors": [{"reason": "quotaExceeded"}], "message": "x"}}))
+
+    def test_sin_cliente_no_conecta(self):
+        salida = os.path.join(DATOS, "conectar.json")
+        subprocess.run([sys.executable, os.path.join(RAIZ, "bin", "youtube.py"), "conectar", salida], check=True, env=os.environ)
+        with open(salida) as f:
+            self.assertFalse(json.load(f)["ok"])
+
+
 class Alucinaciones(unittest.TestCase):
     def test_frases_de_silencio(self):
         for t in [" Thank you.", "Gracias.", "¡Suscríbete!", "Subtítulos realizados por la comunidad de Amara.org"]:
