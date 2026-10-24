@@ -95,7 +95,7 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
     func enviarEstado() {
         guard lista else { return }
         var e: [String: Any] = [
-            "fase": Estado.fase.rawValue, "grabaciones": Grabaciones.listar(), "config": Config.leer(), "ias": IA.paraJS,
+            "fase": Estado.fase.rawValue, "grabandoDesde": Estado.desde.map { Int($0.timeIntervalSince1970 * 1000) } ?? 0, "grabaciones": Grabaciones.listar(), "config": Config.leer(), "ias": IA.paraJS,
             "modelos": Modelos.paraJS, "permisos": Permisos.paraJS, "carpeta": Rutas.base.path,
             "procesando": Procesador.enCurso ?? NSNull(),
             "actualizacion": Actualizaciones.disponible,
@@ -121,6 +121,8 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
             enviarEstado()
         case "grabar":
             Estado.grabar()
+        case "terminar":
+            Estado.detener()
         case "abrirCarpeta":
             if rutaValida { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: ruta)]) } else { NSWorkspace.shared.open(Rutas.base) }
         case "abrirVideo":

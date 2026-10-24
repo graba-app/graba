@@ -276,6 +276,9 @@
   "Muy pronto: subir directo a tu canal con un clic.": "Coming soon: upload straight to your channel with one click.",
   "Publicado en YouTube": "Published on YouTube",
   "No pude guardar el permiso de YouTube en el llavero del sistema.": "I couldn't save the YouTube permission in the system keychain.",
-  "Mis grabaciones": "My recordings"
+  "Mis grabaciones": "My recordings",
+  "Empezando…": "Starting…",
+  "La barra de grabación está abierta: toca su botón rojo para empezar.": "The recording bar is open: press its red button to start.",
+  "En la app, aquí termina la grabación": "In the app, this is where recording stops"
  }
 }

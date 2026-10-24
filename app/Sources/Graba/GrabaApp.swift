@@ -39,8 +39,11 @@ final class GrabaApp: NSObject, NSApplicationDelegate {
 @MainActor
 enum Estado {
     enum Fase: String { case inactiva, preparando, cuenta, grabando, terminando }
-    static var fase = Fase.inactiva { didSet { BarraMenu.shared.actualizar() } }
+    /// Cada cambio de fase llega a la barra de menú y a la ventana: el botón Grabar de la ventana dice siempre lo mismo que la barra.
+    static var fase = Fase.inactiva { didSet { BarraMenu.shared.actualizar(); Ventana.shared.enviarEstado() } }
     static var segundos = 0
+    /// Cuándo empezó a grabar de verdad (después de la cuenta 3-2-1), para que la ventana muestre el mismo reloj.
+    static var desde: Date?
     private static let grabadora = Grabadora()
     private static var carpeta: URL?
     private static var reloj: Timer?
@@ -48,6 +51,8 @@ enum Estado {
 
     /// Primero se elige qué grabar (pantalla, ventana o área), la cámara y el teleprompter; después viene la cuenta 3-2-1.
     static func grabar() {
+        // Si la barra ya está abierta (preparando), "Grabar" en la ventana solo lleva de vuelta a la barra: grabar empieza con su botón rojo.
+        if fase == .preparando { Ventana.shared.ocultar(); Barra.shared.alFrente(); return }
         guard fase == .inactiva else { return }
         guard CGPreflightScreenCaptureAccess() else {
             Permisos.pedir("pantalla") {}
@@ -90,8 +95,9 @@ enum Estado {
                 try await grabadora.empezar(en: c.appendingPathComponent("video.mp4"), fuente: fuente, excluyendo: fuera,
                                             incluyendo: [Burbuja.shared.ventana].compactMap { $0 }, microfono: microfono)
                 grabadora.alFallar = { mensaje in Task { @MainActor in fallo(mensaje) } }
-                fase = .grabando
                 segundos = 0
+                desde = Date()
+                fase = .grabando
                 Barra.shared.grabando()
                 if p.teleprompter { Teleprompter.shared.empezar() }
                 reloj = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
@@ -117,6 +123,7 @@ enum Estado {
 
     static func detener() {
         guard fase == .grabando, let c = carpeta else { if fase == .cuenta { cancelar() }; return }
+        desde = nil
         fase = .terminando
         reloj?.invalidate()
         limpiarFlotantes()
@@ -141,6 +148,7 @@ enum Estado {
     static func cancelar() {
         if fase == .preparando { limpiarFlotantes(); fase = .inactiva; return }
         cancelada = true
+        desde = nil
         let c = carpeta
         let estaba = fase
         fase = .terminando

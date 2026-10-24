@@ -58,6 +58,10 @@ html[data-host="mac"] .aviso-act { margin-top: 44px; }
 .boton.grabar { background: #d6363b; color: #fff; border-color: transparent; border-radius: 99px; font-weight: 650; }
 .boton.grabar:hover { filter: brightness(1.08); }
 .boton.grabar .punto { background: #fff; }
+.boton.grabar .cuadro { width: 10px; height: 10px; border-radius: 2px; background: #fff; display: inline-block; }
+.boton.grabar .reloj-vivo { font-variant-numeric: tabular-nums; opacity: .85; font-weight: 600; }
+.boton.grabar:disabled { opacity: .7; }
+.nota-grabar { margin: 8px 2px 0; font-size: 12px; color: var(--suave); line-height: 1.4; }
 .icono { border: 0; background: transparent; width: 32px; height: 32px; border-radius: 8px; display: inline-grid; place-items: center; color: var(--suave); font-size: 17px; }
 .icono:hover { background: var(--acento-suave); color: var(--texto); }
 .opciones-grabar { display: flex; gap: 6px; margin-top: 8px; }

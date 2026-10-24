@@ -88,7 +88,7 @@ function llamar(funcion, datos) {
 function enviarEstado() {
   if (!lista) return;
   const e = {
-    fase: Estado.fase, grabaciones: Grabaciones.listar(), config: Config.leer(), ias: IA.paraJS(), modelos: Modelos.paraJS(),
+    fase: Estado.fase, grabandoDesde: Estado.fase === "grabando" ? Estado.inicio : 0, grabaciones: Grabaciones.listar(), config: Config.leer(), ias: IA.paraJS(), modelos: Modelos.paraJS(),
     permisos: Permisos.paraJS(), carpeta: BASE, procesando: Procesador.enCurso || null, version: app.getVersion(),
     actualizacion: Actualizaciones.disponible, youtube: YouTube.paraJS(), ...pendiente,
   };
@@ -132,6 +132,8 @@ function esperarGrabadora(tipo, ms) {
 
 /** Abre la barra para preparar la grabación (equivale a Estado.grabar en Mac). */
 function grabar() {
+  // Con la barra ya abierta, "Grabar" en la ventana solo lleva de vuelta a ella: grabar empieza con su botón rojo.
+  if (Estado.fase === "preparando") { ocultar(); if (barra && !barra.isDestroyed()) barra.showInactive(); return; }
   if (Estado.fase !== "inactiva") return;
   if (!grabadora || grabadora.isDestroyed()) crearGrabadora();
   Estado.pantalla = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
@@ -552,6 +554,9 @@ const ACCIONES = {
   },
   grabar() {
     grabar();
+  },
+  terminar() {
+    if (Estado.fase === "grabando") detener();
   },
   abrirCarpeta(d) {
     if (rutaValida(d)) shell.showItemInFolder(path.resolve(d.ruta));

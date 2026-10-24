@@ -158,8 +158,26 @@
       <button class="boton" data-accion="act-despues">Después</button><button class="boton principal" data-accion="actualizar">Actualizar</button></div>`;
   }
 
+  /** El botón Grabar dice siempre lo mismo que la barra de grabación: grabar solo empieza con su botón rojo. */
+  function botonGrabar(grande) {
+    const g = grande ? " grande" : "";
+    if (E.fase === "grabando") {
+      return `<button class="boton grabar${g}" data-accion="terminar" title="Terminar y guardar"><span class="cuadro"></span><span>Terminar</span><span class="reloj-vivo">${reloj(segundosGrabando())}</span></button>`;
+    }
+    if (E.fase === "cuenta" || E.fase === "terminando") {
+      return `<button class="boton grabar${g}" disabled><span class="punto"></span><span>${E.fase === "cuenta" ? "Empezando…" : "Guardando…"}</span></button>`;
+    }
+    const nota = E.fase === "preparando" && grande ? `<p class="nota-grabar">La barra de grabación está abierta: toca su botón rojo para empezar.</p>` : "";
+    return `<button class="boton grabar${g}" data-accion="grabar"><span class="punto"></span><span>Grabar</span></button>${nota}`;
+  }
+  const segundosGrabando = () => (E.grabandoDesde ? (Date.now() - E.grabandoDesde) / 1000 : 0);
+  // El reloj del botón avanza solo, sin volver a pintar toda la ventana.
+  setInterval(() => {
+    if (E.fase !== "grabando") return;
+    document.querySelectorAll(".reloj-vivo").forEach((n) => (n.textContent = reloj(segundosGrabando())));
+  }, 1000);
+
   function lateral() {
-    const libre = E.fase === "inactiva";
     const items = E.grabaciones.map((t) => {
       const e = estadoDe(t), m = t.meta || {};
       const chip = e === "procesando" ? `<span class="chip">Procesando ${t.estado.paso || 0}/${t.estado.total || 3}</span>`
@@ -172,7 +190,7 @@
       <div class="cabeza"><span class="marca">${LOGO}<span>Graba</span></span>
         <button class="icono" data-accion="ajustes" title="Ajustes" aria-label="Ajustes">⚙︎</button></div>
       <div class="grabar-caja">
-        <button class="boton grabar grande" data-accion="grabar" ${libre ? "" : "disabled"}><span class="punto"></span><span>${libre ? "Grabar" : "Grabando…"}</span></button>
+        ${botonGrabar(true)}
         <div class="opciones-grabar">
           <button class="alternar" data-alternar="camara" aria-pressed="${!!E.config.camara}">📷 <span>Cámara</span></button>
           <button class="alternar" data-alternar="microfono" aria-pressed="${!!E.config.microfono}">🎙️ <span>Micrófono</span></button>
@@ -288,7 +306,7 @@
         <div><b>2</b><span>Toca Terminar: Graba transcribe en tu computador, sin subir nada.</span></div>
         <div><b>3</b><span>Recibes notas, un guion para YouTube, títulos, descripción con capítulos y subtítulos.</span></div>
       </div>
-      <button class="boton grabar" data-accion="grabar" ${E.fase === "inactiva" ? "" : "disabled"}><span class="punto"></span><span>Grabar</span></button></div>`;
+      ${botonGrabar(false)}</div>`;
   }
 
   // ───────────── Ajustes y bienvenida ─────────────
@@ -441,6 +459,7 @@
     const t = E.grabaciones.find((x) => x.ruta === E.sel);
     switch (d.accion) {
       case "grabar": return host.enviar("grabar");
+      case "terminar": return host.enviar("terminar");
       case "ajustes": E.ajustes = true; return render();
       case "cerrar": E.ajustes = false; E.borrar = null; if (!E.corregir?.enviando) E.corregir = null; return render();
       case "yt-conectar": E.conectandoYT = true; host.enviar("youtubeConectar"); return render();
@@ -501,7 +520,7 @@
   window.Graba = {
     async estado(e) {
       const antes = JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos, E.actualizacion, E.youtube]);
-      Object.assign(E, { fase: e.fase, grabaciones: e.grabaciones || [], config: e.config || {}, ias: e.ias || [], modelos: e.modelos || { lista: [] },
+      Object.assign(E, { fase: e.fase, grabandoDesde: e.grabandoDesde || 0, grabaciones: e.grabaciones || [], config: e.config || {}, ias: e.ias || [], modelos: e.modelos || { lista: [] },
         permisos: e.permisos || {}, carpeta: e.carpeta || "", version: e.version || "", procesando: e.procesando,
         actualizacion: e.actualizacion || { hay: false }, youtube: e.youtube || { conectado: false } });
       if (e.seleccionar) { E.sel = e.seleccionar; E.pestana = "notas"; }
@@ -553,6 +572,7 @@
     const enviar = () => window.Graba.estado(DEMO);
     if (accion === "listo") return enviar();
     if (accion === "grabar") return toast("En la app, aquí empieza la grabación");
+    if (accion === "terminar") return toast("En la app, aquí termina la grabación");
     if (accion === "config") { Object.assign(DEMO.config, d); return enviar(); }
     if (accion === "borrar") { DEMO.grabaciones = DEMO.grabaciones.filter((t) => t.ruta !== d.ruta); return enviar(); }
     if (accion === "probarIA") return setTimeout(() => { DEMO.config.ia = d.id; window.Graba.iaProbada({ id: d.id, ok: true, texto: "listo" }); enviar(); }, 500);

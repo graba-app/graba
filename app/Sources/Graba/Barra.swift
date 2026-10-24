@@ -82,6 +82,9 @@ final class Barra {
         }
     }
 
+    /// Trae la barra adelante (cuando se vuelve a ella desde la ventana).
+    func alFrente() { panel?.orderFrontRegardless() }
+
     func cuenta(_ n: Int) {
         estado.fase = .cuenta
         estado.cuenta = n
