@@ -45,17 +45,21 @@ function mostrar({ seleccionar, aviso } = {}) {
 }
 const ocultar = () => { if (ventana && !ventana.isDestroyed()) ventana.hide(); };
 
+/** Ventana de vidrio (translúcida, como la barra de grabación) donde el sistema lo permite: Windows 11 (22H2+). En Linux y Windows 10, fondo sólido. */
+const VIDRIO = process.platform === "win32" && Number(os.release().split(".")[2] || 0) >= 22621;
+
 function crearVentana() {
   let guardado = {};
   try { guardado = JSON.parse(fs.readFileSync(path.join(INTERNO, "ventana.json"), "utf8")); } catch {}
   lista = false;
   ventana = new BrowserWindow({
     width: guardado.width || 1120, height: guardado.height || 740, x: guardado.x, y: guardado.y, minWidth: 760, minHeight: 520,
-    show: false, autoHideMenuBar: true, backgroundColor: "#17151c", title: "Graba", icon: icono("graba-256.png"),
+    show: false, autoHideMenuBar: true, backgroundColor: VIDRIO ? "#00000000" : "#17151c", title: "Graba", icon: icono("graba-256.png"),
+    ...(VIDRIO ? { backgroundMaterial: "acrylic" } : {}),
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, sandbox: false, spellcheck: false },
   });
   ventana.setMenuBarVisibility(false);
-  ventana.loadURL("graba://ui/index.html");
+  ventana.loadURL("graba://ui/index.html" + (VIDRIO ? "?vidrio=1" : ""));
   ventana.once("ready-to-show", () => ventana.show());
   // Cerrar la ventana no cierra la app: sigue en la bandeja (como en Mac, en la barra de menú).
   ventana.on("close", (e) => {
@@ -333,7 +337,7 @@ function actualizarBarra() {
     camara: !!c.camara, microfono: !!c.microfono, teleprompter: !!c.teleprompter,
     textos: {
       grabar: t("Grabar"), terminar: t("Terminar"), cuenta: Idioma.f("Empieza en {n}…", Estado.cuenta || 3),
-      ayuda_pantalla: t("Toda la pantalla"), ayuda_ventana: t("Una ventana"), ayuda_area: t("Un área"),
+      ayuda_grabaciones: t("Mis grabaciones"), ayuda_pantalla: t("Toda la pantalla"), ayuda_ventana: t("Una ventana"), ayuda_area: t("Un área"),
       ayuda_camara: t("Cámara: cuál, forma y tamaño"), ayuda_microfono: t("Micrófono"),
       ayuda_guion: t(c.teleprompter ? "Ocultar el guion" : "Guion (teleprompter): solo tú lo ves"),
       ayuda_grabar: t(listo ? "Empezar a grabar" : "Elige una ventana primero"), ayuda_terminar: t("Terminar y guardar"),
@@ -399,6 +403,7 @@ const ACCIONES_BARRA = {
     aplicarFlotantes();
   },
   grabar() { iniciar(); },
+  async grabaciones() { await cancelar(); mostrar(); },
   terminar() { detener(); },
   cerrar() { cancelar(); },
 };

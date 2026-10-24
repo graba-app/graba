@@ -15,6 +15,28 @@ button { font: inherit; color: inherit; cursor: pointer; }
 h1, h2, h3 { margin: 0; line-height: 1.25; }
 .oculto { display: none !important; }
 
+/* Vidrio (Mac y Windows 11): el sistema pone el fondo translúcido y la interfaz dibuja encima con capas semitransparentes,
+   igual que la barra de grabación y el teleprompter. */
+html.vidrio { --fondo: transparent; --panel: rgba(255, 255, 255, .62); --lateral: rgba(255, 255, 255, .22); --linea: rgba(20, 16, 40, .09);
+  --campo: rgba(255, 255, 255, .55); --solido: rgba(250, 249, 252, .9); }
+@media (prefers-color-scheme: dark) {
+  html.vidrio { --panel: rgba(255, 255, 255, .055); --lateral: rgba(0, 0, 0, .16); --linea: rgba(255, 255, 255, .085);
+    --campo: rgba(0, 0, 0, .22); --solido: rgba(30, 29, 37, .88); --sombra: none; }
+}
+html.vidrio, html.vidrio body { background: transparent; }
+html.vidrio .item[aria-current="true"] { background: var(--acento-suave); box-shadow: none; }
+html.vidrio .dialogo { background: var(--solido); -webkit-backdrop-filter: blur(30px) saturate(1.4); backdrop-filter: blur(30px) saturate(1.4); border: 1px solid var(--linea); }
+html.vidrio .capa { background: rgba(10, 8, 20, .3); }
+html.vidrio textarea, html.vidrio input.texto, html.vidrio select { background: var(--campo); }
+html.vidrio .boton:not(.principal):not(.grabar) { background: var(--panel); }
+html.vidrio video { box-shadow: 0 10px 40px -12px rgba(0, 0, 0, .55); }
+/* En el navegador (vista previa) se simula el escritorio detrás del vidrio. */
+html.vidrio[data-host="web"] body { background: radial-gradient(70% 90% at 85% 0%, #5b4bd8 0%, transparent 60%), radial-gradient(60% 80% at 0% 100%, #b43c74 0%, transparent 60%), #2a2540; }
+html.vidrio[data-host="web"] .app { -webkit-backdrop-filter: blur(40px) saturate(1.3); backdrop-filter: blur(40px) saturate(1.3); background: rgba(246, 245, 249, .6); }
+@media (prefers-color-scheme: dark) { html.vidrio[data-host="web"] .app { background: rgba(22, 21, 28, .62); } }
+/* En Mac la franja de arriba (38 px) mueve la ventana: nada clicable ahí. */
+html[data-host="mac"] .aviso-act { margin-top: 44px; }
+
 /* Estructura */
 .app { display: grid; grid-template-columns: 290px minmax(0, 1fr); height: 100vh; }
 .lateral { background: var(--lateral); border-right: 1px solid var(--linea); display: flex; flex-direction: column; min-height: 0; }
@@ -32,6 +54,10 @@ h1, h2, h3 { margin: 0; line-height: 1.25; }
 .boton:disabled { opacity: .5; cursor: default; }
 .punto { width: 10px; height: 10px; border-radius: 50%; background: currentColor; display: inline-block; }
 .boton.principal .punto { background: var(--rojo); box-shadow: 0 0 0 2px var(--sobre-acento); }
+/* Grabar: el mismo botón rojo de la barra de grabación */
+.boton.grabar { background: #d6363b; color: #fff; border-color: transparent; border-radius: 99px; font-weight: 650; }
+.boton.grabar:hover { filter: brightness(1.08); }
+.boton.grabar .punto { background: #fff; }
 .icono { border: 0; background: transparent; width: 32px; height: 32px; border-radius: 8px; display: inline-grid; place-items: center; color: var(--suave); font-size: 17px; }
 .icono:hover { background: var(--acento-suave); color: var(--texto); }
 .opciones-grabar { display: flex; gap: 6px; margin-top: 8px; }

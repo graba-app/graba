@@ -32,7 +32,7 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
     private func crear() {
         let control = WKUserContentController()
         control.add(self, name: "graba")
-        control.addUserScript(WKUserScript(source: "window.GRABA_HOST = 'mac';", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        control.addUserScript(WKUserScript(source: "window.GRABA_HOST = 'mac'; window.GRABA_VIDRIO = true;", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let conf = WKWebViewConfiguration()
         conf.userContentController = control
         conf.mediaTypesRequiringUserActionForPlayback = []
@@ -43,7 +43,21 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
         v.titlebarAppearsTransparent = true
         v.titleVisibility = .hidden
         v.minSize = NSSize(width: 760, height: 520)
-        v.contentView = w
+        // Vidrio como la barra de grabación: el fondo translúcido lo pone macOS y la interfaz dibuja encima sin fondo propio.
+        v.isOpaque = false
+        v.backgroundColor = .clear
+        let fondo = NSVisualEffectView(frame: w.frame)
+        fondo.material = .hudWindow
+        fondo.blendingMode = .behindWindow
+        fondo.state = .active
+        w.frame = fondo.bounds
+        w.autoresizingMask = [.width, .height]
+        fondo.addSubview(w)
+        // La web tapa la barra de título: esta franja de arriba (sin contenido de la interfaz) es la que mueve la ventana.
+        let franja = FranjaArrastre(frame: NSRect(x: 0, y: fondo.bounds.height - 38, width: fondo.bounds.width, height: 38))
+        franja.autoresizingMask = [.width, .minYMargin]
+        fondo.addSubview(franja)
+        v.contentView = fondo
         v.delegate = self
         v.isReleasedWhenClosed = false
         v.setFrameAutosaveName("Graba")
@@ -210,5 +224,14 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
         default:
             break
         }
+    }
+}
+
+/// Franja invisible arriba de la ventana: arrastrar la mueve y el doble clic la agranda, como una barra de título normal.
+/// (WKWebView no entiende `-webkit-app-region`, así que sin esto la ventana no se podía mover.)
+final class FranjaArrastre: NSView {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func mouseDown(with e: NSEvent) {
+        if e.clickCount == 2 { window?.performZoom(nil) } else { window?.performDrag(with: e) }
     }
 }

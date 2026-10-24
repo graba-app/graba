@@ -16,8 +16,8 @@
   svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .sep { width: 1px; height: 20px; background: rgba(255, 255, 255, .12); margin: 0 4px; }
   .detalle { color: rgba(255, 255, 255, .75); font-weight: 500; font-size: 12px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
-  .rojo { background: #e8402f; color: #fff; border-radius: 999px; padding: 0 14px; }
-  .rojo:hover { background: #f04a39; }
+  .rojo { background: #d6363b; color: #fff; border-radius: 999px; padding: 0 14px; }
+  .rojo:hover { background: #e04045; }
   .rojo:disabled { background: rgba(255, 255, 255, .12); color: rgba(255, 255, 255, .5); cursor: default; }
   .punto { width: 9px; height: 9px; border-radius: 50%; background: currentColor; display: inline-block; }
   .punto.rec { background: #e8402f; margin-left: 10px; }
@@ -31,6 +31,8 @@
 <!-- Barra de grabación (como la de Mac): preparar → cuenta → grabando. En Windows no sale en el video (setContentProtection). -->
 <div class="barra" id="barra">
   <span id="preparando">
+    <button id="grabaciones" data-accion="grabaciones"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M6 6h12M8 3h8"/></svg></button>
+    <span class="sep"></span>
     <button id="pantalla" data-accion="pantalla"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button>
     <button id="ventana" data-accion="ventana"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M6.5 7h.01M9 7h.01"/></svg></button>
     <button id="area" data-accion="area"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="1.5" stroke-dasharray="3 2.6"/></svg></button>

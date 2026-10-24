@@ -21,7 +21,7 @@ window.interno.alBarra((d) => {
   $("grabar").disabled = !d.listo;
   $("t-grabar").textContent = T.grabar || "";
   $("t-terminar").textContent = T.terminar || "";
-  for (const id of ["pantalla", "ventana", "area", "camara", "microfono", "guion", "grabar", "terminar", "cerrar"]) ayuda(id, T["ayuda_" + id]);
+  for (const id of ["grabaciones", "pantalla", "ventana", "area", "camara", "microfono", "guion", "grabar", "terminar", "cerrar"]) ayuda(id, T["ayuda_" + id]);
 });
 
 document.addEventListener("click", (e) => {

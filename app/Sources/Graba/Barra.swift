@@ -112,7 +112,7 @@ private struct VistaBarra: View {
     let cancelar: () -> Void
     let elegirArea: () -> Void
 
-    private let rojo = Color(red: 0.91, green: 0.25, blue: 0.21)
+    private let rojo = Color(red: 0.84, green: 0.21, blue: 0.23)  // #d6363b, el mismo de la ventana (texto blanco legible)
 
     var body: some View {
         HStack(spacing: 4) {
@@ -142,6 +142,9 @@ private struct VistaBarra: View {
     }
 
     @ViewBuilder private var preparando: some View {
+        // Volver a las grabaciones (cierra la barra sin grabar)
+        icono("rectangle.stack", "Mis grabaciones", activo: false) { Estado.cancelar(); Ventana.shared.mostrar() }
+        separador
         // Qué grabar
         icono("display", "Toda la pantalla", activo: p.modo == "pantalla") { p.modo = "pantalla"; p.area = nil; MarcoArea.shared.ocultar(); p.guardar(); Barra.shared.ajustar() }
         Menu {

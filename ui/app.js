@@ -3,6 +3,9 @@
 (() => {
   "use strict";
   const HOST = window.GRABA_HOST || "web";
+  // Vidrio: fondo translúcido como la barra de grabación (lo pone el sistema: Mac y Windows 11). En el navegador, ?vidrio para verlo.
+  document.documentElement.dataset.host = HOST;
+  if (window.GRABA_VIDRIO || new URLSearchParams(location.search).has("vidrio")) document.documentElement.classList.add("vidrio");
   const E = {
     fase: "inactiva", grabaciones: [], config: {}, ias: [], modelos: { lista: [] }, permisos: {}, carpeta: "", version: "", procesando: null,
     sel: null, pestana: "notas", ajustes: false, bv: null, bvCerrada: false, probando: {}, resultadoIA: {}, descarga: null,
@@ -169,7 +172,7 @@
       <div class="cabeza"><span class="marca">${LOGO}<span>Graba</span></span>
         <button class="icono" data-accion="ajustes" title="Ajustes" aria-label="Ajustes">⚙︎</button></div>
       <div class="grabar-caja">
-        <button class="boton principal grande" data-accion="grabar" ${libre ? "" : "disabled"}><span class="punto"></span><span>${libre ? "Grabar" : "Grabando…"}</span></button>
+        <button class="boton grabar grande" data-accion="grabar" ${libre ? "" : "disabled"}><span class="punto"></span><span>${libre ? "Grabar" : "Grabando…"}</span></button>
         <div class="opciones-grabar">
           <button class="alternar" data-alternar="camara" aria-pressed="${!!E.config.camara}">📷 <span>Cámara</span></button>
           <button class="alternar" data-alternar="microfono" aria-pressed="${!!E.config.microfono}">🎙️ <span>Micrófono</span></button>
@@ -285,7 +288,7 @@
         <div><b>2</b><span>Toca Terminar: Graba transcribe en tu computador, sin subir nada.</span></div>
         <div><b>3</b><span>Recibes notas, un guion para YouTube, títulos, descripción con capítulos y subtítulos.</span></div>
       </div>
-      <button class="boton principal" data-accion="grabar" ${E.fase === "inactiva" ? "" : "disabled"}><span class="punto"></span><span>Grabar</span></button></div>`;
+      <button class="boton grabar" data-accion="grabar" ${E.fase === "inactiva" ? "" : "disabled"}><span class="punto"></span><span>Grabar</span></button></div>`;
   }
 
   // ───────────── Ajustes y bienvenida ─────────────

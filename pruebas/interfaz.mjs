@@ -54,10 +54,10 @@ for (const [idioma, consulta] of [["español", ""], ["inglés", "?idioma=en"]]) 
 // Contraste del botón Grabar en modo claro y oscuro.
 for (const esquema of ["light", "dark"]) {
   const p = await navegador.newPage({ colorScheme: esquema });
-  await p.goto(BASE); await p.waitForSelector(".boton.principal");
+  await p.goto(BASE); await p.waitForSelector(".boton.grabar");
   const c = await p.evaluate(() => {
     const lum = (s) => { const [r, g, b] = s.match(/[\d.]+/g).slice(0, 3).map((x) => { x = x / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
-    const cs = getComputedStyle(document.querySelector(".boton.principal")); const a = lum(cs.color), b = lum(cs.backgroundColor);
+    const cs = getComputedStyle(document.querySelector(".boton.grabar")); const a = lum(cs.color), b = lum(cs.backgroundColor);
     return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
   });
   if (c < 4.5) falla(`modo ${esquema}: el botón Grabar casi no se lee (contraste ${c.toFixed(2)})`); else console.log(`  ✓ Contraste en modo ${esquema === "light" ? "claro" : "oscuro"} (${c.toFixed(1)})`);
