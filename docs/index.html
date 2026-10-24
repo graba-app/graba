@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Graba — graba tu pantalla y tu IA te deja el guion para YouTube | Gratis y privado</title>
-<meta name="description" content="Graba tu pantalla con tu cámara, como Loom, pero todo en tu computador. Tu IA prepara el guion para el teleprompter y después escribe notas, títulos, descripción con capítulos y subtítulos. Gratis, open source y sin fines de lucro. Mac, Windows y Linux.">
+<meta name="description" content="Graba tu pantalla con tu cámara, como Loom, pero todo en tu computador. Tu IA prepara el guion para un teleprompter que no sale en el video y después escribe notas, títulos, descripción con capítulos y subtítulos. Gratis, open source y sin fines de lucro. Mac, Windows y Linux.">
 <link rel="canonical" href="https://graba-app.github.io/graba/">
 <meta name="theme-color" content="#0d0c12">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -14,7 +14,7 @@
 <meta property="og:url" content="https://graba-app.github.io/graba/">
 <meta property="og:locale" content="es_CL"><meta property="og:locale:alternate" content="en_US">
 <meta property="og:title" content="Graba — graba tu pantalla y tu IA te deja el guion">
-<meta property="og:description" content="Pantalla + cámara + voz. Transcribe en tu computador y tu IA escribe notas, guion, títulos, capítulos y subtítulos. Gratis y open source.">
+<meta property="og:description" content="Pantalla + cámara + voz. Teleprompter invisible, transcripción en tu computador y tu IA escribe notas, guion, títulos, capítulos y subtítulos. Gratis y open source.">
 <meta property="og:image" content="https://graba-app.github.io/graba/img/compartir.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
@@ -27,7 +27,7 @@
    "name": "Graba",
    "url": "https://graba-app.github.io/graba/",
    "image": "https://graba-app.github.io/graba/img/compartir.png",
-   "description": "Grabador de pantalla con cámara que transcribe en tu computador y usa tu propia IA para escribir notas, guion para YouTube, títulos, descripción con capítulos y subtítulos.",
+   "description": "Grabador de pantalla con cámara y teleprompter que transcribe en tu computador y usa tu propia IA para escribir el guion, notas, títulos, descripción con capítulos y subtítulos para YouTube.",
    "applicationCategory": "MultimediaApplication",
    "operatingSystem": "macOS 15, Windows 10, Windows 11, Linux",
    "license": "https://opensource.org/licenses/MIT",
@@ -40,19 +40,20 @@
    "@type": "FAQPage",
    "mainEntity": [
     { "@type": "Question", "name": "¿Es una alternativa gratis a Loom?", "acceptedAnswer": { "@type": "Answer", "text": "Para grabar tu pantalla con tu cámara y tener el texto listo, sí: Graba es gratis, de código abierto y todo queda en tu computador. Si necesitas compartir un link al instante para que otros comenten, Loom sigue siendo mejor para eso." } },
-    { "@type": "Question", "name": "¿Sube mi video a algún lado?", "acceptedAnswer": { "@type": "Answer", "text": "No. El video y la transcripción quedan en tu computador. A tu IA solo le llega el texto de la transcripción, con tu cuenta, igual que si lo pegaras en su chat." } },
+    { "@type": "Question", "name": "¿Sube mi video a algún lado?", "acceptedAnswer": { "@type": "Answer", "text": "No. El video y la transcripción quedan en tu computador. A tu IA solo le llega el texto de la transcripción (y los archivos que tú adjuntes para el guion), con tu cuenta, igual que si lo pegaras en su chat." } },
+    { "@type": "Question", "name": "¿El teleprompter sale en el video?", "acceptedAnswer": { "@type": "Answer", "text": "No. En Mac y Windows el teleprompter, la barra de controles y la cuenta regresiva se excluyen de la grabación: tú los ves, el video no. La burbuja de tu cámara sí sale." } },
     { "@type": "Question", "name": "¿Por qué Graba es gratis?", "acceptedAnswer": { "@type": "Answer", "text": "Porque es un proyecto open source sin fines de lucro: no hay versión de pago, anuncios ni inversionistas. La mantiene su comunidad y la licencia es MIT." } },
-    { "@type": "Question", "name": "¿Qué IA necesito?", "acceptedAnswer": { "@type": "Answer", "text": "La que ya tengas: Claude Code (Claude Pro o Max), Codex (cualquier plan de ChatGPT) o Antigravity CLI (Gemini). Se instala una vez y Graba la usa por ti." } }
+    { "@type": "Question", "name": "¿Qué IA necesito?", "acceptedAnswer": { "@type": "Answer", "text": "La que ya tengas: Claude Code (Claude Pro o Max), Codex (cualquier plan de ChatGPT) o Antigravity CLI (Gemini). Se instala una vez y Graba la usa por ti, con tu cuenta." } }
    ]
   }
  ]
 }
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --titulo: "Bricolage Grotesque", Inter, system-ui, sans-serif; --fondo: #0d0c12; --fondo2: #14131b; --panel: #1b1a24; --linea: #2c2b38;
-    --texto: #f3f1ec; --suave: #a7a4b2; --acento: #b9b0ff; --acento2: #6d5dfc; --rojo: #ff5d5d; --verde: #3ddc84; }
+  :root { --titulo: "Bricolage Grotesque", Inter, system-ui, sans-serif; --fondo: #0d0c12; --fondo2: #14131b; --panel: #1b1a24; --panel2: #23222e; --linea: #2c2b38;
+    --texto: #f3f1ec; --suave: #a7a4b2; --acento: #b9b0ff; --acento2: #6d5dfc; --rojo: #ff5d5d; --verde: #3ddc84; --ambar: #ffc861; --papel: #f6f3ec; --tinta: #1a1822; }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   html[lang="es"] [data-en], html[lang="en"] [data-es] { display: none !important; }
@@ -60,199 +61,750 @@
   a { color: var(--acento); } :focus-visible { outline: 2px solid var(--acento); outline-offset: 3px; border-radius: 6px; }
   img { max-width: 100%; height: auto; display: block; }
   h1, h2, h3 { font-family: var(--titulo); line-height: 1.08; margin: 0; letter-spacing: -0.01em; }
-  .ancho { width: min(1120px, 100% - 32px); margin: 0 auto; }
+  .ancho { width: min(1140px, 100% - 32px); margin: 0 auto; }
+
+  /* Barra superior */
   .barra { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(14px); background: color-mix(in srgb, var(--fondo) 80%, transparent); border-bottom: 1px solid var(--linea); }
   .barra .ancho { display: flex; align-items: center; gap: 16px; height: 60px; }
   .marca { display: flex; align-items: center; gap: 9px; font-family: var(--titulo); font-weight: 800; font-size: 20px; text-decoration: none; color: var(--texto); }
   .marca img { width: 28px; height: 28px; }
   .barra nav { display: flex; gap: 18px; margin-left: auto; font-size: 14px; } .barra nav a { color: var(--suave); text-decoration: none; } .barra nav a:hover { color: var(--texto); }
+  .estrellas { font-size: 13px; font-weight: 600; color: var(--texto); text-decoration: none; border: 1px solid var(--linea); border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
+  .estrellas b { color: var(--ambar); }
   .idioma { border: 1px solid var(--linea); background: none; color: var(--texto); border-radius: 999px; padding: 5px 11px; font: 600 12px Inter, sans-serif; cursor: pointer; }
   .boton { display: inline-flex; align-items: center; gap: 9px; padding: 13px 20px; border-radius: 12px; font-weight: 600; text-decoration: none; border: 1px solid var(--linea); color: var(--texto); background: var(--fondo2); }
-  .boton.principal { background: var(--acento2); color: #fff; border-color: transparent; }
-  .boton.principal:hover { filter: brightness(1.1); }
-  .rec { width: 11px; height: 11px; border-radius: 50%; background: var(--rojo); box-shadow: 0 0 0 3px rgba(255,255,255,.9); }
+  .boton.principal { background: var(--acento2); color: #fff; border-color: transparent; box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--acento2) 80%, transparent); }
+  .boton.principal:hover { filter: brightness(1.1); } .boton:not(.principal):hover { border-color: var(--acento); }
+  .rec { width: 11px; height: 11px; border-radius: 50%; background: var(--rojo); box-shadow: 0 0 0 3px rgba(255,255,255,.9); flex: none; }
 
-  .heroe { padding: 76px 0 30px; text-align: center; }
-  .heroe h1 { font-size: clamp(38px, 6.4vw, 72px); max-width: 15ch; margin: 0 auto; }
-  .heroe h1 em { font-style: normal; color: var(--acento); }
-  .heroe p.sub { color: var(--suave); font-size: 19px; max-width: 60ch; margin: 20px auto 28px; }
+  /* Héroe */
+  .heroe { padding: 70px 0 20px; text-align: center; position: relative; }
+  .heroe::before { content: ""; position: absolute; inset: -60px 0 auto; height: 560px; background: radial-gradient(50% 60% at 50% 30%, color-mix(in srgb, var(--acento2) 22%, transparent), transparent 70%); pointer-events: none; z-index: -1; }
+  .pildora { display: inline-flex; gap: 8px; align-items: center; padding: 5px 13px; border-radius: 999px; border: 1px solid var(--linea); background: var(--fondo2); color: var(--suave); font-size: 13.5px; margin-bottom: 20px; }
+  .pildora b { color: var(--verde); font-weight: 600; }
+  .heroe h1 { font-size: clamp(38px, 6.6vw, 76px); max-width: 17ch; margin: 0 auto; }
+  .heroe h1 em { display: block; font-style: normal; background: linear-gradient(90deg, var(--acento), #ff9ad5); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .heroe p.sub { color: var(--suave); font-size: 19px; max-width: 62ch; margin: 20px auto 28px; }
+  .heroe p.sub b { color: var(--texto); font-weight: 600; }
   .acciones { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   .sellos { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 18px; color: var(--suave); font-size: 14px; }
   .sellos > span::before { content: "✓ "; color: var(--verde); font-weight: 700; }
   .aviso-so { color: var(--suave); font-size: 14px; margin-top: 12px; }
-  .captura { display: block; margin: 44px auto 0; border-radius: 16px; border: 1px solid var(--linea); overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.03); max-width: 1000px; }
 
-  section { padding: 80px 0; }
-  section h2 { font-size: clamp(30px, 4.4vw, 46px); margin-bottom: 12px; }
-  .bajada { color: var(--suave); font-size: 18px; max-width: 62ch; margin: 0 0 34px; }
-  .pasos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-  .paso { background: var(--fondo2); border: 1px solid var(--linea); border-radius: 18px; padding: 22px; }
-  .paso .esc { height: 130px; border-radius: 12px; background: var(--panel); margin-bottom: 18px; position: relative; overflow: hidden; }
-  .paso h3 { font-size: 22px; margin-bottom: 6px; } .paso p { color: var(--suave); margin: 0; }
-  /* Escena 1: pantalla + burbuja + REC */
-  .pantalla { position: absolute; inset: 18px 22px 30px 22px; border: 3px solid var(--acento); border-radius: 8px; }
-  .pantalla i { position: absolute; top: 9px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: var(--rojo); animation: latido 1.2s infinite; }
-  .burbuja { position: absolute; left: 12px; bottom: 10px; width: 46px; height: 46px; border-radius: 50%; background: var(--acento2); border: 3px solid var(--panel); animation: flota 3s ease-in-out infinite; }
-  @keyframes latido { 50% { opacity: .25; } } @keyframes flota { 50% { transform: translateY(-5px); } }
-  /* Escena 2: ondas → texto */
-  .ondas { position: absolute; left: 22px; top: 50%; transform: translateY(-50%); display: flex; gap: 4px; align-items: center; }
-  .ondas b { width: 5px; border-radius: 3px; background: var(--acento); animation: onda 1s ease-in-out infinite; }
-  .ondas b:nth-child(2n) { animation-delay: .2s } .ondas b:nth-child(3n) { animation-delay: .4s }
-  @keyframes onda { 0%, 100% { height: 10px } 50% { height: 46px } }
-  .lineas { position: absolute; right: 22px; top: 30px; display: grid; gap: 9px; width: 50%; }
-  .lineas i { height: 8px; border-radius: 4px; background: var(--linea); position: relative; overflow: hidden; }
-  .lineas i::after { content: ""; position: absolute; inset: 0; background: var(--suave); transform-origin: left; animation: escribe 3s ease-in-out infinite; }
-  .lineas i:nth-child(2)::after { animation-delay: .5s } .lineas i:nth-child(3)::after { animation-delay: 1s } .lineas i:nth-child(4)::after { animation-delay: 1.5s }
-  @keyframes escribe { 0% { transform: scaleX(0) } 60%, 100% { transform: scaleX(1) } }
-  /* Escena 3: tarjetas */
-  .fichas { position: absolute; inset: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .fichas span { border-radius: 8px; background: var(--fondo2); border: 1px solid var(--linea); display: grid; place-items: center; font-size: 22px; animation: aparece 3.6s infinite; opacity: 0; }
-  .fichas span:nth-child(2) { animation-delay: .3s } .fichas span:nth-child(3) { animation-delay: .6s } .fichas span:nth-child(4) { animation-delay: .9s } .fichas span:nth-child(5) { animation-delay: 1.2s } .fichas span:nth-child(6) { animation-delay: 1.5s }
-  @keyframes aparece { 0% { opacity: 0; transform: scale(.8) } 15%, 85% { opacity: 1; transform: none } 100% { opacity: 0 } }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } .fichas span { opacity: 1; } .lineas i::after { transform: none; } }
+  /* ── Estudio animado (se escala con el ancho gracias a cqw) ── */
+  .marco-estudio { max-width: 1040px; margin: 46px auto 0; position: relative; }
+  .estudio { container-type: inline-size; position: relative; aspect-ratio: 16 / 10; border-radius: 18px; overflow: hidden; border: 1px solid var(--linea);
+    background: radial-gradient(80% 90% at 85% 0%, #3b2b6e 0%, transparent 60%), radial-gradient(70% 80% at 0% 100%, #5b2346 0%, transparent 60%), #17152a;
+    box-shadow: 0 40px 100px -30px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.03); text-align: left; font-family: Inter, sans-serif; }
+  .estudio .menu-sis { position: absolute; inset: 0 0 auto; height: 3.2cqw; background: rgba(10,9,18,.55); display: flex; align-items: center; gap: 1.6cqw; padding: 0 1.8cqw; font-size: 1.25cqw; color: #d9d6e3; }
+  .estudio .menu-sis .r { margin-left: auto; display: flex; gap: 1.4cqw; align-items: center; }
+  .estudio .menu-sis .r i { width: 1.1cqw; height: 1.1cqw; border-radius: 50%; background: var(--rojo); animation: latido 1.2s infinite; }
+  /* ventana con diapositivas */
+  .diapo { position: absolute; left: 5%; top: 9%; width: 64%; height: 70%; border-radius: 1.2cqw; background: var(--papel); color: var(--tinta); overflow: hidden; box-shadow: 0 2cqw 5cqw -1cqw rgba(0,0,0,.6); }
+  .diapo .tb { height: 3.2cqw; background: #e7e2d8; display: flex; align-items: center; gap: .7cqw; padding: 0 1.2cqw; font-size: 1.15cqw; color: #6a6575; }
+  .diapo .tb i { width: 1cqw; height: 1cqw; border-radius: 50%; background: #d0c9bc; } .diapo .tb i:first-child { background: #ff6159; } .diapo .tb i:nth-child(2) { background: #ffbd2e; } .diapo .tb i:nth-child(3) { background: #28c941; }
+  .diapo .tb span { margin-left: 1cqw; }
+  .diapo .cont { padding: 2.6cqw 3.2cqw; }
+  .diapo h4 { margin: 0; font: 800 3cqw/1.1 var(--titulo); }
+  .diapo p { margin: .6cqw 0 0; font-size: 1.35cqw; color: #6a6575; }
+  .grafico { display: flex; align-items: flex-end; gap: 2.2cqw; height: 18cqw; margin-top: 2.4cqw; padding-bottom: .6cqw; border-bottom: 2px solid #d7d1c5; }
+  .grafico b { flex: 1; border-radius: .7cqw .7cqw 0 0; background: #c9c2f5; transform-origin: bottom; animation: crecer 9s ease-in-out infinite; }
+  .grafico b:nth-child(1) { height: 42%; } .grafico b:nth-child(2) { height: 58%; animation-delay: .15s; } .grafico b:nth-child(3) { height: 50%; animation-delay: .3s; }
+  .grafico b:nth-child(4) { height: 92%; background: var(--acento2); animation-delay: .45s; } .grafico b:nth-child(5) { height: 74%; animation-delay: .6s; }
+  @keyframes crecer { 0%, 4% { transform: scaleY(.08); } 14%, 92% { transform: scaleY(1); } 100% { transform: scaleY(.08); } }
+  .grafico-et { display: flex; gap: 2.2cqw; font-size: 1.1cqw; color: #8a8494; margin-top: .5cqw; } .grafico-et span { flex: 1; text-align: center; }
+  .resalta { position: absolute; left: 50%; top: 40%; width: 7cqw; height: 7cqw; border-radius: 50%; border: .35cqw solid var(--ambar); opacity: 0; animation: resalta 9s ease-out infinite; }
+  @keyframes resalta { 0%, 46% { opacity: 0; transform: scale(.4); } 50% { opacity: 1; transform: scale(1); } 60%, 100% { opacity: 0; transform: scale(1.5); } }
+  /* cursor */
+  .cursor { position: absolute; left: 0; top: 0; width: 2.4cqw; height: 2.4cqw; z-index: 3; animation: cursor 9s ease-in-out infinite; filter: drop-shadow(0 .3cqw .4cqw rgba(0,0,0,.5)); }
+  @keyframes cursor { 0%, 8% { transform: translate(30cqw, 52cqw); } 30% { transform: translate(22cqw, 30cqw); } 46%, 52% { transform: translate(41.5cqw, 27cqw); } 70% { transform: translate(52cqw, 44cqw); } 100% { transform: translate(30cqw, 52cqw); } }
+  /* teleprompter (no sale en el video) */
+  .tp { position: absolute; right: 3.5%; top: 9%; width: 25%; height: 56%; border-radius: 1.2cqw; background: rgba(12,11,20,.92); border: .15cqw solid rgba(255,255,255,.12); overflow: hidden; z-index: 2; transition: opacity .6s; }
+  .tp .tp-cab { display: flex; align-items: center; justify-content: space-between; padding: .9cqw 1.1cqw; font-size: 1.05cqw; color: var(--suave); border-bottom: .1cqw solid rgba(255,255,255,.08); }
+  .tp .tp-cab b { color: var(--texto); font-weight: 600; }
+  .tp .play { width: 2cqw; height: 2cqw; border-radius: 50%; background: var(--acento2); display: grid; place-items: center; color: #fff; font-size: .9cqw; }
+  .tp .ventana-t { position: absolute; inset: 3.6cqw 0 0; overflow: hidden; mask-image: linear-gradient(transparent, #000 25%, #000 70%, transparent); -webkit-mask-image: linear-gradient(transparent, #000 25%, #000 70%, transparent); }
+  .tp .rollo { padding: 0 1.4cqw; font: 600 1.7cqw/1.45 Inter, sans-serif; color: #ece9f6; animation: rollo 18s linear infinite; }
+  .tp .rollo p { margin: 0 0 1.4cqw; } .tp .rollo .cue { color: var(--ambar); font-size: 1.3cqw; font-weight: 500; }
+  @keyframes rollo { from { transform: translateY(8cqw); } to { transform: translateY(-50%); } }
+  .tp .guia { position: absolute; left: 0; right: 0; top: 45%; height: 2.6cqw; border-top: .12cqw solid rgba(185,176,255,.35); border-bottom: .12cqw solid rgba(185,176,255,.35); pointer-events: none; }
+  /* burbuja de la cámara (sí sale) */
+  .cam { position: absolute; left: 3.5%; bottom: 6%; width: 17cqw; height: 17cqw; border-radius: 50%; overflow: hidden; border: .45cqw solid #fff; z-index: 2; box-shadow: 0 1.6cqw 4cqw -1cqw rgba(0,0,0,.7); background: linear-gradient(160deg, #6d5dfc, #ff7aa8); }
+  .cam svg { width: 100%; height: 100%; display: block; }
+  .boca { transform-origin: 50% 50%; transform-box: fill-box; animation: hablar 2.4s infinite; }
+  @keyframes hablar { 0%, 100% { transform: scaleY(.35); } 8% { transform: scaleY(1); } 16% { transform: scaleY(.5); } 24% { transform: scaleY(.95); } 34% { transform: scaleY(.3); } 44% { transform: scaleY(.8); } 54% { transform: scaleY(.45); } 64% { transform: scaleY(1); } 76% { transform: scaleY(.35); } 86% { transform: scaleY(.7); } }
+  .ojos { transform-origin: 50% 50%; transform-box: fill-box; animation: parpadear 5s infinite; }
+  @keyframes parpadear { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+  /* barra de grabación (no sale en el video) */
+  .barra-rec { position: absolute; left: 50%; bottom: 4.5%; transform: translateX(-50%); display: flex; align-items: center; gap: 1.2cqw; padding: .9cqw 1.4cqw; border-radius: 99cqw; background: rgba(16,15,26,.94); border: .12cqw solid rgba(255,255,255,.12); font: 600 1.35cqw Inter, sans-serif; color: var(--texto); z-index: 2; white-space: nowrap; transition: opacity .6s; }
+  .barra-rec .p { width: 1.1cqw; height: 1.1cqw; border-radius: 50%; background: var(--rojo); animation: latido 1.2s infinite; }
+  .barra-rec .t { font-variant-numeric: tabular-nums; min-width: 4.4cqw; }
+  .barra-rec .term { padding: .45cqw 1.1cqw; border-radius: 99cqw; background: var(--rojo); color: #fff; }
+  .barra-rec .x { color: var(--suave); }
+  @keyframes latido { 50% { opacity: .3; } }
+  /* etiquetas sobre el estudio */
+  .etq { position: absolute; z-index: 4; display: inline-flex; align-items: center; gap: .6cqw; padding: .55cqw 1.1cqw; border-radius: 99cqw; font: 600 1.25cqw Inter, sans-serif; white-space: nowrap; box-shadow: 0 .8cqw 2cqw -.4cqw rgba(0,0,0,.6); }
+  .etq.no { background: var(--fondo); color: var(--texto); border: .12cqw dashed var(--acento); }
+  .etq.si { background: var(--verde); color: #0b2316; }
+  .etq.e-tp { right: 6%; top: 66.5%; } .etq.e-cam { left: 5%; bottom: 25.5%; } .etq.e-barra { left: 50%; bottom: 13%; transform: translateX(-50%); }
+  /* versión "lo que queda en el video" */
+  .estudio.video .tp, .estudio.video .barra-rec, .estudio.video .etq, .estudio.video .cursor-no { opacity: 0 !important; visibility: hidden; }
+  .estudio.video::after { content: ""; position: absolute; inset: 0; border: .5cqw solid var(--rojo); border-radius: 18px; pointer-events: none; }
+  .estudio.chico .etq, .estudio.chico .menu-sis { display: none; }
 
-  .recibes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 36px; align-items: center; }
-  .lista-recibes { display: grid; gap: 12px; }
-  .lista-recibes div { display: flex; gap: 14px; padding: 14px 16px; background: var(--fondo2); border: 1px solid var(--linea); border-radius: 14px; }
+  section { padding: 84px 0; }
+  section h2 { font-size: clamp(30px, 4.4vw, 48px); margin-bottom: 12px; }
+  .sec-cab { max-width: 760px; margin-bottom: 38px; }
+  .sec-cab p { color: var(--suave); font-size: 18px; margin: 0; } .sec-cab p b { color: var(--texto); font-weight: 600; }
+  .sec-cab .antetitulo { display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--acento); margin-bottom: 12px; }
+  .centro { text-align: center; margin-left: auto; margin-right: auto; }
+
+  /* ── Flujo: cómo funciona ── */
+  .flujo { display: grid; grid-template-columns: minmax(0, 1fr) 46px minmax(0, 1fr) 46px minmax(0, 1fr) 46px minmax(0, 1.1fr); }
+  .estacion { --brillo: transparent; position: relative; border-radius: 20px; border: 1px solid var(--linea); background: var(--fondo2); padding: 16px; display: flex; flex-direction: column; gap: 11px; min-height: 300px;
+    box-shadow: 0 0 0 1px var(--brillo), 0 22px 60px -30px rgba(0,0,0,.8); animation: turno 12s linear infinite; font-size: 13.5px; }
+  .estacion.e2 { animation-delay: 3s; } .estacion.e3 { animation-delay: 6s; } .estacion.e4 { animation-delay: 9s; }
+  @property --brillo { syntax: "<color>"; inherits: false; initial-value: transparent; }
+  @keyframes turno { 0%, 24% { --brillo: color-mix(in srgb, var(--acento) 60%, transparent); border-color: color-mix(in srgb, var(--acento) 55%, var(--linea)); } 26%, 100% { --brillo: transparent; } }
+  .est-tit { display: flex; align-items: center; gap: 9px; font: 700 16px var(--titulo); }
+  .est-tit .n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 700 12px Inter, sans-serif; border: 1px solid var(--linea); background: var(--panel); }
+  .donde { margin-top: auto; align-self: flex-start; font-size: 11.5px; color: var(--verde); border: 1px solid color-mix(in srgb, var(--verde) 40%, var(--linea)); border-radius: 999px; padding: 2px 9px; }
+  .donde.fuera { color: var(--acento); border-color: color-mix(in srgb, var(--acento) 40%, var(--linea)); }
+  .campo { border: 1px solid var(--linea); background: var(--panel); border-radius: 10px; padding: 8px 10px; }
+  .campo small { display: block; color: var(--suave); font-size: 11px; margin-bottom: 2px; }
+  .escribe { display: block; white-space: nowrap; overflow: hidden; animation: tipeo 12s steps(30) infinite; }
+  @keyframes tipeo { 0%, 2% { clip-path: inset(0 100% 0 0); } 16%, 97% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 100% 0 0); } }
+  .fila-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--linea); font-size: 12px; }
+  .chip.arch { animation: soltar 12s ease-out infinite; }
+  @keyframes soltar { 0%, 10% { opacity: 0; transform: translateY(-14px); } 14%, 97% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  .btn-mini { align-self: flex-start; padding: 6px 12px; border-radius: 9px; background: var(--acento2); color: #fff; font-weight: 600; font-size: 12.5px; animation: pulsar 12s infinite; }
+  @keyframes pulsar { 0%, 18% { box-shadow: 0 0 0 0 transparent; } 21% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--acento2) 35%, transparent); } 25%, 100% { box-shadow: 0 0 0 0 transparent; } }
+  .mini-tp { position: relative; border-radius: 10px; background: #0b0a12; border: 1px solid var(--linea); height: 108px; overflow: hidden; padding: 0 10px; }
+  .mini-tp .r { font-weight: 600; font-size: 13px; line-height: 1.5; animation: rollo2 12s linear infinite; padding-top: 10px; }
+  .mini-tp .r p { margin: 0 0 8px; } .mini-tp .r .cue { color: var(--ambar); font-weight: 500; font-size: 11.5px; }
+  @keyframes rollo2 { 0%, 25% { transform: translateY(0); } 50%, 100% { transform: translateY(-62px); } }
+  .mini-tp::after { content: ""; position: absolute; inset: 0; background: linear-gradient(#0b0a12, transparent 28%, transparent 70%, #0b0a12); }
+  .grabando { display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--rojo) 16%, transparent); color: #ffb3b3; }
+  .grabando i { width: 8px; height: 8px; border-radius: 50%; background: var(--rojo); animation: latido 1.2s infinite; }
+  .onda { display: flex; align-items: center; gap: 3px; height: 34px; }
+  .onda i { flex: 1; max-width: 5px; height: 100%; border-radius: 3px; background: var(--acento); transform: scaleY(.25); animation: voz .9s ease-in-out infinite; }
+  .onda i:nth-child(3n) { animation-delay: .15s } .onda i:nth-child(3n+1) { animation-delay: .35s } .onda i:nth-child(4n) { animation-delay: .5s }
+  @keyframes voz { 50% { transform: scaleY(1); } }
+  .linea-t { font-size: 12.5px; color: #d9d6e3; } .linea-t time { color: var(--suave); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  .linea-t.l1 { animation: escribir 12s infinite; } .linea-t.l2 { animation: escribir2 12s infinite; } .linea-t.l3 { animation: escribir3 12s infinite; }
+  @keyframes escribir { 0%, 52% { clip-path: inset(0 100% 0 0); } 58%, 97% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 100% 0 0); } }
+  @keyframes escribir2 { 0%, 57% { clip-path: inset(0 100% 0 0); } 63%, 97% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 100% 0 0); } }
+  @keyframes escribir3 { 0%, 62% { clip-path: inset(0 100% 0 0); } 68%, 97% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 100% 0 0); } }
+  .estacion.e4 { background: var(--papel); color: var(--tinta); border-color: transparent; }
+  .estacion.e4 .est-tit .n { background: var(--tinta); color: var(--papel); border-color: transparent; }
+  .ias-giran { position: relative; height: 22px; font-weight: 700; font-family: var(--titulo); font-size: 15px; }
+  .ias-giran span { position: absolute; left: 0; opacity: 0; animation: nombre 9s infinite; } .ias-giran span:nth-child(2) { animation-delay: 3s; } .ias-giran span:nth-child(3) { animation-delay: 6s; }
+  @keyframes nombre { 0% { opacity: 0; transform: translateY(6px); } 4%, 30% { opacity: 1; transform: none; } 34%, 100% { opacity: 0; transform: translateY(-6px); } }
+  .sale { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 9px; background: #fff; border: 1px solid #e4dfd3; font-size: 12.5px; opacity: 0; }
+  .sale b { font-weight: 600; } .sale .ok { margin-left: auto; color: #18a35a; font-weight: 700; }
+  .sale.s1 { animation: aparecer 12s infinite; } .sale.s2 { animation: aparecer2 12s infinite; } .sale.s3 { animation: aparecer3 12s infinite; } .sale.s4 { animation: aparecer4 12s infinite; }
+  @keyframes aparecer { 0%, 76% { opacity: 0; transform: translateY(6px); } 79%, 97% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  @keyframes aparecer2 { 0%, 79% { opacity: 0; transform: translateY(6px); } 82%, 97% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  @keyframes aparecer3 { 0%, 82% { opacity: 0; transform: translateY(6px); } 85%, 97% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  @keyframes aparecer4 { 0%, 85% { opacity: 0; transform: translateY(6px); } 88%, 97% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  .estacion.e4 .donde { color: #4a4555; border-color: #d9d3c6; }
+  .conector { position: relative; display: grid; place-items: center; }
+  .conector::before { content: ""; position: absolute; left: 6px; right: 6px; top: 50%; border-top: 2px dashed var(--linea); }
+  .conector small { position: absolute; top: calc(50% + 10px); font-size: 11px; color: var(--suave); white-space: nowrap; }
+  .paquete { position: absolute; left: 0; top: calc(50% - 12px); padding: 3px 7px; border-radius: 7px; background: var(--acento); color: #15130c; font: 700 10.5px Inter, sans-serif; opacity: 0; white-space: nowrap; animation: viaje 12s ease-in-out infinite; }
+  .c1 .paquete { animation-delay: -10.5s; } .c3 .paquete { animation-delay: -4.5s; }
+  .particula { position: absolute; left: 4px; top: calc(50% - 4px); width: 8px; height: 8px; border-radius: 50%; background: var(--acento); animation: sonido 1.4s linear infinite; }
+  .particula:nth-of-type(2) { animation-delay: -.47s; } .particula:nth-of-type(3) { animation-delay: -.94s; }
+  @keyframes sonido { from { transform: translateX(0); opacity: 0; } 20%, 80% { opacity: 1; } to { transform: translateX(32px); opacity: 0; } }
+  @keyframes viaje { 0% { opacity: 0; transform: translateX(-30%); } 2% { opacity: 1; } 9% { opacity: 1; transform: translateX(30%); } 11%, 100% { opacity: 0; transform: translateX(30%); } }
+  .flujo-pie { margin: 20px 0 0; text-align: center; color: var(--suave); font-size: 15px; } .flujo-pie b { color: var(--texto); font-weight: 600; }
+
+  /* ── Comparación ── */
+  .tabla { border: 1px solid var(--linea); border-radius: 20px; overflow: hidden; }
+  .fila { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1fr) minmax(0, 1.05fr); border-top: 1px solid var(--linea); }
+  .fila:first-child { border-top: 0; } .fila > div { padding: 15px 20px; font-size: 15px; }
+  .fila > div:first-child { color: var(--suave); } .fila > div:nth-child(2) { color: #c9c6d1; } .fila > div:last-child { background: color-mix(in srgb, var(--verde) 7%, transparent); }
+  .fila.cab > div { font-family: var(--titulo); font-weight: 700; font-size: 17px; color: var(--texto); } .fila.cab > div:last-child { color: var(--verde); }
+  .tabla-pie { color: var(--suave); font-size: 14px; margin-top: 14px; }
+
+  /* ── Teleprompter invisible: lo que ves vs. lo que queda ── */
+  .dos-pantallas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; }
+  .dos-pantallas figure { margin: 0; }
+  .dos-pantallas figcaption { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; font: 700 18px var(--titulo); }
+  .dos-pantallas figcaption small { font: 500 13.5px Inter, sans-serif; color: var(--suave); margin-left: auto; }
+  .dos-pantallas .estudio { border-radius: 14px; }
+  .ojo { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--panel2); font-size: 14px; }
+  .ventajas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
+  .ventaja { padding: 20px; border-radius: 18px; background: var(--fondo2); border: 1px solid var(--linea); }
+  .ventaja b { display: block; font: 700 18px var(--titulo); margin-bottom: 4px; } .ventaja p { margin: 0; color: var(--suave); font-size: 15px; }
+
+  /* ── A tu manera: modo, forma de cámara, dispositivos ── */
+  .manera { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .tarjeta { border-radius: 20px; background: var(--fondo2); border: 1px solid var(--linea); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .tarjeta h3 { font-size: 20px; } .tarjeta p { margin: 0; color: var(--suave); font-size: 15px; }
+  .lienzo { position: relative; height: 170px; border-radius: 14px; background: radial-gradient(90% 90% at 80% 0%, #33285f, transparent 60%), #17152a; overflow: hidden; }
+  .modo { position: absolute; border-radius: 10px; opacity: 0; animation: modo 9s infinite; }
+  .modo.m1 { inset: 6px; border: 3px solid var(--rojo); }
+  .modo.m2 { left: 16%; top: 18%; width: 56%; height: 62%; border: 3px solid var(--rojo); background: rgba(246,243,236,.92); animation-delay: 3s; }
+  .modo.m2::before { content: ""; position: absolute; inset: 0 0 auto; height: 14px; background: #e7e2d8; border-radius: 6px 6px 0 0; }
+  .modo.m3 { left: 30%; top: 26%; width: 46%; height: 50%; border: 3px dashed var(--rojo); background: rgba(255,93,93,.08); animation-delay: 6s; }
+  @keyframes modo { 0% { opacity: 0; transform: scale(.96); } 4%, 30% { opacity: 1; transform: none; } 34%, 100% { opacity: 0; } }
+  .ventanitas i { position: absolute; border-radius: 7px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1); }
+  .etq-modo { position: absolute; left: 12px; bottom: 10px; height: 24px; font-size: 12.5px; font-weight: 600; }
+  .etq-modo span { position: absolute; left: 0; white-space: nowrap; padding: 3px 10px; border-radius: 999px; background: var(--fondo); border: 1px solid var(--linea); opacity: 0; animation: nombre 9s infinite; }
+  .etq-modo span:nth-child(2) { animation-delay: 3s; } .etq-modo span:nth-child(3) { animation-delay: 6s; }
+  .forma { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); border: 4px solid #fff; overflow: hidden; background: linear-gradient(160deg, #6d5dfc, #ff7aa8); animation: forma 12s ease-in-out infinite; box-shadow: 0 16px 40px -12px rgba(0,0,0,.7); }
+  .forma svg { width: 100%; height: 100%; display: block; object-fit: cover; }
+  @keyframes forma { 0%, 20% { width: 96px; height: 96px; border-radius: 50%; } 25%, 45% { width: 96px; height: 96px; border-radius: 18px; } 50%, 70% { width: 156px; height: 88px; border-radius: 14px; } 75%, 95% { width: 72px; height: 124px; border-radius: 14px; } 100% { width: 96px; height: 96px; border-radius: 50%; } }
+  .etq-modo.de4 span { animation: nombre4 12s infinite; } .etq-modo.de4 span:nth-child(2) { animation-delay: 3s; } .etq-modo.de4 span:nth-child(3) { animation-delay: 6s; } .etq-modo.de4 span:nth-child(4) { animation-delay: 9s; }
+  @keyframes nombre4 { 0% { opacity: 0; } 3%, 22% { opacity: 1; } 25%, 100% { opacity: 0; } }
+  .menu-disp { position: absolute; left: 14px; right: 14px; top: 14px; border-radius: 12px; background: rgba(16,15,26,.96); border: 1px solid var(--linea); padding: 6px; font-size: 13px; }
+  .menu-disp div { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; color: #d9d6e3; position: relative; }
+  .menu-disp div::after { content: "✓"; margin-left: auto; color: var(--acento); font-weight: 700; opacity: 0; animation: marca 9s infinite; }
+  .menu-disp div:nth-child(2)::after { animation-delay: 3s; } .menu-disp div:nth-child(3)::after { animation-delay: 6s; }
+  .menu-disp div::before { content: ""; position: absolute; inset: 0; border-radius: 8px; background: rgba(185,176,255,.12); opacity: 0; animation: marca 9s infinite; }
+  .menu-disp div:nth-child(2)::before { animation-delay: 3s; } .menu-disp div:nth-child(3)::before { animation-delay: 6s; }
+  @keyframes marca { 0% { opacity: 0; } 3%, 31% { opacity: 1; } 34%, 100% { opacity: 0; } }
+  .nivel { position: absolute; left: 14px; right: 14px; bottom: 14px; display: flex; gap: 3px; height: 14px; align-items: flex-end; }
+  .nivel i { flex: 1; height: 100%; border-radius: 2px; background: var(--verde); transform-origin: bottom; transform: scaleY(.2); animation: voz 1s ease-in-out infinite; }
+  .nivel i:nth-child(odd) { animation-delay: .2s; } .nivel i:nth-child(3n) { animation-delay: .4s; background: var(--ambar); }
+
+  /* ── Guion con IA ── */
+  .guion-ia { display: grid; grid-template-columns: minmax(0, .9fr) 70px minmax(0, 1.1fr); align-items: center; }
+  .pedido { border-radius: 20px; background: var(--fondo2); border: 1px solid var(--linea); padding: 20px; display: grid; gap: 12px; }
+  .pedido h3 { font-size: 19px; }
+  .duracion { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--suave); }
+  .duracion .riel { flex: 1; height: 6px; border-radius: 3px; background: var(--panel2); position: relative; }
+  .duracion .riel i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--acento2); animation: riel 10s ease-in-out infinite; }
+  .duracion .riel b { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #fff; animation: perilla 10s ease-in-out infinite; }
+  @keyframes riel { 0%, 2% { width: 10%; } 10%, 100% { width: 38%; } } @keyframes perilla { 0%, 2% { left: 10%; } 10%, 100% { left: 38%; } }
+  .duracion output { color: var(--texto); font-weight: 700; min-width: 44px; }
+  .archivos { display: flex; gap: 8px; flex-wrap: wrap; }
+  .archivo { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--linea); font-size: 13px; animation: caer 10s ease-out infinite; }
+  .archivo:nth-child(2) { animation-delay: .4s; }
+  .archivo .tipo { font: 700 10px Inter, sans-serif; padding: 3px 5px; border-radius: 5px; background: #e5533d; color: #fff; } .archivo:nth-child(2) .tipo { background: #2b6be5; }
+  @keyframes caer { 0%, 9% { opacity: 0; transform: translateY(-16px) rotate(-3deg); } 15%, 96% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  .flecha-ia { position: relative; height: 100%; display: grid; place-items: center; }
+  .flecha-ia .chispa { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; background: radial-gradient(circle, color-mix(in srgb, var(--acento) 30%, transparent), transparent 70%); animation: chispa 10s infinite; }
+  @keyframes chispa { 0%, 15% { transform: scale(.7); opacity: .4; } 20% { transform: scale(1.25) rotate(20deg); opacity: 1; } 25%, 100% { transform: scale(1); opacity: .9; } }
+  .resultado-tp { border-radius: 20px; background: #0b0a12; border: 1px solid var(--linea); overflow: hidden; }
+  .resultado-tp .cab { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--linea); font-size: 13px; color: var(--suave); }
+  .resultado-tp .cab b { color: var(--texto); } .resultado-tp .cab .cuenta { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .resultado-tp .cuerpo { padding: 18px 20px 22px; font: 600 17px/1.55 Inter, sans-serif; color: #ece9f6; min-height: 280px; }
+  .resultado-tp .cuerpo p { margin: 0 0 12px; opacity: 0; animation: parrafo 10s infinite; } .resultado-tp .cuerpo .cue { color: var(--ambar); font-size: 14px; font-weight: 500; }
+  .resultado-tp .cuerpo p:nth-child(2) { animation-name: parrafo2; } .resultado-tp .cuerpo p:nth-child(3) { animation-name: parrafo3; } .resultado-tp .cuerpo p:nth-child(4) { animation-name: parrafo4; }
+  @keyframes parrafo { 0%, 22% { opacity: 0; transform: translateY(6px); } 26%, 96% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  @keyframes parrafo2 { 0%, 29% { opacity: 0; transform: translateY(6px); } 33%, 96% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  @keyframes parrafo3 { 0%, 36% { opacity: 0; transform: translateY(6px); } 40%, 96% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  @keyframes parrafo4 { 0%, 43% { opacity: 0; transform: translateY(6px); } 47%, 96% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  .resultado-tp .pie { display: flex; gap: 8px; padding: 0 20px 18px; opacity: 0; animation: parrafo4 10s infinite; }
+  .resultado-tp .pie span { padding: 7px 12px; border-radius: 9px; font-size: 13px; font-weight: 600; background: var(--acento2); color: #fff; } .resultado-tp .pie span + span { background: var(--panel2); color: var(--texto); }
+  .lista-ok { list-style: none; padding: 0; margin: 26px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .lista-ok li { padding: 16px 18px; border-radius: 16px; background: var(--fondo2); border: 1px solid var(--linea); color: var(--suave); font-size: 15px; }
+  .lista-ok li b { display: block; color: var(--texto); font-weight: 600; margin-bottom: 2px; }
+
+  /* ── Lo que recibes ── */
+  .recibes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 36px; align-items: start; }
+  .lista-recibes { display: grid; gap: 11px; }
+  .lista-recibes div { display: flex; gap: 14px; padding: 13px 16px; background: var(--fondo2); border: 1px solid var(--linea); border-radius: 14px; }
   .lista-recibes .ico { font-size: 22px; } .lista-recibes b { display: block; } .lista-recibes small { color: var(--suave); font-size: 14.5px; }
-  .captura2 { border-radius: 14px; border: 1px solid var(--linea); overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+  .publicar { border-radius: 20px; background: var(--papel); color: var(--tinta); padding: 18px; box-shadow: 0 30px 80px -30px rgba(0,0,0,.8); position: sticky; top: 84px; }
+  .publicar .cab { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: #6a6575; margin-bottom: 12px; }
+  .publicar .cab b { color: var(--tinta); }
+  .miniatura { position: relative; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: radial-gradient(80% 90% at 85% 0%, #5a45d8, transparent 60%), radial-gradient(70% 80% at 0% 100%, #c2417a, transparent 60%), #241d4a; }
+  .miniatura .gran { position: absolute; left: 7%; top: 14%; font: 800 clamp(20px, 3vw, 30px)/1.05 var(--titulo); color: #fff; max-width: 60%; }
+  .miniatura .gran em { font-style: normal; color: var(--ambar); }
+  .miniatura .cara { position: absolute; right: 6%; bottom: 0; width: 38%; aspect-ratio: 1; }
+  .miniatura .dur { position: absolute; right: 8px; bottom: 8px; padding: 1px 6px; border-radius: 4px; background: rgba(0,0,0,.8); color: #fff; font: 600 12px Inter, sans-serif; }
+  .titulos { position: relative; height: 50px; margin: 14px 0 6px; }
+  .titulos div { position: absolute; inset: 0; font: 700 17px/1.3 var(--titulo); opacity: 0; animation: nombre 9s infinite; } .titulos div:nth-child(2) { animation-delay: 3s; } .titulos div:nth-child(3) { animation-delay: 6s; }
+  .titulos small { display: block; font: 500 11.5px Inter, sans-serif; color: #8a8494; }
+  .capitulos { font-size: 13.5px; border-top: 1px solid #e4dfd3; padding-top: 10px; }
+  .capitulos div { display: flex; gap: 10px; padding: 3px 0; animation: capitulo 9s infinite; } .capitulos div:nth-child(3) { animation-delay: .5s; } .capitulos div:nth-child(4) { animation-delay: 1s; } .capitulos div:nth-child(5) { animation-delay: 1.5s; }
+  @keyframes capitulo { 0%, 6% { clip-path: inset(0 100% 0 0); } 14%, 95% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 100% 0 0); } }
+  .capitulos time { color: #3a5bd9; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .capitulos .t { font-size: 11.5px; color: #8a8494; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; animation: none; }
+  .etiquetas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .etiquetas span { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: #ebe6db; color: #4a4555; }
+  .archivos-fin { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .archivos-fin span { font: 600 12px ui-monospace, Menlo, monospace; padding: 5px 9px; border-radius: 8px; background: var(--tinta); color: var(--papel); }
+  .subida { margin-top: 14px; padding: 10px 12px; border-radius: 12px; border: 1px dashed #cfc8ba; font-size: 13px; color: #4a4555; }
+  .subida .barrita { height: 6px; border-radius: 3px; background: #e7e2d8; margin-top: 7px; overflow: hidden; } .subida .barrita i { display: block; height: 100%; background: #e5533d; transform-origin: left; animation: subir 9s ease-in-out infinite; }
+  @keyframes subir { 0%, 10% { transform: scaleX(0); } 80%, 100% { transform: scaleX(1); } }
+  .pronto { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--ambar); color: #2a1e00; margin-left: 6px; }
+  .captura { margin-top: 40px; border-radius: 16px; border: 1px solid var(--linea); overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
 
-  .tuyo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 30px; align-items: start; }
+  /* ── Corrector ── */
+  .corrector { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: center; }
+  .chat { display: grid; gap: 12px; }
+  .burbuja-chat { max-width: 88%; padding: 12px 15px; border-radius: 16px; font-size: 15.5px; }
+  .burbuja-chat.tu { justify-self: end; background: var(--acento2); color: #fff; border-bottom-right-radius: 4px; animation: aparecerC 10s infinite; }
+  .burbuja-chat.ella { background: var(--fondo2); border: 1px solid var(--linea); border-bottom-left-radius: 4px; animation: aparecerC2 10s infinite; }
+  @keyframes aparecerC { 0%, 6% { opacity: 0; transform: translateY(8px); } 10%, 96% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  @keyframes aparecerC2 { 0%, 40% { opacity: 0; transform: translateY(8px); } 44%, 96% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  .texto-corr { border-radius: 18px; background: #0b0a12; border: 1px solid var(--linea); padding: 20px; font-size: 16px; line-height: 1.7; }
+  .texto-corr .srt { font: 13px ui-monospace, Menlo, monospace; color: var(--suave); display: block; margin-bottom: 6px; }
+  .mal { position: relative; color: #ffb3b3; animation: mal 10s infinite; }
+  .mal::after { content: ""; position: absolute; left: -2px; right: -2px; top: 54%; height: 2px; background: var(--rojo); transform-origin: left; animation: tachar 10s infinite; }
+  @keyframes tachar { 0%, 18% { transform: scaleX(0); } 26%, 100% { transform: scaleX(1); } }
+  @keyframes mal { 0%, 30% { opacity: 1; } 36%, 97% { opacity: 0; } 100% { opacity: 1; } }
+  .cambio { display: inline-grid; } .cambio > * { grid-area: 1 / 1; }
+  .bien { display: inline-block; color: var(--verde); font-weight: 700; animation: bien 10s infinite; }
+  @keyframes bien { 0%, 30% { opacity: 0; transform: translateY(-6px); } 36%, 96% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  .hechos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .hechos span { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--verde) 14%, transparent); color: #a7f0c6; opacity: 0; animation: aparecerC2 10s infinite; }
+  .hechos span:nth-child(2) { animation-delay: .3s; } .hechos span:nth-child(3) { animation-delay: .6s; }
+
+  /* ── Tu IA ── */
+  .ias { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .ia { padding: 24px; border-radius: 20px; border: 1px solid var(--linea); background: var(--fondo2); display: flex; flex-direction: column; gap: 10px; }
+  .ia .logo { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; }
+  .ia h3 { font-size: 22px; } .ia h3 small { display: block; font: 500 13.5px Inter, sans-serif; color: var(--suave); margin-top: 3px; }
+  .ia p { margin: 0; color: var(--suave); font-size: 15px; } .ia p b { color: var(--texto); font-weight: 600; }
+  .ia .guia { margin-top: auto; font-weight: 600; font-size: 14.5px; text-decoration: none; } .ia .guia::after { content: " →"; }
+  .beta { font: 700 10.5px Inter, sans-serif; padding: 2px 6px; border-radius: 6px; background: var(--panel2); color: var(--suave); vertical-align: middle; }
+  .viaje { margin-top: 30px; display: grid; grid-template-columns: minmax(0, 1.25fr) 190px minmax(0, .9fr); align-items: stretch; }
+  .caja-pc { border-radius: 20px; border: 2px dashed color-mix(in srgb, var(--verde) 50%, var(--linea)); padding: 18px; background: color-mix(in srgb, var(--verde) 4%, transparent); }
+  .caja-pc h3, .caja-ia h3 { font-size: 17px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .caja-pc .sub-cajas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .caja-pc .sub-cajas div, .caja-ia div { padding: 10px 12px; border-radius: 12px; background: var(--fondo2); border: 1px solid var(--linea); font-size: 13.5px; color: var(--suave); }
+  .caja-pc .sub-cajas b, .caja-ia b { display: block; color: var(--texto); font-weight: 600; font-size: 14px; }
+  .caja-ia { border-radius: 20px; border: 1px solid color-mix(in srgb, var(--acento) 45%, var(--linea)); padding: 18px; background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--acento) 10%, var(--fondo2)), var(--fondo2)); display: grid; gap: 10px; align-content: start; }
+  .tuberia { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 46px; padding: 0 8px; }
+  .tubo { position: relative; height: 2px; border-top: 2px dashed var(--linea); }
+  .tubo small { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-size: 11.5px; color: var(--suave); line-height: 1.3; }
+  .tubo .paq { position: absolute; top: -12px; left: 0; padding: 3px 7px; border-radius: 7px; font: 700 10.5px Inter, sans-serif; white-space: nowrap; animation: ida 6s ease-in-out infinite; }
+  .tubo.ida .paq { background: var(--acento); color: #15130c; }
+  .tubo.vuelta .paq { background: var(--verde); color: #0b2316; animation-name: vuelta; }
+  @keyframes ida { 0%, 5% { left: 0; opacity: 0; } 10% { opacity: 1; } 40% { left: calc(100% - 46px); opacity: 1; } 45%, 100% { left: calc(100% - 46px); opacity: 0; } }
+  @keyframes vuelta { 0%, 50% { left: calc(100% - 52px); opacity: 0; } 55% { opacity: 1; } 85% { left: 0; opacity: 1; } 90%, 100% { left: 0; opacity: 0; } }
+  .razones { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 26px; }
+  .razones div { padding: 18px; border-radius: 16px; border: 1px solid var(--linea); }
+  .razones b { font-family: var(--titulo); font-size: 17px; } .razones p { margin: 6px 0 0; color: var(--suave); font-size: 14.5px; }
+  .que-pide { margin-top: 26px; padding: 22px; border-radius: 20px; background: var(--fondo2); border: 1px solid var(--linea); }
+  .que-pide h3 { font-size: 19px; margin-bottom: 12px; }
+  .que-pide .fila-chips > span { font-size: 13.5px; padding: 6px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--linea); }
+  .que-pide p { color: var(--suave); font-size: 14.5px; margin: 14px 0 0; }
+  .ayuda-ia { margin-top: 18px; display: flex; gap: 18px; align-items: center; padding: 20px 22px; border-radius: 20px; background: linear-gradient(120deg, color-mix(in srgb, var(--acento2) 18%, var(--fondo2)), var(--fondo2)); border: 1px solid color-mix(in srgb, var(--acento) 35%, var(--linea)); }
+  .ayuda-ia p { margin: 0; flex: 1; color: var(--suave); } .ayuda-ia p b { display: block; color: var(--texto); font-size: 17px; margin-bottom: 2px; }
+
+  /* ── Privacidad y archivos ── */
+  .garantias { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .garantia { padding: 22px; border-radius: 20px; background: var(--fondo2); border: 1px solid var(--linea); }
+  .garantia .ico { font-size: 28px; } .garantia h3 { font-size: 19px; margin: 10px 0 6px; } .garantia p { margin: 0; color: var(--suave); font-size: 15px; } .garantia p b { color: var(--texto); font-weight: 600; }
+  .garantia.destacada { grid-column: 1 / -1; display: flex; gap: 18px; align-items: center; border-color: color-mix(in srgb, var(--verde) 45%, var(--linea)); background: linear-gradient(120deg, color-mix(in srgb, var(--verde) 10%, var(--fondo2)), var(--fondo2)); }
+  .garantia.destacada .txt { flex: 1; min-width: 0; } .garantia.destacada h3 { margin: 0 0 4px; } .garantia.destacada .boton { flex: none; }
+  .tuyo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 30px; align-items: start; margin-top: 40px; }
   pre { margin: 0; background: var(--fondo2); border: 1px solid var(--linea); border-radius: 14px; padding: 18px; overflow-x: auto; font: 13.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: #d9d6e3; }
+  pre .c { color: var(--suave); }
   .puntos { margin: 0; padding-left: 20px; color: var(--suave); } .puntos li { margin: 8px 0; } .puntos b { color: var(--texto); }
 
-  .instalar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .carta { background: var(--fondo2); border: 1px solid var(--linea); border-radius: 18px; padding: 22px; }
+  /* ── Instalar, preguntas, comunidad ── */
+  .instalar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .carta { background: var(--fondo2); border: 1px solid var(--linea); border-radius: 18px; padding: 22px; display: flex; flex-direction: column; }
   .carta h3 { font-size: 21px; margin-bottom: 8px; } .carta p { color: var(--suave); margin: 0 0 14px; }
+  .carta.tuyo-so { border-color: var(--acento); box-shadow: 0 0 0 1px var(--acento); }
+  .carta .chico { font-size: 14px; margin: 12px 0; } .carta .boton { margin-top: auto; align-self: flex-start; }
   .cmd { display: flex; gap: 8px; align-items: stretch; }
   .cmd code { flex: 1; min-width: 0; background: var(--fondo); border: 1px solid var(--linea); border-radius: 10px; padding: 11px 12px; font-size: 13px; overflow-x: auto; white-space: nowrap; color: #d9d6e3; }
   .cmd button { border: 1px solid var(--linea); background: var(--panel); color: var(--texto); border-radius: 10px; padding: 0 14px; font: 600 13px Inter, sans-serif; cursor: pointer; }
-
-  .instalar.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .carta.tuyo-so { border-color: var(--acento); }
-  .carta .chico { font-size: 14px; margin: 12px 0; }
-  .carta .boton { margin-top: auto; }
-  .carta { display: flex; flex-direction: column; }
-  .valor { padding: 20px; border-radius: 16px; background: var(--fondo2); border: 1px solid var(--linea); }
-  .valor b { display: block; font-family: var(--titulo); font-size: 19px; margin: 8px 0 4px; } .valor small { color: var(--suave); font-size: 14.5px; }
-  details { border-bottom: 1px solid var(--linea); padding: 16px 0; max-width: 820px; }
+  .primera { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 22px; counter-reset: p; }
+  .primera div { padding: 14px 16px; border-radius: 14px; border: 1px solid var(--linea); font-size: 14.5px; color: var(--suave); counter-increment: p; }
+  .primera div::before { content: counter(p); display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--panel2); color: var(--texto); font: 700 12px Inter; margin-right: 8px; }
+  .primera b { color: var(--texto); }
+  details { border-bottom: 1px solid var(--linea); padding: 16px 0; max-width: 840px; }
   summary { cursor: pointer; font-weight: 600; font-size: 17.5px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  summary::-webkit-details-marker { display: none; }
   summary::after { content: "+"; color: var(--acento); font-size: 22px; line-height: 1; } details[open] summary::after { content: "–"; }
   details p { color: var(--suave); margin: 10px 0 0; }
-
-  .comunidad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-  .comunidad a { display: block; text-decoration: none; color: var(--texto); padding: 20px; border-radius: 16px; background: var(--fondo2); border: 1px solid var(--linea); transition: transform .15s, border-color .15s; }
-  .comunidad a:hover { transform: translateY(-2px); border-color: var(--acento); }
-  .comunidad b { display: block; font-family: var(--titulo); font-size: 19px; margin: 8px 0 4px; } .comunidad small { color: var(--suave); font-size: 14.5px; }
-  .final { text-align: center; padding: 90px 0; } .final h2 { font-size: clamp(32px, 5vw, 52px); margin-bottom: 22px; }
-  footer { border-top: 1px solid var(--linea); padding: 26px 0; color: var(--suave); font-size: 14px; }
+  .valores, .comunidad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .valor, .comunidad a { display: block; padding: 20px; border-radius: 16px; background: var(--fondo2); border: 1px solid var(--linea); }
+  .comunidad a { text-decoration: none; color: var(--texto); transition: transform .15s, border-color .15s; } .comunidad a:hover { transform: translateY(-2px); border-color: var(--acento); }
+  .valor b, .comunidad b { display: block; font-family: var(--titulo); font-size: 19px; margin: 8px 0 4px; } .valor small, .comunidad small { color: var(--suave); font-size: 14.5px; }
+  .libre { border-radius: 26px; padding: 40px; background: radial-gradient(80% 120% at 100% 0%, color-mix(in srgb, var(--verde) 12%, transparent), transparent 60%), var(--fondo2); border: 1px solid var(--linea); }
+  .libre .sec-cab { margin-bottom: 28px; }
+  .final { text-align: center; padding: 90px 0; } .final h2 { font-size: clamp(32px, 5vw, 54px); margin-bottom: 22px; }
+  footer { border-top: 1px solid var(--linea); padding: 26px 0 40px; color: var(--suave); font-size: 14px; }
   footer .ancho { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
 
-  @media (max-width: 860px) {
-    .barra nav { display: none; }
-    .pasos, .recibes, .tuyo, .instalar, .instalar.tres { grid-template-columns: minmax(0, 1fr); }
-    .comunidad { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    section { padding: 56px 0; } .heroe { padding-top: 48px; }
+  /* ── Móvil ── */
+  @media (max-width: 980px) {
+    .flujo { grid-template-columns: minmax(0, 1fr); }
+    .estacion { min-height: 0; }
+    .conector { height: 46px; }
+    .conector::before { left: 50%; right: auto; top: 6px; bottom: 6px; border-top: 0; border-left: 2px dashed var(--linea); }
+    .conector small { top: 50%; transform: translateY(-50%); right: auto; left: calc(50% + 14px); }
+    .particula { left: calc(50% - 4px); top: 2px; animation-name: sonidoV; }
+    .paquete { left: calc(50% - 24px); top: 0; animation-name: viajeV; }
+    .viaje { grid-template-columns: minmax(0, 1fr); gap: 0; } .tuberia { padding: 26px 0; gap: 54px; }
+    .razones, .valores, .comunidad, .primera { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
-  @media (max-width: 480px) { .comunidad { grid-template-columns: minmax(0, 1fr); } }
+  @keyframes sonidoV { from { transform: translateY(0); opacity: 0; } 20%, 80% { opacity: 1; } to { transform: translateY(34px); opacity: 0; } }
+  @keyframes viajeV { 0% { opacity: 0; transform: translateY(0); } 2% { opacity: 1; } 9% { opacity: 1; transform: translateY(22px); } 11%, 100% { opacity: 0; transform: translateY(22px); } }
+  @media (max-width: 860px) {
+    .barra nav { display: none; } .estrellas { margin-left: auto; }
+    .dos-pantallas, .manera, .ventajas, .recibes, .corrector, .tuyo, .instalar, .lista-ok, .ias { grid-template-columns: minmax(0, 1fr); }
+    .guion-ia { grid-template-columns: minmax(0, 1fr); } .flecha-ia { height: 70px; } .flecha-ia .chispa { transform: rotate(90deg); }
+    .publicar { position: static; }
+    section { padding: 60px 0; } .heroe { padding-top: 46px; } .libre { padding: 24px; }
+    .fila { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .fila > div:first-child { grid-column: 1 / -1; padding-bottom: 0; font-weight: 600; color: var(--texto); } .fila.cab > div:first-child { display: none; } .fila > div { padding: 12px 16px; font-size: 14px; }
+    .garantia.destacada, .ayuda-ia { flex-direction: column; align-items: flex-start; }
+  }
+  @media (max-width: 520px) { .razones, .valores, .comunidad, .primera, .caja-pc .sub-cajas { grid-template-columns: minmax(0, 1fr); } .heroe p.sub { font-size: 17px; } .etq { display: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .escribe, .linea-t, .capitulos div { clip-path: none !important; }
+    .sale, .chip.arch, .archivo, .resultado-tp .cuerpo p, .resultado-tp .pie, .burbuja-chat, .bien, .hechos span { opacity: 1 !important; }
+    .modo.m1, .etq-modo span:first-child, .ias-giran span:first-child, .titulos div:first-child { opacity: 1 !important; }
+    .forma { width: 96px; height: 96px; border-radius: 50%; } .mal { display: none; } .mal::after { transform: none; }
+    .particula, .paquete, .tubo .paq { display: none; } .grafico b { transform: none; } .cursor { transform: translate(41.5cqw, 27cqw); }
+    .onda i, .nivel i { transform: scaleY(.6); } .subida .barrita i { transform: scaleX(.65); } .duracion .riel i { width: 38%; } .duracion .riel b { left: 38%; }
+  }
 </style>
 </head>
 <body>
 <header class="barra"><div class="ancho">
   <a class="marca" href="./"><img src="img/logo-512.png" alt="">Graba</a>
-  <nav><a href="#como"><span data-es>Cómo funciona</span><span data-en>How it works</span></a><a href="#recibes"><span data-es>Qué recibes</span><span data-en>What you get</span></a><a href="#instalar"><span data-es>Instalar</span><span data-en>Install</span></a><a href="#libre"><span data-es>Sin fines de lucro</span><span data-en>Non-profit</span></a><a href="#preguntas"><span data-es>Preguntas</span><span data-en>FAQ</span></a><a href="#comunidad"><span data-es>Comunidad</span><span data-en>Community</span></a></nav>
+  <nav><a href="#como"><span data-es>Cómo funciona</span><span data-en>How it works</span></a><a href="#teleprompter"><span data-es>Teleprompter</span><span data-en>Teleprompter</span></a><a href="#recibes"><span data-es>Qué recibes</span><span data-en>What you get</span></a><a href="#ia"><span data-es>Tu IA</span><span data-en>Your AI</span></a><a href="#privacidad"><span data-es>Privacidad</span><span data-en>Privacy</span></a><a href="#instalar"><span data-es>Instalar</span><span data-en>Install</span></a></nav>
+  <a class="estrellas" href="https://github.com/graba-app/graba" aria-label="GitHub">★ GitHub <b id="n-estrellas" hidden></b></a>
   <button class="idioma" id="idioma" aria-label="Idioma / Language">EN</button>
 </div></header>
 
 <main>
 <div class="heroe"><div class="ancho">
+  <span class="pildora"><b>●</b><span data-es>Gratis, open source y sin fines de lucro · Mac, Windows y Linux</span><span data-en>Free, open source and non-profit · Mac, Windows and Linux</span></span>
   <h1><span data-es>Graba tu pantalla. <em>Tu IA te deja el guion.</em></span><span data-en>Record your screen. <em>Your AI writes the script.</em></span></h1>
-  <p class="sub"><span data-es>Pantalla, cámara y voz, como Loom. Tu IA prepara el guion y lo lees en un teleprompter que no sale en el video. Al terminar, Graba transcribe en tu computador y te deja notas, títulos, descripción con capítulos y subtítulos.</span><span data-en>Screen, camera and voice, like Loom. Your AI prepares the script and you read it on a teleprompter that doesn't show in the video. When you finish, Graba transcribes on your computer and gives you notes, titles, a description with chapters and subtitles.</span></p>
+  <p class="sub"><span data-es>Pantalla, cámara y voz, como Loom. Tu IA te escribe qué decir y lo lees en un <b>teleprompter que no sale en el video</b>. Al terminar, Graba transcribe <b>en tu computador</b> y te deja notas, títulos, descripción con capítulos y subtítulos.</span><span data-en>Screen, camera and voice, like Loom. Your AI writes what to say and you read it on a <b>teleprompter that doesn't show in the video</b>. When you finish, Graba transcribes <b>on your computer</b> and gives you notes, titles, a description with chapters and subtitles.</span></p>
   <div class="acciones">
     <a class="boton principal" id="descargar" href="https://github.com/graba-app/graba/releases/latest/download/Graba-macOS.zip"><span class="rec"></span><span data-es>Descargar para <b class="so-nombre">Mac</b></span><span data-en>Download for <b class="so-nombre">Mac</b></span></a>
-    <a class="boton" href="https://github.com/graba-app/graba"><span data-es>Ver el código</span><span data-en>View the code</span></a>
+    <a class="boton" href="#como"><span data-es>Ver cómo funciona</span><span data-en>See how it works</span></a>
   </div>
-  <p class="aviso-so"><span data-es>Para Mac, Windows y Linux ·</span><span data-en>For Mac, Windows and Linux ·</span> <a href="#instalar"><span data-es>otras formas de instalar</span><span data-en>other ways to install</span></a></p>
-  <div class="sellos"><span><span data-es>Gratis para siempre</span><span data-en>Free forever</span></span><span><span data-es>Open source</span><span data-en>Open source</span></span><span><span data-es>Sin fines de lucro</span><span data-en>Non-profit</span></span><span><span data-es>Nada sale de tu computador</span><span data-en>Nothing leaves your computer</span></span></div>
-  <picture class="captura"><source srcset="img/app-oscuro.jpg"><img src="img/app-oscuro.jpg" alt="Graba mostrando títulos, descripción con capítulos y etiquetas para YouTube de una grabación" width="2360" height="1520"></picture>
+  <p class="aviso-so"><span data-es>¿Otro sistema?</span><span data-en>Another system?</span> <a href="#instalar"><span data-es>Todas las formas de instalar</span><span data-en>All the ways to install</span></a> · <span data-es>Necesitas Claude, ChatGPT o Gemini:</span><span data-en>You need Claude, ChatGPT or Gemini:</span> <a href="ia.html"><span data-es>te explicamos cómo</span><span data-en>here's how</span></a></p>
+
+  <div class="marco-estudio">
+    <div class="estudio" id="estudio" role="img" aria-label="Graba grabando: una presentación en pantalla, la burbuja de la cámara que sí sale en el video, y el teleprompter y la barra de grabación que solo ves tú. / Graba recording: a presentation on screen, the camera bubble that shows in the video, and the teleprompter and recording bar that only you see.">
+      <div class="menu-sis" aria-hidden="true"><b>Keynote</b><span data-es>Archivo</span><span data-en>File</span><span data-es>Edición</span><span data-en>Edit</span><span class="r"><i></i><span class="t">10:42</span></span></div>
+      <div class="diapo" aria-hidden="true">
+        <div class="tb"><i></i><i></i><i></i><span data-es>Presupuesto 2027.key</span><span data-en>Budget 2027.key</span></div>
+        <div class="cont">
+          <h4><span data-es>Presupuesto 2027</span><span data-en>2027 budget</span></h4>
+          <p><span data-es>Dónde invertimos y por qué</span><span data-en>Where we invest and why</span></p>
+          <div class="grafico"><b></b><b></b><b></b><b></b><b></b></div>
+          <div class="grafico-et"><span data-es>Ene</span><span data-en>Jan</span><span data-es>Mar</span><span data-en>Mar</span><span data-es>May</span><span data-en>May</span><span data-es>Jul</span><span data-en>Jul</span><span data-es>Sep</span><span data-en>Sep</span></div>
+        </div>
+        <span class="resalta"></span>
+      </div>
+      <svg class="cursor" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2l15 11-6.5 1.2 3.8 7-2.6 1.3-3.8-7L5 20z" fill="#fff" stroke="#111" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      <div class="tp" aria-hidden="true">
+        <div class="tp-cab"><span><b data-es>Guion</b><b data-en>Script</b> · 1×</span><span class="play">▶</span></div>
+        <div class="ventana-t"><div class="rollo">
+          <p data-es>Hola, soy Ana. En tres minutos te cuento dónde vamos a invertir el próximo año.</p><p data-en>Hi, I'm Ana. In three minutes I'll show you where we'll invest next year.</p>
+          <p class="cue" data-es>[pasa a la diapositiva 2]</p><p class="cue" data-en>[go to slide 2]</p>
+          <p data-es>Mira julio: es el mes en que más crecemos, y no es casualidad.</p><p data-en>Look at July: it's the month we grow the most, and it's no accident.</p>
+          <p data-es>Ahí lanzamos la app nueva y duplicamos el equipo de soporte.</p><p data-en>That's when we launched the new app and doubled the support team.</p>
+          <p data-es>Hola, soy Ana. En tres minutos te cuento dónde vamos a invertir el próximo año.</p><p data-en>Hi, I'm Ana. In three minutes I'll show you where we'll invest next year.</p>
+          <p class="cue" data-es>[pasa a la diapositiva 2]</p><p class="cue" data-en>[go to slide 2]</p>
+          <p data-es>Mira julio: es el mes en que más crecemos, y no es casualidad.</p><p data-en>Look at July: it's the month we grow the most, and it's no accident.</p>
+          <p data-es>Ahí lanzamos la app nueva y duplicamos el equipo de soporte.</p><p data-en>That's when we launched the new app and doubled the support team.</p>
+        </div></div>
+        <span class="guia"></span>
+      </div>
+      <div class="cam" aria-hidden="true"><svg viewBox="0 0 100 100"><circle cx="50" cy="112" r="44" fill="#2a2440"/><circle cx="50" cy="46" r="21" fill="#f2c4a2"/><path d="M28 44c0-17 10-25 23-25s22 9 22 23c-5-7-12-10-22-10-10 0-17 4-23 12z" fill="#3b2a22"/><g class="ojos"><circle cx="42" cy="47" r="2.4" fill="#2a2030"/><circle cx="58" cy="47" r="2.4" fill="#2a2030"/></g><ellipse class="boca" cx="50" cy="57" rx="5" ry="3.2" fill="#a2384f"/></svg></div>
+      <div class="barra-rec" aria-hidden="true"><span class="p"></span><span class="t">00:12</span><span class="term"><span data-es>Terminar</span><span data-en>Stop</span></span><span class="x">✕</span></div>
+      <span class="etq no e-tp" aria-hidden="true">👁 <span data-es>solo tú lo ves</span><span data-en>only you see it</span></span>
+      <span class="etq si e-cam" aria-hidden="true">✓ <span data-es>sale en el video</span><span data-en>shows in the video</span></span>
+      <span class="etq no e-barra" aria-hidden="true"><span data-es>no se graba</span><span data-en>not recorded</span></span>
+    </div>
+  </div>
+  <div class="sellos"><span><span data-es>Gratis para siempre</span><span data-en>Free forever</span></span><span><span data-es>Sin cuentas ni nube</span><span data-en>No accounts, no cloud</span></span><span><span data-es>Sin límite de largo ni marca de agua</span><span data-en>No length limits, no watermark</span></span><span><span data-es>Código abierto (MIT)</span><span data-en>Open source (MIT)</span></span></div>
 </div></div>
 
 <section id="como"><div class="ancho">
-  <h2><span data-es>Así de simple</span><span data-en>That simple</span></h2>
-  <p class="bajada"><span data-es>Tres pasos y nada que configurar cada vez.</span><span data-en>Three steps, nothing to set up each time.</span></p>
-  <div class="pasos">
-    <div class="paso"><div class="esc" aria-hidden="true"><div class="pantalla"><i></i></div><div class="burbuja"></div></div>
-      <h3><span data-es>1. Graba</span><span data-en>1. Record</span></h3><p><span data-es>Tu pantalla con tu cara en una burbuja y tu voz. La barrita para terminar no sale en el video.</span><span data-en>Your screen with your face in a bubble and your voice. The stop bar doesn't show up in the video.</span></p></div>
-    <div class="paso"><div class="esc" aria-hidden="true"><div class="ondas"><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div><div class="lineas"><i></i><i></i><i></i><i></i></div></div>
-      <h3><span data-es>2. Transcribe aquí</span><span data-en>2. Transcribes here</span></h3><p><span data-es>Tu voz se vuelve texto dentro de tu computador, con whisper. Sin subir el video.</span><span data-en>Your voice becomes text on your computer, with whisper. Without uploading the video.</span></p></div>
-    <div class="paso"><div class="esc" aria-hidden="true"><div class="fichas"><span>📝</span><span>🎬</span><span>🏷️</span><span>⏱️</span><span>💬</span><span>✨</span></div></div>
-      <h3><span data-es>3. Tu IA escribe</span><span data-en>3. Your AI writes</span></h3><p><span data-es>Claude, ChatGPT o Gemini, con tu cuenta, te deja todo listo para publicar.</span><span data-en>Claude, ChatGPT or Gemini, with your account, gets everything ready to publish.</span></p></div>
+  <div class="sec-cab"><span class="antetitulo"><span data-es>Cómo funciona</span><span data-en>How it works</span></span>
+    <h2><span data-es>De la idea al video publicado, sin escribir una línea</span><span data-en>From idea to published video, without writing a line</span></h2>
+    <p><span data-es>Cuatro pasos. Tú solo pones la idea y la voz.</span><span data-en>Four steps. You just bring the idea and your voice.</span></p></div>
+  <div class="flujo" role="img" aria-label="1. Tu IA escribe el guion con tu idea y tu presentación. 2. Grabas leyendo el teleprompter. 3. Graba transcribe en tu computador, sin internet. 4. Tu IA, con solo el texto, deja títulos, capítulos, subtítulos y notas. / 1. Your AI writes the script from your idea and slides. 2. You record reading the teleprompter. 3. Graba transcribes on your computer, offline. 4. Your AI, with only the text, writes titles, chapters, subtitles and notes.">
+    <div class="estacion e1" aria-hidden="true">
+      <div class="est-tit"><span class="n">1</span><span data-es>Prepara</span><span data-en>Prepare</span></div>
+      <div class="campo"><small><span data-es>Idea</span><span data-en>Idea</span></small><span class="escribe"><span data-es>Explicar el presupuesto 2027</span><span data-en>Explain the 2027 budget</span></span></div>
+      <div class="fila-chips"><span class="chip">⏱ 3 min</span><span class="chip arch">📎 <span data-es>presupuesto.pdf</span><span data-en>budget.pdf</span></span></div>
+      <span class="btn-mini">✨ <span data-es>Crear guion</span><span data-en>Write script</span></span>
+      <span class="donde fuera"><span data-es>tu IA escribe el guion</span><span data-en>your AI writes the script</span></span>
+    </div>
+    <div class="conector c1" aria-hidden="true"><span class="paquete"><span data-es>guion</span><span data-en>script</span></span></div>
+    <div class="estacion e2" aria-hidden="true">
+      <div class="est-tit"><span class="n">2</span><span data-es>Graba</span><span data-en>Record</span></div>
+      <span class="grabando"><i></i><span data-es>Grabando</span><span data-en>Recording</span> 01:24</span>
+      <div class="mini-tp"><div class="r">
+        <p><span data-es>Hola, soy Ana. En tres minutos te cuento…</span><span data-en>Hi, I'm Ana. In three minutes I'll show you…</span></p>
+        <p class="cue"><span data-es>[pasa a la diapositiva 2]</span><span data-en>[go to slide 2]</span></p>
+        <p><span data-es>Mira julio: es el mes en que más crecemos.</span><span data-en>Look at July: it's when we grow the most.</span></p>
+        <p><span data-es>Ahí lanzamos la app nueva.</span><span data-en>That's when we launched the new app.</span></p>
+      </div></div>
+      <span class="donde"><span data-es>en tu computador</span><span data-en>on your computer</span></span>
+    </div>
+    <div class="conector" aria-hidden="true"><span class="particula"></span><span class="particula"></span><span class="particula"></span><small><span data-es>tu voz</span><span data-en>your voice</span></small></div>
+    <div class="estacion e3" aria-hidden="true">
+      <div class="est-tit"><span class="n">3</span><span data-es>Transcribe</span><span data-en>Transcribe</span></div>
+      <span class="chip" style="align-self:flex-start">📴 <span data-es>sin internet</span><span data-en>offline</span></span>
+      <div class="onda"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="linea-t l1"><time>00:00</time><span data-es>Hola, soy Ana. En tres…</span><span data-en>Hi, I'm Ana. In three…</span></div>
+      <div class="linea-t l2"><time>00:41</time><span data-es>Mira julio: es el mes…</span><span data-en>Look at July: it's the…</span></div>
+      <div class="linea-t l3"><time>01:30</time><span data-es>Ahí lanzamos la app…</span><span data-en>That's when we launched…</span></div>
+      <span class="donde"><span data-es>en tu computador</span><span data-en>on your computer</span></span>
+    </div>
+    <div class="conector c3" aria-hidden="true"><span class="paquete"><span data-es>solo texto</span><span data-en>text only</span></span></div>
+    <div class="estacion e4" aria-hidden="true">
+      <div class="est-tit"><span class="n">4</span><span data-es>Tu IA lo deja listo</span><span data-en>Your AI gets it ready</span></div>
+      <div class="ias-giran"><span>Claude</span><span>ChatGPT</span><span>Gemini</span></div>
+      <div class="sale s1">🏷️ <b><span data-es>3 títulos y etiquetas</span><span data-en>3 titles and tags</span></b><span class="ok">✓</span></div>
+      <div class="sale s2">⏱️ <b><span data-es>Capítulos con tiempos</span><span data-en>Timed chapters</span></b><span class="ok">✓</span></div>
+      <div class="sale s3">💬 <b><span data-es>Subtítulos .srt</span><span data-en>.srt subtitles</span></b><span class="ok">✓</span></div>
+      <div class="sale s4">📝 <b><span data-es>Notas y guion</span><span data-en>Notes and script</span></b><span class="ok">✓</span></div>
+      <span class="donde"><span data-es>vuelve a tu carpeta</span><span data-en>back to your folder</span></span>
+    </div>
+  </div>
+  <p class="flujo-pie"><span data-es><b>El video nunca sale de tu computador.</b> Solo el texto viaja a tu IA, con tu cuenta, y todo vuelve a una carpeta tuya.</span><span data-en><b>The video never leaves your computer.</b> Only the text goes to your AI, with your account, and everything comes back to your own folder.</span></p>
+</div></section>
+
+<section id="distinto" style="padding-top:20px"><div class="ancho">
+  <div class="sec-cab"><h2><span data-es>Por qué Graba y no otro grabador</span><span data-en>Why Graba and not another recorder</span></h2>
+    <p><span data-es>Casi todos los grabadores con IA suben tu video a su nube y te cobran una suscripción. Graba funciona al revés.</span><span data-en>Most AI screen recorders upload your video to their cloud and charge a subscription. Graba works the other way around.</span></p></div>
+  <div class="tabla">
+    <div class="fila cab"><div></div><div><span data-es>Lo habitual</span><span data-en>The usual</span></div><div>Graba</div></div>
+    <div class="fila"><div><span data-es>¿Cuánto pagas?</span><span data-en>How much do you pay?</span></div><div><span data-es>Una suscripción, o un plan gratis con límites</span><span data-en>A subscription, or a free plan with limits</span></div><div><span data-es>Nada, nunca. Usas la IA que ya tienes</span><span data-en>Nothing, ever. You use the AI you already have</span></div></div>
+    <div class="fila"><div><span data-es>¿Dónde queda tu video?</span><span data-en>Where does your video live?</span></div><div><span data-es>En sus servidores</span><span data-en>On their servers</span></div><div><span data-es>En una carpeta de tu computador</span><span data-en>In a folder on your computer</span></div></div>
+    <div class="fila"><div><span data-es>¿Límite de largo o marca de agua?</span><span data-en>Length limits or watermarks?</span></div><div><span data-es>Muchas veces, en el plan gratis</span><span data-en>Often, on the free plan</span></div><div><span data-es>Ninguno</span><span data-en>None</span></div></div>
+    <div class="fila"><div><span data-es>¿Te ayuda a saber qué decir?</span><span data-en>Does it help you know what to say?</span></div><div><span data-es>No</span><span data-en>No</span></div><div><span data-es>Tu IA escribe el guion con tu presentación y lo lees en un teleprompter invisible</span><span data-en>Your AI writes the script from your slides and you read it on an invisible teleprompter</span></div></div>
+    <div class="fila"><div><span data-es>¿Te deja listo para YouTube?</span><span data-en>Is it ready for YouTube?</span></div><div><span data-es>Una transcripción, a veces pagada</span><span data-en>A transcript, sometimes paid</span></div><div><span data-es>Títulos, descripción con capítulos, etiquetas y subtítulos</span><span data-en>Titles, description with chapters, tags and subtitles</span></div></div>
+    <div class="fila"><div><span data-es>¿Necesitas internet para transcribir?</span><span data-en>Do you need internet to transcribe?</span></div><div><span data-es>Sí</span><span data-en>Yes</span></div><div><span data-es>No: whisper corre en tu equipo</span><span data-en>No: whisper runs on your machine</span></div></div>
+    <div class="fila"><div><span data-es>¿Puedes revisar el código?</span><span data-en>Can you read the code?</span></div><div><span data-es>No</span><span data-en>No</span></div><div><span data-es>Sí, es abierto (MIT)</span><span data-en>Yes, it's open (MIT)</span></div></div>
+    <div class="fila"><div><span data-es>¿Link para compartir al instante?</span><span data-en>Instant share link?</span></div><div><span data-es>Sí, es su fuerte</span><span data-en>Yes, that's their strength</span></div><div><span data-es>No: tú decides dónde publicar (o directo a YouTube, muy pronto)</span><span data-en>No: you decide where to publish (or straight to YouTube, coming soon)</span></div></div>
+  </div>
+  <p class="tabla-pie"><span data-es>Somos honestos: si lo tuyo es mandar un link para que tu equipo comente al tiro, Loom lo hace mejor. Si quieres videos bien hechos, tuyos y gratis, Graba.</span><span data-en>To be honest: if you need to send a link for your team to comment on right away, Loom does that better. If you want polished videos that are yours and free, Graba.</span></p>
+</div></section>
+
+<section id="teleprompter"><div class="ancho">
+  <div class="sec-cab"><span class="antetitulo"><span data-es>Teleprompter invisible</span><span data-en>Invisible teleprompter</span></span>
+    <h2><span data-es>Lees tu guion. Tu audiencia no lo ve.</span><span data-en>You read your script. Your audience doesn't see it.</span></h2>
+    <p><span data-es>El teleprompter, la barra de grabación y la cuenta regresiva <b>se quedan fuera del video</b>. Tu cara en la burbuja sí sale. Hablas mirando a la cámara, sin papeles ni pausas para recordar.</span><span data-en>The teleprompter, the recording bar and the countdown <b>stay out of the video</b>. Your face in the bubble does show. You speak looking at the camera, no notes, no pauses to remember.</span></p></div>
+  <div class="dos-pantallas" id="dos-pantallas">
+    <figure><figcaption><span class="ojo">👁</span><span data-es>Lo que tú ves</span><span data-en>What you see</span><small><span data-es>mientras grabas</span><span data-en>while recording</span></small></figcaption><div class="hueco" data-version="tu"></div></figure>
+    <figure><figcaption><span class="ojo" style="background:var(--rojo)">●</span><span data-es>Lo que queda en el video</span><span data-en>What ends up in the video</span><small>video.mp4</small></figcaption><div class="hueco" data-version="video"></div></figure>
+  </div>
+  <div class="ventajas">
+    <div class="ventaja"><b>▶ <span data-es>Avanza solo</span><span data-en>Scrolls by itself</span></b><p><span data-es>A tu ritmo: play, más rápido o más lento, y vuelves al inicio con un clic.</span><span data-en>At your pace: play, faster or slower, and back to the start in one click.</span></p></div>
+    <div class="ventaja"><b>A+ <span data-es>Letra grande</span><span data-en>Big text</span></b><p><span data-es>Cambias el tamaño y lo pones cerca de la cámara para que tu mirada no se note.</span><span data-en>Change the size and place it near the camera so your eyes don't give it away.</span></p></div>
+    <div class="ventaja"><b>3·2·1 <span data-es>Nada empieza solo</span><span data-en>Nothing starts by itself</span></b><p><span data-es>Eliges qué grabar y aprietas el botón rojo. Cuenta regresiva grande y a grabar.</span><span data-en>Pick what to record and press the red button. A big countdown and you're rolling.</span></p></div>
   </div>
 </div></section>
 
-<section id="guion"><div class="ancho recibes">
-  <img class="captura2" src="img/app-guion-ia.jpg" alt="Preparar un guion en Graba: idea, duración y archivos" width="2360" height="1520" loading="lazy">
-  <div>
+<section id="manera" style="padding-top:10px"><div class="ancho">
+  <div class="sec-cab"><h2><span data-es>Grábalo a tu manera</span><span data-en>Record it your way</span></h2>
+    <p><span data-es>Una sola barra abajo, simple. Todo lo que eliges queda guardado para la próxima vez.</span><span data-en>One simple bar at the bottom. Everything you choose is remembered for next time.</span></p></div>
+  <div class="manera">
+    <div class="tarjeta">
+      <div class="lienzo" aria-hidden="true"><div class="ventanitas"><i style="left:8%;top:12%;width:40%;height:44%"></i><i style="left:54%;top:22%;width:38%;height:50%"></i><i style="left:20%;top:62%;width:30%;height:26%"></i></div>
+        <span class="modo m1"></span><span class="modo m2"></span><span class="modo m3"></span>
+        <div class="etq-modo"><span><span data-es>Toda la pantalla</span><span data-en>Whole screen</span></span><span><span data-es>Una ventana</span><span data-en>One window</span></span><span><span data-es>Un área</span><span data-en>An area</span></span></div></div>
+      <h3><span data-es>Qué grabar</span><span data-en>What to record</span></h3><p><span data-es>Toda la pantalla, solo una app o el área que marques con el mouse.</span><span data-en>The whole screen, just one app, or the area you draw with the mouse.</span></p>
+    </div>
+    <div class="tarjeta">
+      <div class="lienzo" aria-hidden="true"><div class="forma"><svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><circle cx="50" cy="112" r="44" fill="#2a2440"/><circle cx="50" cy="46" r="21" fill="#f2c4a2"/><path d="M28 44c0-17 10-25 23-25s22 9 22 23c-5-7-12-10-22-10-10 0-17 4-23 12z" fill="#3b2a22"/><g class="ojos"><circle cx="42" cy="47" r="2.4" fill="#2a2030"/><circle cx="58" cy="47" r="2.4" fill="#2a2030"/></g><ellipse class="boca" cx="50" cy="57" rx="5" ry="3.2" fill="#a2384f"/></svg></div>
+        <div class="etq-modo de4"><span><span data-es>Círculo</span><span data-en>Circle</span></span><span><span data-es>Cuadrada</span><span data-en>Square</span></span><span><span data-es>Horizontal</span><span data-en>Landscape</span></span><span><span data-es>Vertical</span><span data-en>Portrait</span></span></div></div>
+      <h3><span data-es>Tu cámara, con la forma que quieras</span><span data-en>Your camera, any shape</span></h3><p><span data-es>Círculo, cuadrada, horizontal o vertical, y del tamaño que te acomode. O sin cámara.</span><span data-en>Circle, square, landscape or portrait, at whatever size suits you. Or no camera.</span></p>
+    </div>
+    <div class="tarjeta">
+      <div class="lienzo" aria-hidden="true"><div class="menu-disp"><div>🎙️ <span data-es>Micrófono del computador</span><span data-en>Built-in microphone</span></div><div>🎧 <span data-es>Audífonos Bluetooth</span><span data-en>Bluetooth headphones</span></div><div>🎚️ <span data-es>Micrófono USB</span><span data-en>USB microphone</span></div></div>
+        <div class="nivel"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      <h3><span data-es>Tu micrófono y tu cámara</span><span data-en>Your mic and camera</span></h3><p><span data-es>Eliges cuál usar desde su propio menú, sin entrar a ajustes.</span><span data-en>Pick which one to use from its own menu, no settings needed.</span></p>
+    </div>
+  </div>
+</div></section>
+
+<section id="guion"><div class="ancho">
+  <div class="sec-cab"><span class="antetitulo"><span data-es>Guion con tu IA</span><span data-en>Script with your AI</span></span>
     <h2><span data-es>Llega y graba</span><span data-en>Just show up and record</span></h2>
-    <p class="bajada"><span data-es>Cuéntale a tu IA la idea, cuánto debe durar y súmale tu presentación. Te escribe lo que vas a decir, con el largo justo.</span><span data-en>Tell your AI the idea, how long it should be and add your slides. It writes what you'll say, at just the right length.</span></p>
-    <div class="lista-recibes">
-      <div><span class="ico">✨</span><span><b><span data-es>Guion con tu IA</span><span data-en>Script with your AI</span></b><small><span data-es>De una idea, un PDF, un PowerPoint o tus notas. Con indicaciones como [pasa a la diapositiva 3].</span><span data-en>From an idea, a PDF, a PowerPoint or your notes. With cues like [go to slide 3].</span></small></span></div>
-      <div><span class="ico">📜</span><span><b><span data-es>Teleprompter invisible</span><span data-en>Invisible teleprompter</span></b><small><span data-es>Avanza solo mientras grabas, cerca de la cámara. Tú lo ves; el video no.</span><span data-en>It scrolls by itself while you record, near the camera. You see it; the video doesn't.</span></small></span></div>
-      <div><span class="ico">🎛️</span><span><b><span data-es>Graba lo que quieras</span><span data-en>Record what you want</span></b><small><span data-es>Toda la pantalla, una ventana o un área. Cámara en círculo, cuadrada, horizontal o vertical, del tamaño que quieras.</span><span data-en>Whole screen, a window or an area. Camera as a circle, square, landscape or portrait, any size.</span></small></span></div>
+    <p><span data-es>Cuéntale a tu IA la idea, cuánto debe durar y súmale tu presentación. Te escribe lo que vas a decir con el largo justo, y el teleprompter queda listo.</span><span data-en>Tell your AI the idea, how long it should be and add your slides. It writes what you'll say at just the right length, and the teleprompter is ready.</span></p></div>
+  <div class="guion-ia" aria-hidden="true">
+    <div class="pedido">
+      <h3>✨ <span data-es>Crear guion con IA</span><span data-en>Write a script with AI</span></h3>
+      <div class="campo"><small><span data-es>¿De qué se trata?</span><span data-en>What's it about?</span></small><span data-es>Explicar el presupuesto 2027 al equipo, simple y en buena onda.</span><span data-en>Explain the 2027 budget to the team, simple and friendly.</span></div>
+      <div class="duracion"><span data-es>Duración</span><span data-en>Length</span><span class="riel"><i></i><b></b></span><output>3 min</output></div>
+      <div class="archivos"><span class="archivo"><span class="tipo">PDF</span><span data-es>presupuesto-2027.pdf</span><span data-en>budget-2027.pdf</span></span><span class="archivo"><span class="tipo">PPT</span><span data-es>diapositivas.pptx</span><span data-en>slides.pptx</span></span></div>
+      <div class="fila-chips"><span class="chip">🎬 YouTube</span><span class="chip">🖥️ <span data-es>Presentación</span><span data-en>Presentation</span></span><span class="chip">🧭 <span data-es>Tutorial</span><span data-en>Tutorial</span></span></div>
+    </div>
+    <div class="flecha-ia"><span class="chispa">✨</span></div>
+    <div class="resultado-tp">
+      <div class="cab"><b><span data-es>Guion listo</span><span data-en>Script ready</span></b><span>· <span data-es>El presupuesto 2027 en 3 minutos</span><span data-en>The 2027 budget in 3 minutes</span></span><span class="cuenta">≈ 420 <span data-es>palabras</span><span data-en>words</span> · 3:00</span></div>
+      <div class="cuerpo">
+        <p><span data-es>Hola, soy Ana. En tres minutos te cuento dónde vamos a invertir el próximo año, y por qué.</span><span data-en>Hi, I'm Ana. In three minutes I'll tell you where we'll invest next year, and why.</span></p>
+        <p class="cue"><span data-es>[pasa a la diapositiva 2]</span><span data-en>[go to slide 2]</span></p>
+        <p><span data-es>Mira julio: es el mes en que más crecemos. No es casualidad.</span><span data-en>Look at July: it's the month we grow the most. It's no accident.</span></p>
+        <p><span data-es>Ahí lanzamos la app nueva y duplicamos el equipo de soporte…</span><span data-en>That's when we launched the new app and doubled the support team…</span></p>
+      </div>
+      <div class="pie"><span><span data-es>Usar en el teleprompter</span><span data-en>Use in the teleprompter</span></span><span><span data-es>Grabar ahora</span><span data-en>Record now</span></span></div>
     </div>
   </div>
+  <ul class="lista-ok">
+    <li><b><span data-es>Desde lo que ya tienes</span><span data-en>From what you already have</span></b><span data-es>Una idea, un PDF, un PowerPoint, un Word o tus notas. Tu IA los lee con tu cuenta.</span><span data-en>An idea, a PDF, a PowerPoint, a Word file or your notes. Your AI reads them with your account.</span></li>
+    <li><b><span data-es>Con el largo justo</span><span data-en>At just the right length</span></b><span data-es>Le dices cuántos minutos y escribe para eso: unas 140 palabras por minuto, leyendo cómodo.</span><span data-en>Tell it how many minutes and it writes for that: about 140 words per minute, read comfortably.</span></li>
+    <li><b><span data-es>Con indicaciones</span><span data-en>With cues</span></b><span data-es>Marca cuándo cambiar de diapositiva o qué mostrar, entre corchetes, sin contarlas como texto leído.</span><span data-en>It marks when to change slides or what to show, in brackets, not counted as read text.</span></li>
+  </ul>
 </div></section>
 
-<section id="recibes"><div class="ancho recibes">
-  <div>
-    <h2><span data-es>Lo que recibes</span><span data-en>What you get</span></h2>
-    <p class="bajada"><span data-es>De cada grabación, con un botón para copiar cada cosa.</span><span data-en>From every recording, with a copy button for each part.</span></p>
+<section id="recibes"><div class="ancho">
+  <div class="sec-cab"><span class="antetitulo"><span data-es>Lo que recibes</span><span data-en>What you get</span></span>
+    <h2><span data-es>Terminas de grabar y ya está todo escrito</span><span data-en>You stop recording and it's all written</span></h2>
+    <p><span data-es>De cada grabación, con un botón para copiar cada cosa y pegarla en YouTube, LinkedIn o donde quieras.</span><span data-en>From every recording, with a copy button for each part to paste into YouTube, LinkedIn or anywhere.</span></p></div>
+  <div class="recibes">
     <div class="lista-recibes">
-      <div><span class="ico">📝</span><span><b><span data-es>Notas</span><span data-en>Notes</span></b><small><span data-es>Un resumen y los puntos clave en orden.</span><span data-en>A summary and the key points in order.</span></small></span></div>
-      <div><span class="ico">🎬</span><span><b><span data-es>Guion para YouTube</span><span data-en>YouTube script</span></b><small><span data-es>Gancho, introducción, desarrollo con lo que hay que mostrar en pantalla, y cierre.</span><span data-en>Hook, intro, body with what to show on screen, and closing.</span></small></span></div>
-      <div><span class="ico">🏷️</span><span><b><span data-es>Títulos y etiquetas</span><span data-en>Titles and tags</span></b><small><span data-es>Tres opciones de título y etiquetas para buscar.</span><span data-en>Three title options and tags for search.</span></small></span></div>
+      <div><span class="ico">🏷️</span><span><b><span data-es>Títulos y etiquetas</span><span data-en>Titles and tags</span></b><small><span data-es>Tres opciones de título y etiquetas para que te encuentren.</span><span data-en>Three title options and tags so people find you.</span></small></span></div>
       <div><span class="ico">⏱️</span><span><b><span data-es>Descripción con capítulos</span><span data-en>Description with chapters</span></b><small><span data-es>Con los tiempos reales del video y el primero en 00:00, como pide YouTube.</span><span data-en>With the video's real times and the first one at 00:00, as YouTube requires.</span></small></span></div>
-      <div><span class="ico">💬</span><span><b><span data-es>Subtítulos .srt</span><span data-en>.srt subtitles</span></b><small><span data-es>Listos para subir a YouTube Studio.</span><span data-en>Ready to upload to YouTube Studio.</span></small></span></div>
-      <div><span class="ico">✎</span><span><b><span data-es>Corrige con tus palabras</span><span data-en>Fix it in your own words</span></b><small><span data-es>"Dice Grava y es Graba": tu IA lo arregla en todo, también en los subtítulos, y lo aprende.</span><span data-en>"It says Grava and it's Graba": your AI fixes it everywhere, subtitles included, and learns it.</span></small></span></div>
-      <div><span class="ico">▶️</span><span><b><span data-es>Directo a YouTube</span><span data-en>Straight to YouTube</span></b><small><span data-es>Conecta tu canal y sube con título, capítulos, etiquetas y subtítulos, o que se suba solo al terminar. (Muy pronto)</span><span data-en>Connect your channel and upload with title, chapters, tags and subtitles, or have it upload by itself. (Coming soon)</span></small></span></div>
+      <div><span class="ico">💬</span><span><b><span data-es>Subtítulos .srt</span><span data-en>.srt subtitles</span></b><small><span data-es>Listos para subir. Sin frases inventadas en los silencios.</span><span data-en>Ready to upload. No made-up phrases in the silences.</span></small></span></div>
+      <div><span class="ico">📝</span><span><b><span data-es>Notas</span><span data-en>Notes</span></b><small><span data-es>Un resumen y los puntos clave en orden, para compartir o estudiar.</span><span data-en>A summary and the key points in order, to share or study.</span></small></span></div>
+      <div><span class="ico">🎬</span><span><b><span data-es>Guion para YouTube</span><span data-en>YouTube script</span></b><small><span data-es>Gancho, introducción, desarrollo y cierre, por si quieres regrabarlo mejor.</span><span data-en>Hook, intro, body and closing, in case you want to re-record it better.</span></small></span></div>
+      <div><span class="ico">▶️</span><span><b><span data-es>Directo a tu canal</span><span data-en>Straight to your channel</span><span class="pronto"><span data-es>MUY PRONTO</span><span data-en>COMING SOON</span></span></b><small><span data-es>Conectas tu canal y sube con título, capítulos, etiquetas y subtítulos. O que se suba solo al terminar.</span><span data-en>Connect your channel and it uploads with title, chapters, tags and subtitles. Or have it upload by itself when done.</span></small></span></div>
+    </div>
+    <div class="publicar" aria-hidden="true">
+      <div class="cab"><b><span data-es>Listo para publicar</span><span data-en>Ready to publish</span></b><span>~/Graba/2026-10-20 1015</span></div>
+      <div class="miniatura"><div class="gran"><span data-es>El presupuesto <em>2027</em> en 3 minutos</span><span data-en>The <em>2027</em> budget in 3 minutes</span></div>
+        <svg class="cara" viewBox="0 0 100 100"><circle cx="50" cy="112" r="44" fill="#2a2440"/><circle cx="50" cy="46" r="21" fill="#f2c4a2"/><path d="M28 44c0-17 10-25 23-25s22 9 22 23c-5-7-12-10-22-10-10 0-17 4-23 12z" fill="#3b2a22"/><circle cx="42" cy="47" r="2.4" fill="#2a2030"/><circle cx="58" cy="47" r="2.4" fill="#2a2030"/><path d="M43 56q7 6 14 0" stroke="#a2384f" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>
+        <span class="dur">3:04</span></div>
+      <div class="titulos">
+        <div><small><span data-es>Título 1 de 3</span><span data-en>Title 1 of 3</span></small><span data-es>El presupuesto 2027 en 3 minutos</span><span data-en>The 2027 budget in 3 minutes</span></div>
+        <div><small><span data-es>Título 2 de 3</span><span data-en>Title 2 of 3</span></small><span data-es>¿Por qué julio fue nuestro mejor mes?</span><span data-en>Why was July our best month?</span></div>
+        <div><small><span data-es>Título 3 de 3</span><span data-en>Title 3 of 3</span></small><span data-es>Dónde invertimos el próximo año (y por qué)</span><span data-en>Where we invest next year (and why)</span></div>
+      </div>
+      <div class="capitulos">
+        <div class="t"><span data-es>Capítulos</span><span data-en>Chapters</span></div>
+        <div><time>00:00</time><span data-es>Lo que vas a ver</span><span data-en>What you'll see</span></div>
+        <div><time>00:41</time><span data-es>Julio, el mes que más crecimos</span><span data-en>July, our biggest growth month</span></div>
+        <div><time>01:30</time><span data-es>La app nueva y el soporte</span><span data-en>The new app and support</span></div>
+        <div><time>02:35</time><span data-es>Qué viene para 2027</span><span data-en>What's next for 2027</span></div>
+      </div>
+      <div class="etiquetas"><span data-es>presupuesto</span><span data-en>budget</span><span>2027</span><span data-es>finanzas</span><span data-en>finance</span><span data-es>equipo</span><span data-en>team</span></div>
+      <div class="archivos-fin"><span>video.mp4</span><span>grabacion.md</span><span>subtitulos.srt</span></div>
+      <div class="subida">▶️ <span data-es>Subiendo a tu canal (privado)…</span><span data-en>Uploading to your channel (private)…</span><span class="pronto"><span data-es>MUY PRONTO</span><span data-en>COMING SOON</span></span><div class="barrita"><i></i></div></div>
     </div>
   </div>
-  <img class="captura2" src="img/app-oscuro-guion.jpg" alt="Guion para YouTube generado por la IA en Graba" width="2360" height="1520" loading="lazy">
+  <img class="captura" src="img/app-oscuro.jpg" alt="Graba mostrando títulos, descripción con capítulos y etiquetas de una grabación" width="2360" height="1520" loading="lazy">
 </div></section>
 
-<section id="tuyo"><div class="ancho tuyo">
+<section id="corregir" style="padding-top:20px"><div class="ancho corrector">
   <div>
-    <h2><span data-es>Tus videos son tuyos</span><span data-en>Your videos are yours</span></h2>
-    <p class="bajada"><span data-es>Todo queda en una carpeta normal de tu computador. Sin cuentas, sin nube, sin límites de largo.</span><span data-en>Everything stays in a normal folder on your computer. No accounts, no cloud, no length limits.</span></p>
-    <ul class="puntos">
-      <li><span data-es><b>El video no sale de tu computador.</b> A tu IA solo le llega el texto, con tu cuenta.</span><span data-en><b>The video never leaves your computer.</b> Your AI only gets the text, with your account.</span></li>
-      <li><span data-es><b>Archivos abiertos:</b> MP4, Markdown y SRT. Ábrelos con lo que quieras o arma tus propios scripts.</span><span data-en><b>Open files:</b> MP4, Markdown and SRT. Open them with anything or build your own scripts.</span></li>
-      <li><span data-es><b>Código abierto (MIT):</b> puedes ver exactamente qué hace.</span><span data-en><b>Open source (MIT):</b> you can see exactly what it does.</span></li>
-    </ul>
+    <div class="sec-cab" style="margin-bottom:24px"><span class="antetitulo"><span data-es>Corrector con IA</span><span data-en>AI corrector</span></span>
+      <h2><span data-es>¿Se equivocó? Díselo con tus palabras</span><span data-en>Got something wrong? Say it in your own words</span></h2>
+      <p><span data-es>La transcripción a veces escucha mal un nombre. Le escribes qué está mal y tu IA lo arregla <b>en todo</b>: notas, títulos, transcripción y subtítulos. Y lo aprende para las próximas grabaciones.</span><span data-en>Transcription sometimes mishears a name. Write what's wrong and your AI fixes it <b>everywhere</b>: notes, titles, transcript and subtitles. And it learns it for future recordings.</span></p></div>
   </div>
-  <pre aria-label="Carpeta de una grabación">~/Graba/
-  2026-10-20 1015 - Presupuesto en planilla/
+  <div class="chat" aria-hidden="true">
+    <div class="texto-corr"><span class="srt">00:00:03,200 --> 00:00:06,900</span><span data-es>Hoy les presento </span><span data-en>Today I'm presenting </span><span class="cambio"><span class="mal">Grava</span><span class="bien">Graba</span></span><span data-es>, la app para grabar tu pantalla.</span><span data-en>, the app to record your screen.</span></div>
+    <div class="burbuja-chat tu"><span data-es>Dice «Grava» y es «Graba», con b.</span><span data-en>It says “Grava” and it's “Graba”, with a b.</span></div>
+    <div class="burbuja-chat ella">✓ <span data-es>Listo: lo cambié en 6 lugares.</span><span data-en>Done: I changed it in 6 places.</span>
+      <div class="hechos"><span><span data-es>subtítulos</span><span data-en>subtitles</span></span><span><span data-es>transcripción</span><span data-en>transcript</span></span><span><span data-es>aprendido</span><span data-en>learned</span></span></div></div>
+  </div>
+</div></section>
+
+<section id="ia"><div class="ancho">
+  <div class="sec-cab"><span class="antetitulo"><span data-es>Tu IA</span><span data-en>Your AI</span></span>
+    <h2><span data-es>Usa la IA que ya tienes, no una más</span><span data-en>Use the AI you already have, not another one</span></h2>
+    <p><span data-es>Graba no trae su propia IA ni tiene servidores: le pide a <b>la tuya</b> que escriba, con tu propia cuenta. Elige la que ya usas.</span><span data-en>Graba doesn't ship its own AI or have servers: it asks <b>yours</b> to write, with your own account. Pick the one you already use.</span></p></div>
+  <div class="ias">
+    <div class="ia"><span class="logo" style="background:#3a2a24;color:#f0a385">✳</span><h3>Claude<small><span data-es>con Claude Code</span><span data-en>with Claude Code</span></small></h3>
+      <p><span data-es>Necesitas <b>Claude Pro o Max</b> (o una cuenta de empresa). Lee muy bien presentaciones y PDF.</span><span data-en>You need <b>Claude Pro or Max</b> (or a work account). Great at reading slides and PDFs.</span></p>
+      <a class="guia" href="ia.html#claude"><span data-es>Cómo instalarla</span><span data-en>How to install it</span></a></div>
+    <div class="ia"><span class="logo" style="background:#20302a;color:#7fe0b4">◎</span><h3>ChatGPT<small><span data-es>con Codex</span><span data-en>with Codex</span></small></h3>
+      <p><span data-es>Funciona con <b>cualquier cuenta de ChatGPT</b>, incluso la gratis (con límites de uso).</span><span data-en>Works with <b>any ChatGPT account</b>, even the free one (with usage limits).</span></p>
+      <a class="guia" href="ia.html#codex"><span data-es>Cómo instalarla</span><span data-en>How to install it</span></a></div>
+    <div class="ia"><span class="logo" style="background:#222b40;color:#9bb8ff">✦</span><h3>Gemini <span class="beta">beta</span><small><span data-es>con Antigravity CLI</span><span data-en>with Antigravity CLI</span></small></h3>
+      <p><span data-es>Con tu <b>cuenta de Google</b>. Es nueva, así que aún la estamos puliendo.</span><span data-en>With your <b>Google account</b>. It's new, so we're still polishing it.</span></p>
+      <a class="guia" href="ia.html#gemini"><span data-es>Cómo instalarla</span><span data-en>How to install it</span></a></div>
+  </div>
+
+  <div class="viaje" role="img" aria-label="En tu computador se quedan el video y la transcripción. A tu IA solo viaja el texto (y los archivos que adjuntes para el guion), con tu cuenta. Vuelven notas, guion, títulos y capítulos. / The video and transcription stay on your computer. Only the text (and files you attach for the script) goes to your AI, with your account. Notes, script, titles and chapters come back.">
+    <div class="caja-pc" aria-hidden="true">
+      <h3>💻 <span data-es>Tu computador</span><span data-en>Your computer</span></h3>
+      <div class="sub-cajas">
+        <div><b>🎬 video.mp4</b><span data-es>Se queda aquí. Nunca se sube.</span><span data-en>Stays here. Never uploaded.</span></div>
+        <div><b>🎙️ <span data-es>Transcripción</span><span data-en>Transcription</span></b><span data-es>whisper, en tu equipo, sin internet.</span><span data-en>whisper, on your machine, offline.</span></div>
+        <div><b>🔑 <span data-es>Tu sesión</span><span data-en>Your session</span></b><span data-es>Graba usa el programa oficial de tu IA, ya conectado a tu cuenta.</span><span data-en>Graba uses your AI's official program, already signed in.</span></div>
+        <div><b>📁 ~/Graba</b><span data-es>Todo vuelve a una carpeta tuya.</span><span data-en>Everything comes back to your folder.</span></div>
+      </div>
+    </div>
+    <div class="tuberia" aria-hidden="true">
+      <div class="tubo ida"><span class="paq"><span data-es>texto</span><span data-en>text</span></span><small><span data-es>solo el texto (y lo que adjuntes)</span><span data-en>only the text (and what you attach)</span></small></div>
+      <div class="tubo vuelta"><span class="paq">✓ <span data-es>listo</span><span data-en>done</span></span><small><span data-es>notas, guion, títulos…</span><span data-en>notes, script, titles…</span></small></div>
+    </div>
+    <div class="caja-ia" aria-hidden="true">
+      <h3>✨ <span data-es>Tu IA, con tu cuenta</span><span data-en>Your AI, your account</span></h3>
+      <div><b>Claude · ChatGPT · Gemini</b><span data-es>Bajo el acuerdo que ya tienes con ese proveedor.</span><span data-en>Under the agreement you already have with that provider.</span></div>
+      <div><b>🔒 <span data-es>Solo lectura</span><span data-en>Read only</span></b><span data-es>Trabaja en una carpeta temporal y sin permiso para tocar tus archivos.</span><span data-en>It works in a temporary folder with no permission to touch your files.</span></div>
+    </div>
+  </div>
+
+  <div class="razones">
+    <div><b><span data-es>Sin pagar dos veces</span><span data-en>No paying twice</span></b><p><span data-es>Ya pagas (o usas gratis) una IA. Graba no suma otro cobro.</span><span data-en>You already pay for (or use for free) an AI. Graba adds no other charge.</span></p></div>
+    <div><b><span data-es>Sin intermediarios</span><span data-en>No middlemen</span></b><p><span data-es>El texto va directo de tu computador a tu proveedor. Graba no ve nada en el camino.</span><span data-en>The text goes straight from your computer to your provider. Graba sees nothing on the way.</span></p></div>
+    <div><b><span data-es>Los mejores modelos</span><span data-en>The best models</span></b><p><span data-es>Tus textos los escribe el modelo que usas a diario, no uno barato elegido para ahorrar.</span><span data-en>Your texts are written by the model you use every day, not a cheap one picked to save money.</span></p></div>
+    <div><b><span data-es>Cambias cuando quieras</span><span data-en>Switch anytime</span></b><p><span data-es>Sin contraseñas que entregar. Si cambias de IA, tus videos siguen siendo tuyos.</span><span data-en>No passwords to hand over. If you switch AIs, your videos are still yours.</span></p></div>
+  </div>
+  <div class="que-pide">
+    <h3><span data-es>Qué le pide Graba a tu IA</span><span data-en>What Graba asks your AI for</span></h3>
+    <div class="fila-chips"><span>✨ <span data-es>El guion para el teleprompter</span><span data-en>The teleprompter script</span></span><span>📝 <span data-es>Notas</span><span data-en>Notes</span></span><span>🎬 <span data-es>Guion para YouTube</span><span data-en>YouTube script</span></span><span>🏷️ <span data-es>Títulos y etiquetas</span><span data-en>Titles and tags</span></span><span>⏱️ <span data-es>Descripción con capítulos</span><span data-en>Description with chapters</span></span><span>✎ <span data-es>Correcciones</span><span data-en>Corrections</span></span></div>
+    <p><span data-es>Los subtítulos no los escribe la IA: salen directo de la transcripción, con sus tiempos exactos. Las instrucciones que le damos a tu IA están en el código, a la vista de todos.</span><span data-en>Subtitles aren't written by the AI: they come straight from the transcript, with exact timings. The instructions we give your AI are in the code, in plain sight.</span></p>
+  </div>
+  <div class="ayuda-ia"><p><b><span data-es>¿Claude Code, Codex, terminal…? Tranquilo.</span><span data-en>Claude Code, Codex, terminal…? Don't worry.</span></b><span data-es>Preparamos una guía sin tecnicismos: qué es cada una, cuál te conviene y cómo dejarla lista en cinco minutos. Graba la detecta y la prueba sola la primera vez.</span><span data-en>We made a plain-language guide: what each one is, which suits you and how to get it ready in five minutes. Graba detects and tests it on its own the first time.</span></p>
+    <a class="boton" href="ia.html"><span data-es>Abrir la guía</span><span data-en>Open the guide</span></a></div>
+</div></section>
+
+<section id="privacidad"><div class="ancho">
+  <div class="sec-cab"><h2><span data-es>Tus videos son tuyos</span><span data-en>Your videos are yours</span></h2>
+    <p><span data-es>Graba no tiene servidores, ni cuentas, ni base de datos: no hay dónde guardar tus cosas aunque quisiéramos.</span><span data-en>Graba has no servers, no accounts and no database: there's nowhere to keep your stuff even if we wanted to.</span></p></div>
+  <div class="garantias">
+    <div class="garantia"><div class="ico">🏠</div><h3><span data-es>Todo en tu computador</span><span data-en>All on your computer</span></h3><p><span data-es>Grabar y transcribir pasa en tu equipo. El video no se sube a ningún lado.</span><span data-en>Recording and transcribing happen on your machine. The video isn't uploaded anywhere.</span></p></div>
+    <div class="garantia"><div class="ico">🙅</div><h3><span data-es>Sin rastreo</span><span data-en>No tracking</span></h3><p><span data-es>Sin telemetría, analítica ni publicidad. Graba no sabe quién eres ni qué grabas.</span><span data-en>No telemetry, analytics or ads. Graba doesn't know who you are or what you record.</span></p></div>
+    <div class="garantia"><div class="ico">📂</div><h3><span data-es>Archivos abiertos</span><span data-en>Open files</span></h3><p><span data-es><b>MP4, Markdown y SRT</b> en una carpeta normal. Ábrelos con lo que quieras o arma tus propios scripts.</span><span data-en><b>MP4, Markdown and SRT</b> in a normal folder. Open them with anything or build your own scripts.</span></p></div>
+    <div class="garantia"><div class="ico">🔑</div><h3><span data-es>Tu YouTube, tu llave</span><span data-en>Your YouTube, your key</span></h3><p><span data-es>Si conectas tu canal, el permiso queda guardado en el llavero de tu computador. Lo quitas con un clic.</span><span data-en>If you connect your channel, the permission is kept in your computer's keychain. Remove it in one click.</span></p></div>
+    <div class="garantia destacada"><div class="ico">🧾</div><div class="txt"><h3><span data-es>No nos creas: revisa el código</span><span data-en>Don't take our word for it: read the code</span></h3><p><span data-es>Todo el código es público (licencia MIT) y cada versión se arma en GitHub a la vista de todos. Cualquiera puede leer qué hace Graba, auditarlo o mejorarlo.</span><span data-en>All the code is public (MIT license) and every version is built on GitHub in plain sight. Anyone can read what Graba does, audit it or improve it.</span></p></div>
+      <a class="boton" href="https://github.com/graba-app/graba"><span data-es>Ver el código</span><span data-en>View the code</span></a></div>
+  </div>
+  <div class="tuyo">
+    <div>
+      <h3 style="font-size:24px;margin-bottom:10px"><span data-es>Una carpeta por video</span><span data-en>One folder per video</span></h3>
+      <ul class="puntos">
+        <li><span data-es><b>Sin límites de largo</b> ni cantidad: el único límite es tu disco.</span><span data-en><b>No length or count limits</b>: the only limit is your disk.</span></li>
+        <li><span data-es><b>Formato documentado:</b> <code>grabacion.md</code> tiene secciones fijas para automatizar encima.</span><span data-en><b>Documented format:</b> <code>grabacion.md</code> has fixed sections to automate on top of.</span></li>
+        <li><span data-es><b>Respaldos solos:</b> antes de cada corrección se guarda una copia.</span><span data-en><b>Automatic backups:</b> a copy is saved before every correction.</span></li>
+      </ul>
+      <p style="margin-top:14px"><a href="https://github.com/graba-app/graba#formato-de-las-grabaciones"><span data-es>Ver el formato completo</span><span data-en>See the full format</span></a></p>
+    </div>
+    <pre aria-label="Carpeta de una grabación / A recording's folder">~/Graba/
+  2026-10-20 1015 - Presupuesto 2027/
     video.mp4
-    grabacion.md      <span style="color:var(--suave)"># notas, guion, títulos…</span>
+    grabacion.md      <span class="c"># notas, guion, títulos, capítulos…</span>
     subtitulos.srt
     transcripcion.json</pre>
+  </div>
 </div></section>
 
-<section id="libre"><div class="ancho">
-  <h2><span data-es>Open source y sin fines de lucro</span><span data-en>Open source and non-profit</span></h2>
-  <p class="bajada"><span data-es>Graba no es una empresa. No hay versión de pago, ni anuncios, ni inversionistas, ni datos que vender. La hacemos entre todos y es de todos.</span><span data-en>Graba isn't a company. There's no paid version, no ads, no investors, no data to sell. We build it together and it belongs to everyone.</span></p>
-  <div class="comunidad">
-    <div class="valor">💸<b><span data-es>Gratis para siempre</span><span data-en>Free forever</span></b><small><span data-es>Todas las funciones, sin límites de largo ni marcas de agua.</span><span data-en>Every feature, no length limits, no watermarks.</span></small></div>
+<section id="libre"><div class="ancho libre">
+  <div class="sec-cab"><span class="antetitulo" style="color:var(--verde)"><span data-es>Sin fines de lucro</span><span data-en>Non-profit</span></span>
+    <h2><span data-es>Open source y sin fines de lucro</span><span data-en>Open source and non-profit</span></h2>
+    <p><span data-es>Graba no es una empresa. No hay versión de pago, ni anuncios, ni inversionistas, ni datos que vender. Nadie gana plata con ella: la hacemos entre todos y es de todos.</span><span data-en>Graba isn't a company. There's no paid version, no ads, no investors, no data to sell. Nobody makes money from it: we build it together and it belongs to everyone.</span></p></div>
+  <div class="valores">
+    <div class="valor">💸<b><span data-es>Gratis para siempre</span><span data-en>Free forever</span></b><small><span data-es>Todas las funciones, sin límites ni marcas de agua.</span><span data-en>Every feature, no limits, no watermarks.</span></small></div>
     <div class="valor">🔒<b><span data-es>Sin nube ni rastreo</span><span data-en>No cloud, no tracking</span></b><small><span data-es>Ni cuentas, ni telemetría. Tus videos no salen de tu computador.</span><span data-en>No accounts, no telemetry. Your videos stay on your computer.</span></small></div>
-    <div class="valor">📖<b><span data-es>Código abierto (MIT)</span><span data-en>Open source (MIT)</span></b><small><span data-es>Cualquiera puede ver, revisar y mejorar lo que hace.</span><span data-en>Anyone can read, review and improve what it does.</span></small></div>
+    <div class="valor">📖<b><span data-es>Código abierto (MIT)</span><span data-en>Open source (MIT)</span></b><small><span data-es>Cualquiera puede ver, revisar, copiar y mejorar lo que hace.</span><span data-en>Anyone can read, review, copy and improve what it does.</span></small></div>
     <div class="valor">🤝<b><span data-es>Hecho en comunidad</span><span data-en>Community-made</span></b><small><span data-es>Ideas, pruebas, traducciones y código de quien quiera sumarse.</span><span data-en>Ideas, testing, translations and code from anyone who joins.</span></small></div>
   </div>
 </div></section>
 
 <section id="instalar"><div class="ancho">
-  <h2><span data-es>Instalar</span><span data-en>Install</span></h2>
-  <p class="bajada"><span data-es>La primera vez, Graba te ayuda a elegir tu IA y descarga el transcriptor (una sola vez). Después se actualiza sola: te avisa dentro de la app.</span><span data-en>The first time, Graba helps you pick your AI and downloads the transcriber (once). After that it updates itself: it lets you know inside the app.</span></p>
-  <div class="instalar tres">
+  <div class="sec-cab"><h2><span data-es>Instalar</span><span data-en>Install</span></h2>
+    <p><span data-es>Un comando o un archivo. Sin Python, sin Homebrew, sin nada más que instalar.</span><span data-en>One command or one file. No Python, no Homebrew, nothing else to install.</span></p></div>
+  <div class="instalar">
     <div class="carta" data-so="mac"><h3>🍎 Mac</h3><p><span data-es>Chip Apple y macOS 15 o posterior. En la Terminal:</span><span data-en>Apple chip and macOS 15 or later. In Terminal:</span></p>
       <div class="cmd"><code id="cmd-mac">curl -fsSL https://raw.githubusercontent.com/graba-app/graba/main/instalar.sh | bash</code><button data-copiar="cmd-mac"><span data-es>Copiar</span><span data-en>Copy</span></button></div>
       <p class="chico"><span data-es>O descarga la app, arrástrala a Aplicaciones y la primera vez ve a Ajustes del Sistema → Privacidad y seguridad → «Abrir igualmente».</span><span data-en>Or download the app, drag it to Applications and the first time go to System Settings → Privacy &amp; Security → “Open Anyway”.</span></p>
@@ -266,27 +818,34 @@
       <p class="chico"><span data-es>O el AppImage: dale permiso de ejecución y ábrelo (necesita FUSE).</span><span data-en>Or the AppImage: make it executable and open it (needs FUSE).</span></p>
       <a class="boton" href="https://github.com/graba-app/graba/releases/latest/download/Graba-Linux.AppImage"><span data-es>Descargar AppImage</span><span data-en>Download AppImage</span></a></div>
   </div>
-  <p class="aviso-so" style="margin-top:18px"><span data-es>¿No tienes una IA instalada? <a href="ia.html">Guía sin tecnicismos para Claude, ChatGPT o Gemini</a>.</span><span data-en>No AI installed yet? <a href="ia.html">Plain-language guide for Claude, ChatGPT or Gemini</a>.</span></p>
+  <div class="primera">
+    <div><span data-es><b>Elige tu idioma</b> y cómo te llamas.</span><span data-en><b>Pick your language</b> and your name.</span></div>
+    <div><span data-es><b>Tu IA:</b> Graba la busca y la prueba.</span><span data-en><b>Your AI:</b> Graba finds and tests it.</span></div>
+    <div><span data-es><b>El transcriptor</b> se descarga una sola vez.</span><span data-en><b>The transcriber</b> downloads only once.</span></div>
+    <div><span data-es><b>Permisos</b> de pantalla, cámara y micrófono. ¡A grabar!</span><span data-en><b>Permissions</b> for screen, camera and mic. Start recording!</span></div>
+  </div>
+  <p class="aviso-so" style="margin-top:18px"><span data-es>Después se actualiza sola: te avisa dentro de la app y tus grabaciones no se tocan. ¿No tienes una IA instalada? <a href="ia.html">Guía sin tecnicismos</a>.</span><span data-en>After that it updates itself: it lets you know inside the app and your recordings aren't touched. No AI installed yet? <a href="ia.html">Plain-language guide</a>.</span></p>
 </div></section>
 
 <section id="preguntas"><div class="ancho">
-  <h2><span data-es>Preguntas</span><span data-en>Questions</span></h2>
+  <h2 style="margin-bottom:18px"><span data-es>Preguntas</span><span data-en>Questions</span></h2>
   <details><summary><span data-es>¿Es una alternativa gratis a Loom?</span><span data-en>Is it a free alternative to Loom?</span></summary><p><span data-es>Para grabar tu pantalla con tu cámara y tener el texto listo, sí. Si necesitas compartir un link al instante para que otros vean y comenten, Loom sigue siendo mejor para eso: Graba deja el video en tu computador y tú decides dónde publicarlo.</span><span data-en>For recording your screen with your camera and getting the text ready, yes. If you need to share a link instantly for others to watch and comment, Loom is still better at that: Graba keeps the video on your computer and you decide where to publish it.</span></p></details>
-  <details><summary><span data-es>¿Sube mi video a algún lado?</span><span data-en>Does it upload my video anywhere?</span></summary><p><span data-es>No. El video y la transcripción quedan en tu computador. A tu IA solo le llega el texto de la transcripción, con tu cuenta, igual que si lo pegaras en su chat.</span><span data-en>No. The video and transcript stay on your computer. Your AI only gets the transcript text, with your account, just as if you pasted it into its chat.</span></p></details>
-  <details><summary><span data-es>¿Qué IA necesito?</span><span data-en>Which AI do I need?</span></summary><p><span data-es>La que ya tengas: Claude Code (Claude Pro o Max), Codex (cualquier plan de ChatGPT, incluso el gratis con límites) o Antigravity CLI (Gemini). Se instala una vez; <a href="ia.html">aquí está la guía</a>.</span><span data-en>The one you already have: Claude Code (Claude Pro or Max), Codex (any ChatGPT plan, even free with limits) or Antigravity CLI (Gemini). You install it once; <a href="ia.html">here's the guide</a>.</span></p></details>
-  <details><summary><span data-es>¿Por qué mi Mac dice que no puede verificar la app?</span><span data-en>Why does my Mac say it can't verify the app?</span></summary><p><span data-es>Porque Graba todavía no paga el certificado de Apple que quita ese aviso: es un proyecto gratis. El código es abierto, cada versión se compila en GitHub a la vista de todos y el instalador de un comando revisa la huella (SHA-256). Para abrirla: Ajustes del Sistema → Privacidad y seguridad → «Abrir igualmente». Con el comando de la Terminal no aparece.</span><span data-en>Because Graba doesn't pay yet for the Apple certificate that removes that warning: it's a free project. The code is open, every version is built on GitHub in public and the one-command installer checks the fingerprint (SHA-256). To open it: System Settings → Privacy &amp; Security → “Open Anyway”. The Terminal command skips it.</span></p></details>
+  <details><summary><span data-es>¿Sube mi video a algún lado?</span><span data-en>Does it upload my video anywhere?</span></summary><p><span data-es>No. El video y la transcripción quedan en tu computador. A tu IA solo le llega el texto de la transcripción (y los archivos que tú adjuntes para el guion), con tu cuenta, igual que si lo pegaras en su chat. Solo si conectas tu canal de YouTube y lo pides, el video se sube a tu canal.</span><span data-en>No. The video and transcript stay on your computer. Your AI only gets the transcript text (and any files you attach for the script), with your account, just as if you pasted it into its chat. Only if you connect your YouTube channel and ask for it does the video go to your channel.</span></p></details>
+  <details><summary><span data-es>¿El teleprompter sale en el video?</span><span data-en>Does the teleprompter show in the video?</span></summary><p><span data-es>No. En Mac y Windows el teleprompter, la barra de controles y la cuenta regresiva quedan fuera de la grabación; la burbuja de tu cámara sí sale. En Linux todavía no hay forma de esconderlos de la captura: ahí conviene grabar una sola ventana.</span><span data-en>No. On Mac and Windows the teleprompter, the control bar and the countdown stay out of the recording; your camera bubble does show. On Linux there's no way yet to hide them from the capture: there, record a single window.</span></p></details>
+  <details><summary><span data-es>¿Qué IA necesito?</span><span data-en>Which AI do I need?</span></summary><p><span data-es>La que ya tengas: Claude Code (Claude Pro o Max), Codex (cualquier plan de ChatGPT, incluso el gratis con límites) o Antigravity CLI (Gemini). Se instala una vez; <a href="ia.html">aquí está la guía</a>. Sin IA, Graba igual graba y te deja la transcripción y los subtítulos.</span><span data-en>The one you already have: Claude Code (Claude Pro or Max), Codex (any ChatGPT plan, even free with limits) or Antigravity CLI (Gemini). You install it once; <a href="ia.html">here's the guide</a>. Without an AI, Graba still records and gives you the transcript and subtitles.</span></p></details>
+  <details><summary><span data-es>¿Por qué mi computador dice que no puede verificar la app?</span><span data-en>Why does my computer say it can't verify the app?</span></summary><p><span data-es>Porque Graba todavía no paga los certificados de Apple y Microsoft que quitan ese aviso: es un proyecto gratis. El código es abierto, cada versión se compila en GitHub a la vista de todos y el instalador de un comando revisa la huella (SHA-256). En Mac: Ajustes del Sistema → Privacidad y seguridad → «Abrir igualmente». En Windows: «Más información» → «Ejecutar de todas formas».</span><span data-en>Because Graba doesn't pay yet for the Apple and Microsoft certificates that remove that warning: it's a free project. The code is open, every version is built on GitHub in public and the one-command installer checks the fingerprint (SHA-256). On Mac: System Settings → Privacy &amp; Security → “Open Anyway”. On Windows: “More info” → “Run anyway”.</span></p></details>
   <details><summary><span data-es>¿Funciona en Windows y Linux?</span><span data-en>Does it work on Windows and Linux?</span></summary><p><span data-es>Sí: es la misma app con la misma interfaz. En Windows y Linux la transcripción usa el procesador (en Mac, el chip gráfico), así que puede ser algo más lenta; el modelo «Liviano» va bien en casi cualquier computador.</span><span data-en>Yes: same app, same interface. On Windows and Linux transcription runs on the CPU (on Mac, the GPU), so it can be a bit slower; the “Light” model runs well on almost any computer.</span></p></details>
-  <details><summary><span data-es>¿Por qué es gratis? ¿Quién la mantiene?</span><span data-en>Why is it free? Who maintains it?</span></summary><p><span data-es>Porque Graba es un proyecto open source sin fines de lucro: no vende nada ni a nadie. La mantiene una comunidad de personas que la usan; cualquiera puede sumar ideas, pruebas, traducciones o código. La licencia es MIT.</span><span data-en>Because Graba is a non-profit open-source project: it doesn't sell anything to anyone. It's maintained by a community of people who use it; anyone can add ideas, testing, translations or code. The license is MIT.</span></p></details>
-  <details><summary><span data-es>¿Cómo se actualiza?</span><span data-en>How does it update?</span></summary><p><span data-es>Sola: Graba revisa si hay una versión nueva al abrirse y cada 6 horas, y te avisa dentro de la app. Tocas Actualizar y listo; tus grabaciones no se tocan.</span><span data-en>By itself: Graba checks for a new version when it opens and every 6 hours, and lets you know inside the app. Click Update and you're done; your recordings aren't touched.</span></p></details>
+  <details><summary><span data-es>¿Por qué es gratis? ¿Quién la mantiene?</span><span data-en>Why is it free? Who maintains it?</span></summary><p><span data-es>Porque Graba es un proyecto open source sin fines de lucro: no vende nada ni a nadie. La mantiene una comunidad de personas que la usan; cualquiera puede sumar ideas, pruebas, traducciones o código. Todo lo que entra se revisa antes. La licencia es MIT.</span><span data-en>Because Graba is a non-profit open-source project: it doesn't sell anything to anyone. It's maintained by a community of people who use it; anyone can add ideas, testing, translations or code. Everything is reviewed before it goes in. The license is MIT.</span></p></details>
+  <details><summary><span data-es>¿Cómo se actualiza?</span><span data-en>How does it update?</span></summary><p><span data-es>Sola: Graba revisa si hay una versión nueva al abrirse y cada 6 horas, y te avisa dentro de la app. Tocas Actualizar y listo; nunca en medio de una grabación, y tus videos no se tocan.</span><span data-en>By itself: Graba checks for a new version when it opens and every 6 hours, and lets you know inside the app. Click Update and you're done; never in the middle of a recording, and your videos aren't touched.</span></p></details>
   <details><summary><span data-es>¿En qué idiomas funciona?</span><span data-en>Which languages does it support?</span></summary><p><span data-es>La app está en español e inglés. La transcripción reconoce muchos idiomas y la IA escribe en el mismo idioma en que hablas.</span><span data-en>The app is in Spanish and English. Transcription recognizes many languages and the AI writes in the same language you speak.</span></p></details>
 </div></section>
 
 <section id="comunidad"><div class="ancho">
-  <h2><span data-es>Hagámosla entre todos</span><span data-en>Let's build it together</span></h2>
-  <p class="bajada"><span data-es>Graba es gratis y abierta. Hay lugar para cualquiera, programes o no.</span><span data-en>Graba is free and open. There's room for everyone, coder or not.</span></p>
+  <div class="sec-cab"><h2><span data-es>Hagámosla entre todos</span><span data-en>Let's build it together</span></h2>
+    <p><span data-es>Graba es gratis y abierta. Hay lugar para cualquiera, programes o no.</span><span data-en>Graba is free and open. There's room for everyone, coder or not.</span></p></div>
   <div class="comunidad">
-    <a href="https://github.com/graba-app/graba/discussions">💬<b><span data-es>Conversa</span><span data-en>Chat</span></b><small><span data-es>Dudas, ideas y lo que armaste.</span><span data-en>Questions, ideas and what you built.</span></small></a>
-    <a href="https://github.com/graba-app/graba/labels/probar">🧪<b><span data-es>Pruébala</span><span data-en>Test it</span></b><small><span data-es>Cuéntanos cómo anda en tu equipo.</span><span data-en>Tell us how it runs on your machine.</span></small></a>
+    <a href="https://github.com/graba-app/graba/discussions">💬<b><span data-es>Conversa</span><span data-en>Chat</span></b><small><span data-es>Dudas, ideas y lo que grabaste.</span><span data-en>Questions, ideas and what you recorded.</span></small></a>
+    <a href="https://github.com/graba-app/graba/labels/probar">🧪<b><span data-es>Pruébala</span><span data-en>Test it</span></b><small><span data-es>Cuéntanos cómo anda en tu Mac, Windows o Linux.</span><span data-en>Tell us how it runs on your Mac, Windows or Linux.</span></small></a>
     <a href="https://github.com/graba-app/graba/labels/good%20first%20issue">🌱<b><span data-es>Tu primer aporte</span><span data-en>Your first contribution</span></b><small><span data-es>Tareas pensadas para empezar.</span><span data-en>Tasks made for getting started.</span></small></a>
     <a href="https://github.com/graba-app/graba/blob/main/CONTRIBUTING.md">🛠️<b><span data-es>Cómo aportar</span><span data-en>How to contribute</span></b><small><span data-es>Con o sin IA, paso a paso.</span><span data-en>With or without AI, step by step.</span></small></a>
   </div>
@@ -300,16 +859,18 @@
 
 <footer><div class="ancho">
   <span>Graba · <span data-es>Licencia MIT</span><span data-en>MIT License</span> · <a href="https://github.com/graba-app/graba"><span data-es>Código</span><span data-en>Code</span></a> · <span data-es>Hermana de</span><span data-en>Sister of</span> <a href="https://minuta-app.github.io/minuta/">Minuta</a></span>
-  <span><span data-es>Loom, Claude, ChatGPT, Codex, Gemini y YouTube son marcas de sus dueños. Graba es un proyecto independiente.</span><span data-en>Loom, Claude, ChatGPT, Codex, Gemini and YouTube are trademarks of their owners. Graba is an independent project.</span></span>
+  <span><span data-es>Loom, Keynote, Claude, ChatGPT, Codex, Gemini y YouTube son marcas de sus dueños. Graba es un proyecto independiente.</span><span data-en>Loom, Keynote, Claude, ChatGPT, Codex, Gemini and YouTube are trademarks of their owners. Graba is an independent project.</span></span>
 </div></footer>
 
 <script>
   const html = document.documentElement, boton = document.getElementById("idioma");
   const TITULOS = { es: "Graba — graba tu pantalla y tu IA te deja el guion para YouTube | Gratis y privado", en: "Graba — record your screen and your AI writes the YouTube script | Free and private" };
   let guardado = null; try { guardado = localStorage.getItem("graba-idioma"); } catch (e) {}
+  const pedido = new URLSearchParams(location.search).get("idioma");
   const poner = (l) => { html.lang = l; boton.textContent = l === "es" ? "EN" : "ES"; document.title = TITULOS[l]; };
-  poner(guardado || ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en"));
+  poner(pedido || guardado || ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en"));
   boton.onclick = () => { const l = html.lang === "es" ? "en" : "es"; poner(l); try { localStorage.setItem("graba-idioma", l); } catch (e) {} };
+
   // El botón principal descarga lo de tu sistema, y su tarjeta queda destacada.
   const ua = navigator.userAgent;
   const so = /Windows/i.test(ua) ? "windows" : /Linux|X11/i.test(ua) && !/Android/i.test(ua) ? "linux" : "mac";
@@ -322,6 +883,30 @@
     try { await navigator.clipboard.writeText(document.getElementById(b.dataset.copiar).textContent); } catch (e) {}
     const antes = b.innerHTML; b.textContent = html.lang === "es" ? "¡Copiado!" : "Copied!"; setTimeout(() => (b.innerHTML = antes), 1600);
   });
+
+  // "Lo que tú ves" y "Lo que queda en el video": la misma escena del inicio, con y sin lo que no se graba.
+  const estudio = document.getElementById("estudio");
+  document.querySelectorAll(".hueco").forEach((h) => {
+    const copia = estudio.cloneNode(true);
+    copia.removeAttribute("id"); copia.classList.add("chico");
+    if (h.dataset.version === "video") copia.classList.add("video");
+    copia.setAttribute("aria-label", h.dataset.version === "video"
+      ? "Lo que queda en el video: la presentación y tu cara, sin teleprompter ni controles. / What ends up in the video: the slides and your face, no teleprompter or controls."
+      : "Lo que tú ves: la presentación, tu cara, el teleprompter y la barra de grabación. / What you see: the slides, your face, the teleprompter and the recording bar.");
+    h.replaceWith(copia);
+  });
+
+  // Reloj de la grabación (se queda quieto si la persona pidió menos movimiento).
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    let s = 12;
+    setInterval(() => { s = s >= 179 ? 0 : s + 1; const t = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+      document.querySelectorAll(".barra-rec .t").forEach((n) => (n.textContent = t)); }, 1000);
+  }
+
+  // Estrellas en GitHub (si la API responde; si no, el botón queda igual).
+  fetch("https://api.github.com/repos/graba-app/graba").then((r) => r.ok ? r.json() : null).then((d) => {
+    if (d && d.stargazers_count > 0) { const n = document.getElementById("n-estrellas"); n.textContent = d.stargazers_count; n.hidden = false; }
+  }).catch(() => {});
 </script>
 </body>
 </html>
