@@ -53,6 +53,7 @@ const Grabaciones = {
       const srt = path.join(c, "subtitulos.srt");
       lista.push({ ruta: c, nombre: d.name, meta, estado: leerJSON(path.join(c, "estado.json"), {}) || {},
         video: video ? urlVideo(video) : null, md, srt: fs.existsSync(srt) ? srt : null, audio: fs.existsSync(path.join(c, "audio.wav")),
+        recortada: fs.existsSync(path.join(c, ".original", "video.mp4")), version: video ? Math.floor(fs.statSync(video).mtimeMs / 1000) : 0,
         youtube: leerJSON(path.join(c, "youtube.json"), {}) || {} });
     }
     return lista.sort((a, b) => String(b.meta.inicio || "").localeCompare(String(a.meta.inicio || "")));
@@ -112,7 +113,9 @@ async function prepararVideo(c) {
   }
   // El audio para transcribir sale del video final (mismos tiempos que los subtítulos); si no se puede, el del micrófono.
   const final = Grabaciones.video(c), audioTmp = path.join(c, "convirtiendo.wav");
-  if (fs.existsSync(mic) && final && (await ffmpeg(["-y", "-i", final, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", audioTmp])) && tamano(audioTmp) > 44) {
+  // Con el sonido del computador mezclado, el video trae más que la voz: se transcribe solo el micrófono.
+  const conSonido = !!leerJSON(path.join(c, "meta.json"), {}).sonido_sistema;
+  if (!conSonido && fs.existsSync(mic) && final && (await ffmpeg(["-y", "-i", final, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", audioTmp])) && tamano(audioTmp) > 44) {
     fs.renameSync(audioTmp, audio);
     fs.rmSync(mic, { force: true });
   } else if (fs.existsSync(mic)) {
@@ -121,4 +124,30 @@ async function prepararVideo(c) {
   }
 }
 
-module.exports = { Grabaciones, prepararVideo };
+/** Recorta el video entre `inicio` y `fin` (segundos del video actual). La primera vez el original queda en .original/video.mp4.
+ * Se recomprime con el ffmpeg incluido para que el corte sea exacto (copiar sin recomprimir solo corta en los cuadros clave). */
+async function recortarVideo(c, inicio, fin) {
+  const video = path.join(c, "video.mp4"), original = path.join(c, ".original", "video.mp4"), tmp = path.join(c, ".recortando.mp4");
+  if (!fs.existsSync(video)) throw new Error(Idioma.t("No encontré el video."));
+  if (!binario("ffmpeg")) throw new Error(Idioma.t("Falta ffmpeg para recortar."));
+  fs.mkdirSync(path.dirname(original), { recursive: true });
+  const primera = !fs.existsSync(original);
+  if (primera) fs.copyFileSync(video, original);
+  const ok = await ffmpeg(["-y", "-ss", String(inicio), "-i", video, "-t", String(fin - inicio), "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+    "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", tmp]);
+  if (!ok || tamano(tmp) === 0) {
+    fs.rmSync(tmp, { force: true });
+    if (primera) fs.rmSync(original, { force: true });
+    throw new Error(Idioma.t("No pude recortar el video."));
+  }
+  fs.renameSync(tmp, video);
+}
+
+/** Vuelve a poner el video de antes del primer recorte. */
+function deshacerRecorteVideo(c) {
+  const original = path.join(c, ".original", "video.mp4");
+  if (!fs.existsSync(original)) throw new Error(Idioma.t("Esta grabación no tiene un recorte para deshacer."));
+  fs.renameSync(original, path.join(c, "video.mp4"));
+}
+
+module.exports = { Grabaciones, prepararVideo, recortarVideo, deshacerRecorteVideo };

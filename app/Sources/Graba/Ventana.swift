@@ -95,7 +95,9 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
     func enviarEstado() {
         guard lista else { return }
         var e: [String: Any] = [
-            "fase": Estado.fase.rawValue, "grabandoDesde": Estado.desde.map { Int($0.timeIntervalSince1970 * 1000) } ?? 0, "grabaciones": Grabaciones.listar(), "config": Config.leer(), "ias": IA.paraJS,
+            "fase": Estado.fase.rawValue, "grabandoDesde": Estado.desde.map { Int($0.timeIntervalSince1970 * 1000) } ?? 0,
+            "pausada": Estado.pausada, "segundos": Estado.segundos, "atajos": ["grabar": Atajos.grabar, "pausar": Atajos.pausar],
+            "grabaciones": Grabaciones.listar(), "config": Config.leer(), "ias": IA.paraJS,
             "modelos": Modelos.paraJS, "permisos": Permisos.paraJS, "carpeta": Rutas.base.path,
             "procesando": Procesador.enCurso ?? NSNull(),
             "actualizacion": Actualizaciones.disponible,
@@ -105,6 +107,23 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
         e.merge(pendiente) { _, nuevo in nuevo }
         pendiente = [:]
         llamar("estado", e)
+    }
+
+    /// Recortar o deshacer un recorte. No mientras se procesa esa misma grabación (se cambiaría el video bajo los pies del procesamiento).
+    private func recortar(_ d: [String: Any], ruta: String, valida: Bool, deshacer: Bool) {
+        guard valida, Procesador.enCurso != ruta else {
+            return llamar("recortado", ["ok": false, "deshacer": deshacer, "error": Idioma.t("Espera a que termine de procesar y vuelve a intentarlo.")])
+        }
+        let c = URL(fileURLWithPath: ruta)
+        let fin: @MainActor ([String: Any]) -> Void = { r in
+            Ventana.shared.llamar("recortado", r.merging(["deshacer": deshacer]) { a, _ in a })
+            Ventana.shared.enviarEstado()
+        }
+        if deshacer {
+            Recorte.deshacer(c, listo: fin)
+        } else {
+            Recorte.recortar(c, inicio: (d["inicio"] as? NSNumber)?.doubleValue ?? 0, fin: (d["fin"] as? NSNumber)?.doubleValue ?? 0, listo: fin)
+        }
     }
 
     // MARK: Desde la interfaz
@@ -123,6 +142,12 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
             Estado.grabar()
         case "terminar":
             Estado.detener()
+        case "pausar":
+            Estado.alternarPausa()
+        case "recortar":
+            recortar(d, ruta: ruta, valida: rutaValida, deshacer: false)
+        case "deshacerRecorte":
+            recortar(d, ruta: ruta, valida: rutaValida, deshacer: true)
         case "abrirCarpeta":
             if rutaValida { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: ruta)]) } else { NSWorkspace.shared.open(Rutas.base) }
         case "abrirVideo":

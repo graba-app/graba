@@ -13,16 +13,20 @@ Gratis, open source y sin fines de lucro. Mac, Windows y Linux. Todo pasa en tu 
 
 1. **Prepara el guion (opcional):** le cuentas a tu IA la idea, cuánto debe durar y le sumas tu presentación (PDF, PowerPoint, Word…).
    Te escribe lo que vas a decir, con el largo justo.
-2. **Grabas** toda la pantalla, una ventana o un área, con tu cámara (círculo, cuadrada, horizontal o vertical, del tamaño que quieras)
-   y tu voz, eligiendo qué cámara y qué micrófono usar. El **teleprompter** avanza solo y no sale en el video, igual que la barra de controles.
+2. **Grabas** toda la pantalla, una ventana, un área o **solo la cámara**, con tu cámara (círculo, cuadrada, horizontal o vertical, del
+   tamaño que quieras) y tu voz, eligiendo qué cámara y qué micrófono usar, y si quieres **el sonido del Mac** (o del computador en
+   Windows). Puedes **pausar y reanudar** sin que quede un hueco. El **teleprompter** avanza solo y no sale en el video, igual que la
+   barra de controles. **Atajos globales:** ⌃⌥⌘R empieza o termina y ⌃⌥⌘P pausa (Ctrl+Alt+Shift+R / P en Windows y Linux).
 3. **Transcribe en tu computador** con whisper.cpp. Nada se sube a ningún servidor.
 4. **Tu propia IA** (Claude Code, Codex o Gemini/Antigravity, con tu cuenta) escribe:
    - **Notas:** resumen y puntos clave.
    - **Guion para YouTube:** gancho, introducción, desarrollo con indicaciones de qué mostrar y cierre (y lo puedes mandar al teleprompter para regrabar).
    - **Para publicar:** 3 títulos, descripción con **capítulos** (con tiempos reales, el primero en 00:00 como pide YouTube) y etiquetas.
    - **Subtítulos** `.srt` listos para subir.
-5. **Corriges con tus palabras** ("dice Grava y es Graba"): tu IA lo arregla en todo, también en los subtítulos, y lo aprende.
-6. **Directo a YouTube** (en camino): conectas tu canal y se sube con título, capítulos, etiquetas y subtítulos, o solo al terminar.
+5. **Recortas el inicio y el final** («eh… ya, ¿se escucha?»): la transcripción, los subtítulos y los capítulos se corren solos y el
+   original queda guardado para volver a él.
+6. **Corriges con tus palabras** ("dice Grava y es Graba"): tu IA lo arregla en todo, también en los subtítulos, y lo aprende.
+7. **Directo a YouTube** (en camino): conectas tu canal y se sube con título, capítulos, etiquetas y subtítulos, o solo al terminar.
 
 Todo queda en `~/Graba`, una carpeta por grabación, en archivos normales que puedes abrir, copiar o usar en tus propios scripts.
 Graba se **actualiza sola**: revisa al abrirse y cada 6 horas, y te avisa dentro de la app.
@@ -68,9 +72,10 @@ La primera vez, Graba te ayuda a elegir tu IA ([cómo instalarla](https://graba-
     grabacion.md         # todo el texto (abajo)
     subtitulos.srt       # subtítulos con tiempos
     transcripcion.json   # salida de whisper ({"transcription": [{"offsets": {"from": ms, "to": ms}, "text": "…"}]})
-    meta.json            # {"inicio": "2026-10-20T10:15:00", "duracion_seg": 312}
+    meta.json            # {"inicio": "2026-10-20T10:15:00", "duracion_seg": 312, "recortes": [{"inicio": 12.5, "fin": 300}]}
     estado.json          # {"estado": "procesando" | "lista" | "error", "paso", "total", "texto", "error"}
     youtube.json         # si se subió: {"estado": "subiendo" | "lista" | "error", "pct", "id", "url", "privacidad"}
+    .original/           # solo si la recortaste: el video y los textos de antes del primer recorte (para «Volver al original»)
   .graba/                # configuración y modelos (no lo toques a mano: se cambia en Ajustes)
 ```
 

@@ -11,8 +11,12 @@ window.interno.alBarra((d) => {
   $("cuenta").hidden = d.fase !== "cuenta";
   $("grabando").hidden = d.fase !== "grabando";
   $("cuenta").textContent = T.cuenta || "";
-  $("reloj").textContent = reloj(d.segundos || 0);
+  $("reloj").textContent = d.pausada ? (T.en_pausa || "") : reloj(d.segundos || 0);
+  document.querySelector(".punto.rec").classList.toggle("pausa", !!d.pausada);
+  $("i-pausa").hidden = !!d.pausada;
+  $("i-seguir").hidden = !d.pausada;
   for (const m of ["pantalla", "ventana", "area"]) $(m).classList.toggle("activo", d.modo === m);
+  $("solocamara").classList.toggle("activo", d.modo === "camara");
   $("camara").classList.toggle("activo", !!d.camara);
   $("microfono").classList.toggle("activo", !!d.microfono);
   $("guion").classList.toggle("activo", !!d.teleprompter);
@@ -21,7 +25,7 @@ window.interno.alBarra((d) => {
   $("grabar").disabled = !d.listo;
   $("t-grabar").textContent = T.grabar || "";
   $("t-terminar").textContent = T.terminar || "";
-  for (const id of ["grabaciones", "pantalla", "ventana", "area", "camara", "microfono", "guion", "grabar", "terminar", "cerrar"]) ayuda(id, T["ayuda_" + id]);
+  for (const id of ["grabaciones", "pantalla", "ventana", "area", "solocamara", "camara", "microfono", "guion", "grabar", "terminar", "pausar", "cerrar"]) ayuda(id, T["ayuda_" + id]);
 });
 
 document.addEventListener("click", (e) => {

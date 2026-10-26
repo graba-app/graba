@@ -28,7 +28,11 @@ const esDato = (t) => demo.includes(t) || /^(Graba|Claude|ChatGPT \(Codex\)|Gemi
 const VISTAS = ["E=>{E.sel=E.grabaciones[1].ruta}", ...["notas", "guion", "youtube", "subtitulos", "transcripcion"].map((t) => `E=>{E.pestana='${t}'}`),
   "E=>{E.sel=E.grabaciones[0].ruta}", "E=>{E.sel=E.grabaciones[2].ruta}", "E=>{E.pestana='youtube';E.youtube={conectado:true,disponible:true,canal:'Canal de Ana'}}", "E=>{E.grabaciones[1].youtube={estado:'subiendo',pct:40}}", "E=>{E.grabaciones[1].youtube={estado:'lista',url:'https://youtu.be/x',privacidad:'unlisted',aviso:'x'}}", "E=>{E.grabaciones[1].youtube={estado:'error',error:'x'}}", "E=>{E.youtube={conectado:false,disponible:false};E.grabaciones[1].youtube={}}", "E=>{E.youtube={conectado:true,disponible:true,canal:'x'};E.ajustes=true}", "E=>{E.ajustes=false;E.youtube={conectado:false,disponible:true}}", "E=>{E.pestana='notas'}",
   "E=>{E.sel=E.grabaciones[1].ruta;E.corregir={ruta:E.sel,texto:''}}", "E=>{E.corregir={ruta:E.sel,texto:'x',enviando:true}}", "E=>{E.corregir=null;E.guion={paso:'pedir',idea:'',minutos:3,para:'youtube',archivos:[{ruta:'/x/a.pdf',nombre:'presentacion.pdf'}],error:'x'}}", "E=>{E.guion.paso='creando'}", "E=>{E.guion={paso:'listo',titulo:'Presupuesto',texto:'Hola, soy Ana.'}}", "E=>{E.guion=null;E.ajustes=true}", "E=>{E.ajustes=false;E.borrar='x'}",
-  "E=>{E.borrar=null;E.actualizacion={hay:true,detalle:'Versión 0.2.0'}}", "E=>{E.act={paso:'2',texto:'Preparando la versión nueva…',pct:40}}", "E=>{E.act={paso:'error',texto:'x'}}", "E=>{E.act=null;E.buscando='alDia';E.ajustes=true}", "E=>{E.ajustes=false;E.grabaciones=[]}"];
+  "E=>{E.borrar=null;E.actualizacion={hay:true,detalle:'Versión 0.2.0'}}", "E=>{E.act={paso:'2',texto:'Preparando la versión nueva…',pct:40}}", "E=>{E.act={paso:'error',texto:'x'}}", "E=>{E.act=null;E.buscando='alDia';E.ajustes=true}",
+  "E=>{E.ajustes=false;E.buscando=null;E.sel=E.grabaciones[1].ruta;E.recorte={ruta:E.sel,inicio:12.5,fin:131,duracion:140,enviando:false,error:'x'}}",
+  "E=>{E.recorte.enviando=true;E.recorte.error=''}", "E=>{E.recorte=null;E.grabaciones[1].recortada=true}",
+  "E=>{E.grabaciones[1].recortada=false;E.fase='grabando';E.grabandoDesde=Date.now()-65000}", "E=>{E.pausada=true;E.segundos=65}",
+  "E=>{E.fase='inactiva';E.pausada=false;E.grabaciones=[]}"];
 const navegador = await chromium.launch();
 for (const [idioma, consulta] of [["español", ""], ["inglés", "?idioma=en"]]) {
   for (const bv of [false, true]) {

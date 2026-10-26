@@ -292,6 +292,72 @@ class Ejemplos(unittest.TestCase):
         self.assertTrue(cuerpo.startswith("## Resumen"))
 
 
+class Recortar(unittest.TestCase):
+    """Recortar el inicio y el final: todos los tiempos se corren al video nuevo y se puede deshacer."""
+
+    def procesada(self):
+        ia_falsa(RESPUESTA)
+        salida = os.path.join(DATOS, "salida.json")
+        sys.argv = ["procesar.py", nueva_grabacion(), salida]
+        procesar.main()
+        with open(salida) as f:
+            return json.load(f)["carpeta"]
+
+    def correr(self, *args):
+        salida = os.path.join(DATOS, "salida-recortar.json")
+        p = subprocess.run([sys.executable, os.path.join(RAIZ, "bin", "recortar.py"), *args, salida], capture_output=True, text=True)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        with open(salida) as f:
+            return json.load(f)
+
+    def leer(self, c, n):
+        with open(os.path.join(c, n), encoding="utf-8") as f:
+            return f.read()
+
+    def test_recortar_y_deshacer(self):
+        c = self.procesada()
+        antes = {n: self.leer(c, n) for n in ("grabacion.md", "subtitulos.srt", "transcripcion.json", "meta.json")}
+        self.assertTrue(self.correr("preparar", c)["ok"])
+        r = self.correr("textos", c, "60", "132")
+        self.assertEqual((r["ok"], r["duracion"]), (True, 72))
+        md = self.leer(c, "grabacion.md")
+        self.assertIn("duracion_seg: 72", md)
+        # «Inicio» seguía sonando en el segundo 60, así que queda en 00:00; 01:05 Columnas → 00:05 y 02:10 Guardar → 01:10.
+        self.assertIn("### Capítulos\n00:00 Inicio\n00:05 Columnas\n01:10 Guardar\n", md)
+        self.assertIn("## Transcripción\n[00:05] Primero seleccionamos las columnas.\n[01:10] Y al final guardamos. Listo.", md)
+        self.assertNotIn("Hola, hoy les muestro", md, "lo que quedó antes del corte se va")
+        srt = self.leer(c, "subtitulos.srt")
+        self.assertTrue(srt.startswith("1\n00:00:05,000 --> 00:00:10,000\nPrimero"), srt)
+        self.assertIn("2\n00:01:10,000 --> 00:01:12,000\nY al final", srt, "el último se corta en el nuevo final")
+        t = json.loads(self.leer(c, "transcripcion.json"))["transcription"]
+        self.assertEqual(t[0]["offsets"], {"from": 5000, "to": 10000})
+        meta = json.loads(self.leer(c, "meta.json"))
+        self.assertEqual((meta["duracion_seg"], meta["recortes"]), (72, [{"inicio": 60.0, "fin": 132.0}]))
+        # Un segundo recorte sobre el ya recortado no pisa la copia del original.
+        self.assertTrue(self.correr("preparar", c)["ok"])
+        self.assertTrue(self.correr("textos", c, "0", "60")["ok"])
+        self.assertTrue(self.correr("deshacer", c)["ok"])
+        for n, texto in antes.items():
+            self.assertEqual(self.leer(c, n), texto, f"{n} volvió a como estaba")
+        self.assertFalse(self.correr("deshacer", c)["ok"], "no hay nada más que deshacer")
+
+    def test_corta_el_audio_si_aun_no_se_transcribe(self):
+        import wave
+        c = tempfile.mkdtemp(dir=DATOS)
+        with open(os.path.join(c, "meta.json"), "w") as f:
+            json.dump({"duracion_seg": 10}, f)
+        with wave.open(os.path.join(c, "audio.wav"), "wb") as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(b"\x00\x00" * 16000 * 10)
+        self.correr("preparar", c)
+        self.assertTrue(self.correr("textos", c, "2", "7")["ok"])
+        with wave.open(os.path.join(c, "audio.wav"), "rb") as w:
+            self.assertEqual(w.getnframes(), 16000 * 5)
+
+    def test_recorte_invalido(self):
+        c = self.procesada()
+        self.assertFalse(self.correr("textos", c, "50", "20")["ok"])
+
+
 if __name__ == "__main__":
     try:
         unittest.main(verbosity=2)

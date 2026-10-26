@@ -10,8 +10,16 @@ final class Grabadora: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Se
     private var writer: AVAssetWriter?
     private var video: AVAssetWriterInput?
     private var audio: AVAssetWriterInput?
+    /// El sonido del Mac va a un archivo aparte (sistema.m4a) y se mezcla al final: así audio.wav (la voz) queda limpio para whisper.
+    private var writerSistema: AVAssetWriter?
+    private var audioSistema: AVAssetWriterInput?
     private var inicio: CMTime?
     private var ultimo: CMTime = .zero
+    // Pausa: mientras está en pausa no se escribe nada; al reanudar, todo lo que llega se corre hacia atrás lo que duró la pausa
+    // (`desfase`), así el video sigue de corrido sin un hueco. Solo se tocan en `cola`.
+    private var enPausa = false
+    private var resincronizar = false
+    private var desfase: CMTime = .zero
     private let cola = DispatchQueue(label: "app.graba.grabadora")
     /// Se llama si macOS corta la grabación (por ejemplo, si se quita el permiso).
     var alFallar: ((String) -> Void)?
@@ -30,7 +38,8 @@ final class Grabadora: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Se
     }
 
     @MainActor
-    func empezar(en archivo: URL, fuente: Fuente, excluyendo ventanas: [CGWindowID], incluyendo extra: [CGWindowID], microfono: Bool) async throws {
+    func empezar(en archivo: URL, fuente: Fuente, excluyendo ventanas: [CGWindowID], incluyendo extra: [CGWindowID], microfono: Bool,
+                 sonidoMac: Bool = false) async throws {
         let contenido = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         func displayDe(_ s: NSScreen) -> SCDisplay? {
             let id = (s.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? CGMainDisplayID()
@@ -84,6 +93,12 @@ final class Grabadora: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Se
         conf.captureMicrophone = microfono
         let micElegido = Config.texto("microfono_id")
         if microfono, !micElegido.isEmpty, AVCaptureDevice(uniqueID: micElegido) != nil { conf.microphoneCaptureDeviceID = micElegido }
+        if sonidoMac {
+            conf.capturesAudio = true
+            conf.excludesCurrentProcessAudio = true
+            conf.sampleRate = 48000
+            conf.channelCount = 2
+        }
 
         let w = try AVAssetWriter(outputURL: archivo, fileType: .mp4)
         let v = AVAssetWriterInput(mediaType: .video, outputSettings: [
@@ -108,18 +123,59 @@ final class Grabadora: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Se
         }
         writer = w
         video = v
+        writerSistema = nil
+        audioSistema = nil
+        if sonidoMac {
+            let destino = archivo.deletingLastPathComponent().appendingPathComponent("sistema.m4a")
+            let ws = try AVAssetWriter(outputURL: destino, fileType: .m4a)
+            let a = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+                AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: 48000, AVNumberOfChannelsKey: 2, AVEncoderBitRateKey: 160_000,
+            ])
+            a.expectsMediaDataInRealTime = true
+            ws.add(a)
+            writerSistema = ws
+            audioSistema = a
+        }
         inicio = nil
         ultimo = .zero
+        cola.sync { enPausa = false; resincronizar = false; desfase = .zero }
 
         let s = SCStream(filter: filtro, configuration: conf, delegate: self)
         try s.addStreamOutput(self, type: .screen, sampleHandlerQueue: cola)
         if microfono { try s.addStreamOutput(self, type: .microphone, sampleHandlerQueue: cola) }
+        if sonidoMac { try s.addStreamOutput(self, type: .audio, sampleHandlerQueue: cola) }
         stream = s
         try await s.startCapture()
     }
 
-    func stream(_ stream: SCStream, didOutputSampleBuffer sb: CMSampleBuffer, of tipo: SCStreamOutputType) {
-        guard sb.isValid, let writer else { return }
+    func pausar() { cola.async { [self] in enPausa = true } }
+
+    func reanudar() { cola.async { [self] in if enPausa { enPausa = false; resincronizar = true } } }
+
+    /// El mismo cuadro o sonido con su tiempo corrido hacia atrás `desfase` (lo que duraron las pausas).
+    private func corrido(_ sb: CMSampleBuffer) -> CMSampleBuffer? {
+        guard desfase != .zero else { return sb }
+        var n: CMItemCount = 0
+        CMSampleBufferGetSampleTimingInfoArray(sb, entryCount: 0, arrayToFill: nil, entriesNeededOut: &n)
+        var tiempos = [CMSampleTimingInfo](repeating: CMSampleTimingInfo(), count: max(1, n))
+        CMSampleBufferGetSampleTimingInfoArray(sb, entryCount: n, arrayToFill: &tiempos, entriesNeededOut: &n)
+        for i in 0..<Int(n) {
+            tiempos[i].presentationTimeStamp = CMTimeSubtract(tiempos[i].presentationTimeStamp, desfase)
+            if tiempos[i].decodeTimeStamp.isValid { tiempos[i].decodeTimeStamp = CMTimeSubtract(tiempos[i].decodeTimeStamp, desfase) }
+        }
+        var copia: CMSampleBuffer?
+        CMSampleBufferCreateCopyWithNewTiming(allocator: nil, sampleBuffer: sb, sampleTimingEntryCount: n, sampleTimingArray: &tiempos, sampleBufferOut: &copia)
+        return copia
+    }
+
+    func stream(_ stream: SCStream, didOutputSampleBuffer original: CMSampleBuffer, of tipo: SCStreamOutputType) {
+        guard original.isValid, let writer, !enPausa else { return }
+        if resincronizar, inicio != nil {
+            // Lo primero que llega después de la pausa queda justo un cuadro después de lo último que se escribió.
+            desfase = CMTimeSubtract(original.presentationTimeStamp, CMTimeAdd(ultimo, CMTime(value: 1, timescale: 30)))
+            resincronizar = false
+        }
+        guard let sb = corrido(original) else { return }
         switch tipo {
         case .screen:
             // Solo cuadros completos: cuando la pantalla no cambia llegan cuadros "idle" sin imagen.
@@ -129,12 +185,17 @@ final class Grabadora: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Se
             if inicio == nil {
                 guard writer.startWriting() else { return }
                 writer.startSession(atSourceTime: sb.presentationTimeStamp)
+                if let ws = writerSistema, ws.startWriting() { ws.startSession(atSourceTime: sb.presentationTimeStamp) }
                 inicio = sb.presentationTimeStamp
             }
             if video.isReadyForMoreMediaData, video.append(sb) { ultimo = max(ultimo, sb.presentationTimeStamp) }
         case .microphone:
             guard let inicio, let audio, sb.presentationTimeStamp >= inicio, audio.isReadyForMoreMediaData else { return }
             if audio.append(sb) { ultimo = max(ultimo, sb.presentationTimeStamp) }
+        case .audio:
+            guard let inicio, let a = audioSistema, writerSistema?.status == .writing, sb.presentationTimeStamp >= inicio,
+                  a.isReadyForMoreMediaData else { return }
+            a.append(sb)
         default:
             break
         }
@@ -153,12 +214,89 @@ final class Grabadora: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Se
                 guard let writer, let inicio, writer.status == .writing else { fin.resume(returning: 0); return }
                 video?.markAsFinished()
                 audio?.markAsFinished()
+                if let ws = writerSistema, ws.status == .writing {
+                    audioSistema?.markAsFinished()
+                    ws.endSession(atSourceTime: max(ultimo, inicio))
+                    let espera = DispatchSemaphore(value: 0)
+                    ws.finishWriting { espera.signal() }
+                    espera.wait()
+                }
+                writerSistema = nil
+                audioSistema = nil
                 // Si la pantalla quedó quieta al final, el video dura hasta el último sonido igual.
                 writer.endSession(atSourceTime: max(ultimo, inicio))
                 let duracion = CMTimeGetSeconds(CMTimeSubtract(ultimo, inicio))
                 writer.finishWriting { fin.resume(returning: writer.status == .completed ? duracion : 0) }
             }
         }
+    }
+
+    /// Mezcla el sonido del Mac (sistema.m4a) con la voz dentro de video.mp4: el video se copia tal cual (sin recomprimir) y el audio
+    /// queda en una sola pista AAC estéreo, la que reproducen todos los programas y YouTube. Devuelve true si reemplazó video.mp4.
+    static func mezclarSonido(video: URL, sistema: URL) async throws -> Bool {
+        let original = AVURLAsset(url: video), sonido = AVURLAsset(url: sistema)
+        guard let pistaVideo = try await original.loadTracks(withMediaType: .video).first,
+              let pistaSistema = try await sonido.loadTracks(withMediaType: .audio).first else { return false }
+        let pistasVoz = try await original.loadTracks(withMediaType: .audio)
+        let duracion = try await original.load(.duration)
+        let rango = CMTimeRange(start: .zero, duration: duracion)
+
+        let comp = AVMutableComposition()
+        guard let cv = comp.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) else { return false }
+        try cv.insertTimeRange(rango, of: pistaVideo, at: .zero)
+        var audios: [AVMutableCompositionTrack] = []
+        for p in pistasVoz {
+            if let ca = comp.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
+                try ca.insertTimeRange(rango, of: p, at: .zero)
+                audios.append(ca)
+            }
+        }
+        if let cs = comp.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
+            let rs = try await pistaSistema.load(.timeRange)
+            try cs.insertTimeRange(CMTimeRange(start: .zero, duration: min(rs.duration, duracion)), of: pistaSistema, at: .zero)
+            audios.append(cs)
+        }
+        let formato = try await pistaVideo.load(.formatDescriptions).first
+
+        let lector = try AVAssetReader(asset: comp)
+        let lectorVideo = AVAssetReaderTrackOutput(track: cv, outputSettings: nil)  // sin recomprimir
+        let lectorAudio = AVAssetReaderAudioMixOutput(audioTracks: audios, audioSettings: [
+            AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: 48000, AVNumberOfChannelsKey: 2,
+            AVLinearPCMBitDepthKey: 16, AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false, AVLinearPCMIsNonInterleaved: false,
+        ])
+        lector.add(lectorVideo)
+        lector.add(lectorAudio)
+
+        let mezcla = video.deletingLastPathComponent().appendingPathComponent(".video-mezcla.mp4")
+        try? FileManager.default.removeItem(at: mezcla)
+        let escritor = try AVAssetWriter(outputURL: mezcla, fileType: .mp4)
+        let escritorVideo = AVAssetWriterInput(mediaType: .video, outputSettings: nil, sourceFormatHint: formato)
+        escritorVideo.transform = try await pistaVideo.load(.preferredTransform)
+        let escritorAudio = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+            AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: 48000, AVNumberOfChannelsKey: 2, AVEncoderBitRateKey: 192_000,
+        ])
+        escritor.add(escritorVideo)
+        escritor.add(escritorAudio)
+        guard lector.startReading(), escritor.startWriting() else { throw lector.error ?? escritor.error ?? NSError(domain: "Graba", code: 4) }
+        escritor.startSession(atSourceTime: .zero)
+
+        let grupo = DispatchGroup()
+        func copiar(_ salida: AVAssetReaderOutput, a entrada: AVAssetWriterInput, cola: String) {
+            grupo.enter()
+            entrada.requestMediaDataWhenReady(on: DispatchQueue(label: cola)) {
+                while entrada.isReadyForMoreMediaData {
+                    if let sb = salida.copyNextSampleBuffer() { entrada.append(sb) } else { entrada.markAsFinished(); grupo.leave(); return }
+                }
+            }
+        }
+        copiar(lectorVideo, a: escritorVideo, cola: "app.graba.mezcla.video")
+        copiar(lectorAudio, a: escritorAudio, cola: "app.graba.mezcla.audio")
+        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in grupo.notify(queue: .global()) { c.resume() } }
+        guard lector.status == .completed else { escritor.cancelWriting(); try? FileManager.default.removeItem(at: mezcla); return false }
+        await escritor.finishWriting()
+        guard escritor.status == .completed else { try? FileManager.default.removeItem(at: mezcla); return false }
+        _ = try FileManager.default.replaceItemAt(video, withItemAt: mezcla)
+        return true
     }
 
     /// Saca el audio del video a WAV 16 kHz mono (lo que necesita whisper). Devuelve false si el video no tiene audio.

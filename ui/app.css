@@ -181,3 +181,24 @@ input.texto { width: 100%; font: inherit; padding: 8px 10px; border-radius: 8px;
   .lista { max-height: 260px; }
   .contenido { padding: 22px 16px 40px; }
 }
+.grupo-grabar { display: flex; gap: 6px; align-items: stretch; width: 100%; }
+.grupo-grabar .grabar { flex: 1; min-width: 0; }
+.boton.pausa { flex: none; min-width: 48px; padding: 0 12px; font-size: 13px; letter-spacing: -1px; border-radius: 99px; }
+.vacio .grupo-grabar { width: auto; display: inline-flex; }
+.vacio .atajos { color: var(--suave); font-size: 12.5px; margin-top: 14px; }
+
+/* Recortar */
+.recorte .nota { color: var(--suave); font-size: 13px; margin: 0 0 14px; line-height: 1.5; }
+.tiradores { position: relative; height: 34px; margin: 6px 0 12px; }
+.tiradores .pista { position: absolute; left: 0; right: 0; top: 13px; height: 8px; border-radius: 99px; background: var(--linea); overflow: hidden; }
+.tiradores .pista i { position: absolute; top: 0; bottom: 0; left: var(--a); right: calc(100% - var(--b)); background: var(--acento); }
+.tiradores input[type=range] { position: absolute; inset: 0; width: 100%; margin: 0; background: transparent; pointer-events: none; -webkit-appearance: none; appearance: none; height: 34px; }
+.tiradores input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 18px; height: 30px; border-radius: 6px; background: var(--panel); border: 2px solid var(--acento); box-shadow: 0 1px 3px rgba(0,0,0,.25); cursor: ew-resize; }
+.tiradores input[type=range]::-moz-range-thumb { pointer-events: auto; width: 14px; height: 26px; border-radius: 6px; background: var(--panel); border: 2px solid var(--acento); cursor: ew-resize; }
+.tiradores input[type=range]::-webkit-slider-runnable-track { background: transparent; }
+.tiradores input[type=range]:focus-visible::-webkit-slider-thumb { outline: 3px solid var(--acento); outline-offset: 2px; }
+.tiempos-recorte { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: 13px; color: var(--suave); margin-bottom: 12px; }
+.tiempos-recorte b { color: var(--texto); font-variant-numeric: tabular-nums; }
+.boton.chico { padding: 3px 9px; font-size: 12px; }
+.recorte .acciones { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.aviso-recorte { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--suave); margin: 0 0 14px; }

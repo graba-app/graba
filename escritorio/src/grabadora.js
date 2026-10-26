@@ -3,6 +3,9 @@
 // y un AudioWorklet manda el micrófono a 16 kHz mono para microfono.wav (respaldo del audio para whisper).
 const puente = window.interno;
 let grabador = null, ctx = null, flujos = [], cadena = Promise.resolve(), inicio = 0;
+// Pausa: MediaRecorder sigue el video de corrido; el micrófono a 16 kHz deja de mandarse y el tiempo en pausa no cuenta.
+let enPausa = false, pausaDesde = 0, pausado = 0;
+let mezcla = null; // AudioContext que junta la voz y el sonido del computador
 // Si piden detener mientras todavía se pide la pantalla (Descartar durante el arranque), no se empieza a grabar.
 let abortar = false;
 
@@ -29,6 +32,7 @@ async function microfonoA16k(stream) {
   const fuente = ctx.createMediaStreamSource(stream);
   const nodo = new AudioWorkletNode(ctx, "pcm", { numberOfInputs: 1, numberOfOutputs: 0, channelCount: 2, channelCountMode: "explicit" });
   nodo.port.onmessage = (e) => {
+    if (enPausa) return;
     const f = e.data, pcm = new Int16Array(f.length);
     for (let i = 0; i < f.length; i++) { const s = Math.max(-1, Math.min(1, f[i])); pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff; }
     puente.pcm(pcm.buffer);
@@ -41,15 +45,24 @@ function soltar() {
   flujos = [];
   try { ctx?.close(); } catch {}
   ctx = null;
+  try { mezcla?.close(); } catch {}
+  mezcla = null;
 }
 
 const abortada = () => { if (!abortar) return false; soltar(); puente.lista({ ok: false, error: "cancelada" }); return true; };
 
-puente.alEmpezar(async ({ microfono, microfonoId, ancho, alto }) => {
+puente.alEmpezar(async ({ microfono, microfonoId, ancho, alto, soloCamara, camaraId, sonidoSistema }) => {
   abortar = false;
   let pantalla, mic = null;
   try {
-    pantalla = await navigator.mediaDevices.getDisplayMedia({ audio: false, video: { width: { ideal: ancho, max: ancho }, height: { ideal: alto, max: alto }, frameRate: { ideal: 30, max: 30 } } });
+    if (soloCamara) {
+      // Solo la cámara: se graba directo (hasta 1080p), sin pasar por la pantalla.
+      const video = { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30, max: 30 } };
+      try { pantalla = await navigator.mediaDevices.getUserMedia({ audio: false, video: camaraId ? { ...video, deviceId: { exact: camaraId } } : video }); }
+      catch { pantalla = await navigator.mediaDevices.getUserMedia({ audio: false, video }); }
+    } else {
+      pantalla = await navigator.mediaDevices.getDisplayMedia({ audio: !!sonidoSistema, video: { width: { ideal: ancho, max: ancho }, height: { ideal: alto, max: alto }, frameRate: { ideal: 30, max: 30 } } });
+    }
     flujos.push(pantalla);
   } catch (e) {
     soltar();
@@ -65,8 +78,20 @@ puente.alEmpezar(async ({ microfono, microfonoId, ancho, alto }) => {
     } catch { mic = null; } // sin micrófono se graba igual (queda "sin voz"), como en Mac
   }
   if (abortada()) return;
-  const pistas = [...pantalla.getVideoTracks(), ...(mic ? mic.getAudioTracks() : [])];
-  const f = formato(!!mic);
+  // Sonido del computador (Windows): se mezcla con la voz en una sola pista para el video; microfono.wav sigue siendo solo la voz.
+  const sistema = pantalla.getAudioTracks()[0] || null;
+  let pistaAudio = mic ? mic.getAudioTracks()[0] : null;
+  if (sistema) {
+    try {
+      mezcla = new AudioContext({ sampleRate: 48000 });
+      const destino = mezcla.createMediaStreamDestination();
+      mezcla.createMediaStreamSource(new MediaStream([sistema])).connect(destino);
+      if (mic) mezcla.createMediaStreamSource(mic).connect(destino);
+      pistaAudio = destino.stream.getAudioTracks()[0];
+    } catch { /* sin mezcla: queda solo la voz */ }
+  }
+  const pistas = [...pantalla.getVideoTracks(), ...(pistaAudio ? [pistaAudio] : [])];
+  const f = formato(!!pistaAudio);
   try {
     grabador = new MediaRecorder(new MediaStream(pistas), { mimeType: f.tipo || undefined, videoBitsPerSecond: 6_000_000, audioBitsPerSecond: 160_000 });
   } catch (e) {
@@ -79,7 +104,8 @@ puente.alEmpezar(async ({ microfono, microfonoId, ancho, alto }) => {
   grabador.onstop = async () => {
     await cadena;
     soltar();
-    puente.detenida({ ms: Date.now() - inicio });
+    if (enPausa) { pausado += Date.now() - pausaDesde; enPausa = false; }
+    puente.detenida({ ms: Date.now() - inicio - pausado });
   };
   // Si el sistema deja de compartir la pantalla (p. ej. el aviso de Wayland), se termina la grabación.
   pantalla.getVideoTracks()[0].addEventListener("ended", () => puente.cortada("pantalla"));
@@ -88,7 +114,14 @@ puente.alEmpezar(async ({ microfono, microfonoId, ancho, alto }) => {
   const ajustes = pantalla.getVideoTracks()[0].getSettings();
   grabador.start(1000);
   inicio = Date.now();
-  puente.lista({ ok: true, ext: f.ext, tipo: grabador.mimeType || f.tipo, microfono: !!mic, ancho: ajustes.width, alto: ajustes.height });
+  enPausa = false; pausado = 0;
+  puente.lista({ ok: true, ext: f.ext, tipo: grabador.mimeType || f.tipo, microfono: !!mic, sonidoSistema: !!sistema, ancho: ajustes.width, alto: ajustes.height });
+});
+
+puente.alPausar((si) => {
+  if (!grabador || grabador.state === "inactive") return;
+  if (si && grabador.state === "recording") { grabador.pause(); enPausa = true; pausaDesde = Date.now(); }
+  else if (!si && grabador.state === "paused") { grabador.resume(); enPausa = false; pausado += Date.now() - pausaDesde; }
 });
 
 puente.alDetener(() => {

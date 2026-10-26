@@ -162,7 +162,8 @@
   function botonGrabar(grande) {
     const g = grande ? " grande" : "";
     if (E.fase === "grabando") {
-      return `<button class="boton grabar${g}" data-accion="terminar" title="Terminar y guardar"><span class="cuadro"></span><span>Terminar</span><span class="reloj-vivo">${reloj(segundosGrabando())}</span></button>`;
+      const pausa = `<button class="boton pausa" data-accion="pausar" title="${E.pausada ? "Reanudar la grabación" : "Pausar la grabación"}" aria-label="${E.pausada ? "Reanudar la grabación" : "Pausar la grabación"}">${E.pausada ? "▶" : "❚❚"}</button>`;
+      return `<span class="grupo-grabar"><button class="boton grabar${g}" data-accion="terminar" title="Terminar y guardar"><span class="cuadro"></span><span>Terminar</span><span class="reloj-vivo">${E.pausada ? "En pausa" : reloj(segundosGrabando())}</span></button>${pausa}</span>`;
     }
     if (E.fase === "cuenta" || E.fase === "terminando") {
       return `<button class="boton grabar${g}" disabled><span class="punto"></span><span>${E.fase === "cuenta" ? "Empezando…" : "Guardando…"}</span></button>`;
@@ -170,10 +171,10 @@
     const nota = E.fase === "preparando" && grande ? `<p class="nota-grabar">La barra de grabación está abierta: toca su botón rojo para empezar.</p>` : "";
     return `<button class="boton grabar${g}" data-accion="grabar"><span class="punto"></span><span>Grabar</span></button>${nota}`;
   }
-  const segundosGrabando = () => (E.grabandoDesde ? (Date.now() - E.grabandoDesde) / 1000 : 0);
+  const segundosGrabando = () => (E.pausada ? E.segundos : E.grabandoDesde ? (Date.now() - E.grabandoDesde) / 1000 : 0);
   // El reloj del botón avanza solo, sin volver a pintar toda la ventana.
   setInterval(() => {
-    if (E.fase !== "grabando") return;
+    if (E.fase !== "grabando" || E.pausada) return;
     document.querySelectorAll(".reloj-vivo").forEach((n) => (n.textContent = reloj(segundosGrabando())));
   }, 1000);
 
@@ -223,13 +224,37 @@
       <div class="titulo-graba"><h1 data-sin-traducir>${esc(titulo)}</h1>
         <div class="acciones">
           <button class="icono" data-accion="carpeta" title="Mostrar en la carpeta" aria-label="Mostrar en la carpeta">📁</button>
+          ${e === "lista" && t.video ? `<button class="icono" data-accion="recortar" title="Recortar el inicio y el final" aria-label="Recortar el inicio y el final">✂</button>` : ""}
           ${e === "lista" ? `<button class="icono" data-accion="corregir" title="Corregir con tu IA" aria-label="Corregir con tu IA">✎</button>` : ""}
           ${e === "lista" ? `<button class="icono" data-accion="regenerar" title="Volver a escribir con la IA" aria-label="Volver a escribir con la IA">↻</button>` : ""}
           <button class="icono" data-accion="borrar" title="Borrar" aria-label="Borrar">🗑</button>
         </div></div>
       <div class="meta" data-sin-traducir>${esc(fechaCorta(m.inicio))}${m.duracion_seg ? " · " + reloj(m.duracion_seg) : ""}</div>
-      ${t.video ? `<video id="video" controls preload="metadata" src="${esc(t.video)}"></video>` : ""}
+      ${t.video ? `<video id="video" controls preload="metadata" src="${esc(t.video + (t.video.includes("?") ? "&" : "?") + "v=" + (t.version || 0))}"></video>` : ""}
+      ${E.recorte && E.recorte.ruta === t.ruta ? panelRecorte(t) : t.recortada && e === "lista" ? `<div class="aviso-recorte"><span>Esta grabación está recortada. El original quedó guardado.</span><button class="boton" data-accion="deshacer-recorte">Volver al original</button></div>` : ""}
       ${cuerpo}</div>`;
+  }
+
+  /** Recortar: dos tiradores (inicio y fin) sobre la duración del video. Mover uno muestra ese cuadro en el video. */
+  function panelRecorte(t) {
+    const r = E.recorte, dur = r.duracion;
+    const pct = (s) => (dur ? (s / dur) * 100 : 0);
+    return `<section class="tarjeta recorte" aria-labelledby="t-recorte"><div class="tarjeta-cabeza"><h3 id="t-recorte">Recortar el inicio y el final</h3></div>
+      <p class="nota">Lo que quede fuera se quita del video, los subtítulos, la transcripción y los capítulos. El original queda guardado y puedes volver a él.</p>
+      <div class="tiradores" style="--a:${pct(r.inicio)}%;--b:${pct(r.fin)}%">
+        <div class="pista"><i></i></div>
+        <input type="range" id="recorte-inicio" data-recorte="inicio" min="0" max="${dur}" step="0.1" value="${r.inicio}" aria-label="Inicio del recorte" aria-valuetext="${reloj(r.inicio)}">
+        <input type="range" id="recorte-fin" data-recorte="fin" min="0" max="${dur}" step="0.1" value="${r.fin}" aria-label="Final del recorte" aria-valuetext="${reloj(r.fin)}">
+      </div>
+      <div class="tiempos-recorte">
+        <span>Inicio: <b id="recorte-t-inicio" data-sin-traducir>${reloj(r.inicio)}</b> <button class="boton chico" data-accion="recorte-marcar-inicio">Marcar donde va el video</button></span>
+        <span>Final: <b id="recorte-t-fin" data-sin-traducir>${reloj(r.fin)}</b> <button class="boton chico" data-accion="recorte-marcar-fin">Marcar donde va el video</button></span>
+        <span>Duración final: <b id="recorte-t-queda" data-sin-traducir>${reloj(Math.max(0, r.fin - r.inicio))}</b></span>
+      </div>
+      ${r.error ? `<p class="error-txt" data-sin-traducir>${esc(r.error)}</p>` : ""}
+      <div class="acciones"><button class="boton" data-accion="recorte-ver">Ver cómo empieza</button>
+        <button class="boton" data-accion="recorte-cancelar" ${r.enviando ? "disabled" : ""}>Cancelar</button>
+        <button class="boton principal" data-accion="recorte-aplicar" ${r.enviando || r.fin - r.inicio < 1 ? "disabled" : ""}>${r.enviando ? "Recortando…" : "Recortar"}</button></div></section>`;
   }
 
   const PESTANAS = [["notas", "Notas"], ["guion", "Guion"], ["youtube", "YouTube"], ["subtitulos", "Subtítulos"], ["transcripcion", "Transcripción"]];
@@ -306,7 +331,8 @@
         <div><b>2</b><span>Toca Terminar: Graba transcribe en tu computador, sin subir nada.</span></div>
         <div><b>3</b><span>Recibes notas, un guion para YouTube, títulos, descripción con capítulos y subtítulos.</span></div>
       </div>
-      ${botonGrabar(false)}</div>`;
+      ${botonGrabar(false)}
+      <p class="atajos">${HOST === "windows" || HOST === "linux" ? "Atajos: Ctrl+Alt+Shift+R empieza o termina la grabación y Ctrl+Alt+Shift+P la pausa." : "Atajos: ⌃⌥⌘R empieza o termina la grabación y ⌃⌥⌘P la pausa."}</p></div>`;
   }
 
   // ───────────── Ajustes y bienvenida ─────────────
@@ -460,6 +486,27 @@
     switch (d.accion) {
       case "grabar": return host.enviar("grabar");
       case "terminar": return host.enviar("terminar");
+      case "pausar": return host.enviar("pausar");
+      case "recortar": {
+        if (!t) return;
+        const v = $("#video"), dur = Math.round(((v && isFinite(v.duration) && v.duration) || t.meta?.duracion_seg || 0) * 10) / 10;
+        E.recorte = { ruta: t.ruta, inicio: 0, fin: dur, duracion: dur, enviando: false, error: "" };
+        render(); return $("#recorte-inicio")?.focus();
+      }
+      case "recorte-cancelar": E.recorte = null; return render();
+      case "recorte-marcar-inicio": case "recorte-marcar-fin": {
+        const v = $("#video"); if (!v || !E.recorte) return;
+        const cual = d.accion.endsWith("inicio") ? "inicio" : "fin";
+        moverRecorte(cual, Math.round(v.currentTime * 10) / 10); return;
+      }
+      case "recorte-ver": { const v = $("#video"); if (v && E.recorte) { v.currentTime = E.recorte.inicio; v.play?.(); } return; }
+      case "recorte-aplicar":
+        if (!E.recorte || E.recorte.fin - E.recorte.inicio < 1) return;
+        $("#video")?.pause?.();
+        Object.assign(E.recorte, { enviando: true, error: "" });
+        host.enviar("recortar", { ruta: E.recorte.ruta, inicio: E.recorte.inicio, fin: E.recorte.fin });
+        return render();
+      case "deshacer-recorte": if (t) { host.enviar("deshacerRecorte", { ruta: t.ruta }); toast("Volviendo al original…"); } return;
       case "ajustes": E.ajustes = true; return render();
       case "cerrar": E.ajustes = false; E.borrar = null; if (!E.corregir?.enviando) E.corregir = null; return render();
       case "yt-conectar": E.conectandoYT = true; host.enviar("youtubeConectar"); return render();
@@ -500,6 +547,27 @@
       case "bv-despues": case "bv-fin": E.bv = null; E.bvCerrada = true; return render();
     }
   });
+  /** Mueve un tirador sin repintar todo (así el video no se recarga) y muestra ese cuadro. */
+  function moverRecorte(cual, valor) {
+    const r = E.recorte;
+    if (!r) return;
+    valor = Math.max(0, Math.min(r.duracion, valor));
+    if (cual === "inicio") r.inicio = Math.min(valor, Math.max(0, r.fin - 1)); else r.fin = Math.max(valor, Math.min(r.duracion, r.inicio + 1));
+    const caja = $(".tiradores");
+    if (caja) { caja.style.setProperty("--a", `${(r.inicio / r.duracion) * 100}%`); caja.style.setProperty("--b", `${(r.fin / r.duracion) * 100}%`); }
+    const ini = $("#recorte-inicio"), fin = $("#recorte-fin");
+    if (ini) { ini.value = r.inicio; ini.setAttribute("aria-valuetext", reloj(r.inicio)); }
+    if (fin) { fin.value = r.fin; fin.setAttribute("aria-valuetext", reloj(r.fin)); }
+    const set = (id, s) => { const n = $(id); if (n) n.textContent = reloj(s); };
+    set("#recorte-t-inicio", r.inicio); set("#recorte-t-fin", r.fin); set("#recorte-t-queda", Math.max(0, r.fin - r.inicio));
+    const aplicar = $("[data-accion=recorte-aplicar]"); if (aplicar) aplicar.disabled = r.fin - r.inicio < 1 || r.enviando;
+    const v = $("#video"); if (v) { v.pause?.(); v.currentTime = cual === "inicio" ? r.inicio : r.fin; }
+  }
+  document.addEventListener("input", (ev) => {
+    const cual = ev.target.dataset?.recorte;
+    if (cual) moverRecorte(cual, Number(ev.target.value));
+  });
+
   document.addEventListener("change", async (ev) => {
     const ds = ev.target.dataset || {};
     if (ds.configBool) { E.config[ds.configBool] = ev.target.checked; host.enviar("config", { [ds.configBool]: ev.target.checked }); return render(); }
@@ -512,6 +580,7 @@
     render();
   });
   document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && E.recorte && !E.recorte.enviando && !E.ajustes && !E.borrar && !E.corregir && !E.guion) { E.recorte = null; return render(); }
     if (ev.key === "Escape" && (E.ajustes || E.borrar || E.guion || (E.corregir && !E.corregir.enviando))) { E.ajustes = false; E.borrar = null; E.corregir = null; E.guion = null; render(); }
     if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey) && E.corregir && !E.corregir.enviando) $("[data-accion=enviar-correccion]")?.click();
   });
@@ -519,8 +588,8 @@
   // ───────────── Lo que manda la app ─────────────
   window.Graba = {
     async estado(e) {
-      const antes = JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos, E.actualizacion, E.youtube]);
-      Object.assign(E, { fase: e.fase, grabandoDesde: e.grabandoDesde || 0, grabaciones: e.grabaciones || [], config: e.config || {}, ias: e.ias || [], modelos: e.modelos || { lista: [] },
+      const antes = JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.pausada, E.ias, E.modelos, E.actualizacion, E.youtube]);
+      Object.assign(E, { fase: e.fase, grabandoDesde: e.grabandoDesde || 0, pausada: !!e.pausada, segundos: e.segundos || 0, grabaciones: e.grabaciones || [], config: e.config || {}, ias: e.ias || [], modelos: e.modelos || { lista: [] },
         permisos: e.permisos || {}, carpeta: e.carpeta || "", version: e.version || "", procesando: e.procesando,
         actualizacion: e.actualizacion || { hay: false }, youtube: e.youtube || { conectado: false } });
       if (e.seleccionar) { E.sel = e.seleccionar; E.pestana = "notas"; }
@@ -535,7 +604,7 @@
       await cargarIdioma();
       if (e.aviso) toast(e.aviso);
       // No se repinta si nada cambió (así el video no se reinicia cada segundo).
-      if (JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.ias, E.modelos, E.actualizacion, E.youtube]) !== antes || e.seleccionar || !$("#app").innerHTML) render();
+      if (JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.pausada, E.ias, E.modelos, E.actualizacion, E.youtube]) !== antes || e.seleccionar || !$("#app").innerHTML) render();
     },
     youtubeConectado(r) { E.conectandoYT = false; toast(r.ok ? "YouTube conectado" : (r.error || "No se pudo conectar")); render(); },
     youtubeSubido(r) { toast(r.ok ? "Subido a YouTube" : (r.error || "No se pudo subir")); render(); },
@@ -551,6 +620,12 @@
     guionCreado(r) {
       if (!E.guion) return;
       E.guion = r.ok ? { ...E.guion, paso: "listo", titulo: r.titulo, texto: r.guion } : { ...E.guion, paso: "pedir", error: r.error || tr("No se pudo crear el guion.") };
+      render();
+    },
+    recortado(r) {
+      if (r.ok) { E.recorte = null; toast(r.deshacer ? "Listo: volviste al video original" : "Listo: recorté la grabación"); }
+      else if (E.recorte) Object.assign(E.recorte, { enviando: false, error: r.error || tr("No pude recortar.") });
+      else toast(r.error || "No pude recortar.");
       render();
     },
     corregido(r) {
@@ -573,6 +648,7 @@
     if (accion === "listo") return enviar();
     if (accion === "grabar") return toast("En la app, aquí empieza la grabación");
     if (accion === "terminar") return toast("En la app, aquí termina la grabación");
+    if (accion === "pausar") { DEMO.pausada = !DEMO.pausada; if (!DEMO.pausada) DEMO.grabandoDesde = Date.now() - (DEMO.segundos || 0) * 1000; return enviar(); }
     if (accion === "config") { Object.assign(DEMO.config, d); return enviar(); }
     if (accion === "borrar") { DEMO.grabaciones = DEMO.grabaciones.filter((t) => t.ruta !== d.ruta); return enviar(); }
     if (accion === "probarIA") return setTimeout(() => { DEMO.config.ia = d.id; window.Graba.iaProbada({ id: d.id, ok: true, texto: "listo" }); enviar(); }, 500);
@@ -591,6 +667,16 @@
       guion: "¿Se te va la plata y no sabes en qué? En tres minutos lo arreglamos.\n\n[muestra la diapositiva 1]\n\nHola, soy Ana. Hoy armamos un presupuesto simple." }), 800);
     if (accion === "grabarConGuion") return toast("En la app, aquí se abre la barra para grabar");
     if (accion === "corregir") return setTimeout(() => window.Graba.corregido({ ok: true, carpeta: d.ruta, reemplazos: 1 }), 700);
+    if (accion === "recortar") return setTimeout(() => {
+      const g = DEMO.grabaciones.find((x) => x.ruta === d.ruta);
+      if (g) { g.recortada = true; g._dur = g._dur || g.meta.duracion_seg; g.meta = { ...g.meta, duracion_seg: Math.round(d.fin - d.inicio) }; }
+      window.Graba.recortado({ ok: true }); enviar();
+    }, 700);
+    if (accion === "deshacerRecorte") return setTimeout(() => {
+      const g = DEMO.grabaciones.find((x) => x.ruta === d.ruta);
+      if (g) { g.recortada = false; g.meta = { ...g.meta, duracion_seg: g._dur || g.meta.duracion_seg }; }
+      window.Graba.recortado({ ok: true, deshacer: true }); enviar();
+    }, 500);
     if (accion === "teleprompter") { DEMO.config.teleprompter = true; DEMO.config.teleprompter_texto = d.texto; return; }
   }
 

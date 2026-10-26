@@ -22,6 +22,8 @@ final class Preparacion: ObservableObject {
     @Published var forma = Burbuja.Forma(rawValue: Config.texto("camara_forma")) ?? .circulo
     @Published var tamano = Config.texto("camara_tamano").isEmpty ? "m" : Config.texto("camara_tamano")
     @Published var microfono = Config.bool("microfono")
+    /// El sonido del Mac (un video, una app): va al video, nunca a la transcripción.
+    @Published var sonidoMac = Config.bool("sonido_mac")
     @Published var camaraID = Config.texto("camara_id")
     @Published var microfonoID = Config.texto("microfono_id")
 
@@ -39,6 +41,7 @@ final class Preparacion: ObservableObject {
         switch modo {
         case "ventana": return ventanaElegida != nil
         case "area": return area != nil
+        case "camara": return AVCaptureDevice.authorizationStatus(for: .video) != .denied
         default: return true
         }
     }
@@ -57,18 +60,19 @@ final class Preparacion: ObservableObject {
     func guardar() {
         Config.guardar(["modo": modo, "camara": camara, "camara_forma": forma.rawValue, "camara_tamano": tamano,
                         "camara_id": camaraID, "microfono_id": microfonoID,
-                        "microfono": microfono, "teleprompter": teleprompter])
+                        "microfono": microfono, "sonido_mac": sonidoMac, "teleprompter": teleprompter])
     }
 
     /// Aplica en vivo la cámara y el teleprompter según lo elegido.
     func aplicar() {
         guardar()  // primero: la burbuja lee la cámara elegida de la configuración
+        if modo == "camara" { camara = true }
         if camara {
             if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
                 AVCaptureDevice.requestAccess(for: .video) { _ in Task { @MainActor in self.aplicar() } }
                 return
             }
-            Burbuja.shared.mostrar(en: pantalla, forma: forma, tamano: tamano, dentroDe: area)
+            Burbuja.shared.mostrar(en: pantalla, forma: forma, tamano: tamano, dentroDe: modo == "camara" ? nil : area, soloCamara: modo == "camara")
         } else {
             Burbuja.shared.ocultar()
         }

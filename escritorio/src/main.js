@@ -5,11 +5,11 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { Readable } = require("stream");
-const { app, BrowserWindow, Menu, Tray, clipboard, desktopCapturer, dialog, ipcMain, nativeImage, net, protocol, screen, session, shell } = require("electron");
+const { app, BrowserWindow, Menu, Tray, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, nativeImage, net, protocol, screen, session, shell } = require("electron");
 const { ES_WIN, BASE, INTERNO, recursos, dentroDeBase } = require("./rutas");
 const { Config, Idioma, Permisos, IA, Modelos, Procesador, YouTube } = require("./servicios");
 const { Actualizaciones, SIN_CONEXION } = require("./actualizaciones");
-const { Grabaciones, prepararVideo } = require("./grabaciones");
+const { Grabaciones, prepararVideo, recortarVideo, deshacerRecorteVideo } = require("./grabaciones");
 const { EscritorWav } = require("./wav");
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
@@ -88,7 +88,8 @@ function llamar(funcion, datos) {
 function enviarEstado() {
   if (!lista) return;
   const e = {
-    fase: Estado.fase, grabandoDesde: Estado.fase === "grabando" ? Estado.inicio : 0, grabaciones: Grabaciones.listar(), config: Config.leer(), ias: IA.paraJS(), modelos: Modelos.paraJS(),
+    fase: Estado.fase, grabandoDesde: Estado.fase === "grabando" && !Estado.pausada ? Date.now() - Estado.segundos * 1000 : 0,
+    pausada: Estado.pausada, segundos: Estado.segundos, atajos: ATAJOS_TEXTO, grabaciones: Grabaciones.listar(), config: Config.leer(), ias: IA.paraJS(), modelos: Modelos.paraJS(),
     permisos: Permisos.paraJS(), carpeta: BASE, procesando: Procesador.enCurso || null, version: app.getVersion(),
     actualizacion: Actualizaciones.disponible, youtube: YouTube.paraJS(), ...pendiente,
   };
@@ -102,6 +103,7 @@ const preparando = new Set();
 const Estado = {
   fase: "inactiva", // inactiva | preparando | cuenta | grabando | terminando
   segundos: 0,
+  pausada: false,  // en pausa: no se graba nada y el reloj se detiene (la fase sigue siendo "grabando")
   carpeta: null,
   cancelada: false,
   reloj: null,
@@ -110,7 +112,7 @@ const Estado = {
   inicio: 0,
   esperando: {},   // resolvedores de las respuestas de la grabadora: lista, detenida
   pantalla: null,  // pantalla bajo el mouse al abrir la barra
-  modo: "pantalla", // pantalla | ventana | area (ventana y área se eligen cada vez)
+  modo: "pantalla", // pantalla | ventana | area | camara (se eligen cada vez; «camara» graba solo la cámara, a pantalla completa)
   ventana: null,   // { id, nombre } de desktopCapturer
   area: null,      // { x, y, ancho, alto } en puntos, relativo a la pantalla
 };
@@ -144,12 +146,13 @@ function grabar() {
   aplicarFlotantes();
 }
 
-const listoParaGrabar = () => Estado.modo === "pantalla" || (Estado.modo === "ventana" && !!Estado.ventana) || (Estado.modo === "area" && !!Estado.area);
+const listoParaGrabar = () => Estado.modo === "pantalla" || (Estado.modo === "camara" && Permisos.paraJS().camara) || (Estado.modo === "ventana" && !!Estado.ventana) || (Estado.modo === "area" && !!Estado.area);
 
 /** Botón rojo de la barra: cuenta 3-2-1 y a grabar. */
 async function iniciar() {
   if (Estado.fase !== "preparando" || !listoParaGrabar()) return;
   const microfono = Config.bool("microfono") && Permisos.paraJS().microfono;
+  Estado.sonidoSistema = ES_WIN && Estado.modo !== "camara" && Config.bool("sonido_sistema");
   Estado.segundos = 0;
   Estado.cancelada = false;
   cambiarFase("cuenta");
@@ -168,13 +171,16 @@ async function iniciar() {
   // Hasta 1920 px de ancho (como un video de YouTube en 1080p), sin agrandar pantallas chicas y en números pares (igual que en Mac).
   const p = Estado.pantalla, ancho = Math.round(p.size.width * p.scaleFactor), alto = Math.round(p.size.height * p.scaleFactor);
   const factor = Math.min(1, 1920 / ancho), par = (n) => Math.max(2, Math.floor(n / 2) * 2);
-  grabadora.webContents.send("empezar", { microfono, microfonoId: Config.texto("microfono_id"), ancho: par(ancho * factor), alto: par(alto * factor) });
+  grabadora.webContents.send("empezar", { microfono, microfonoId: Config.texto("microfono_id"), ancho: par(ancho * factor), alto: par(alto * factor),
+    soloCamara: Estado.modo === "camara", camaraId: Config.texto("camara_id"), sonidoSistema: Estado.sonidoSistema });
   const r = await espera;
   if (Estado.cancelada) return;
   if (!r || !r.ok) return fallo(!r ? t("La grabadora no respondió.") : r.error === "permiso" ? t("No hay permiso para grabar la pantalla.") : r.error);
   try {
     Estado.video = fs.openSync(path.join(c, `captura.${r.ext === "mp4" ? "mp4" : "webm"}`), "w");
     Estado.microfono = r.microfono ? new EscritorWav(path.join(c, "microfono.wav")) : null;
+    // Con el sonido del computador mezclado en el video, la transcripción usa solo microfono.wav (la voz).
+    if (r.sonidoSistema) Grabaciones.actualizarMeta(c, { sonido_sistema: true });
     // Un área: se graba la pantalla entera y al terminar ffmpeg recorta (en píxeles del video).
     if (Estado.modo === "area" && Estado.area && r.ancho) {
       const k = r.ancho / p.size.width, a = Estado.area;
@@ -185,19 +191,42 @@ async function iniciar() {
   if (process.env.GRABA_PRUEBAS === "1") console.log("grabadora:", JSON.stringify(r));
   Estado.inicio = Date.now();
   Estado.segundos = 0;
+  Estado.pausada = false;
   cambiarFase("grabando");
   enTeleprompter({ corriendo: true }); // el texto empieza a avanzar junto con la grabación
   Estado.reloj = setInterval(() => {
+    if (Estado.pausada) return;
     Estado.segundos += 1;
     actualizarBarra();
     if (bandeja) bandeja.setToolTip(`Graba · ${reloj(Estado.segundos)}`);
   }, 1000);
 }
 
+/** Pausa o reanuda (botón de la barra, bandeja, ventana o Ctrl+Alt+Shift+P). El video sigue de corrido. */
+function alternarPausa() {
+  if (Estado.fase !== "grabando") return;
+  Estado.pausada = !Estado.pausada;
+  if (grabadora && !grabadora.isDestroyed()) grabadora.webContents.send("pausar", Estado.pausada);
+  enTeleprompter({ corriendo: !Estado.pausada });
+  actualizarBarra();
+  actualizarBandeja();
+  enviarEstado();
+}
+
+/** Ctrl+Alt+Shift+R: sin grabar, abre la barra y empieza al tiro; preparando, empieza; grabando, termina (como ⌃⌥⌘R en Mac). */
+function atajoGrabar() {
+  if (Estado.fase === "inactiva") { grabar(); if (Estado.fase === "preparando") iniciar(); }
+  else if (Estado.fase === "preparando") iniciar();
+  else if (Estado.fase === "grabando") detener();
+}
+const ATAJOS = { grabar: "CommandOrControl+Alt+Shift+R", pausar: "CommandOrControl+Alt+Shift+P" };
+const ATAJOS_TEXTO = { grabar: "Ctrl+Alt+Shift+R", pausar: "Ctrl+Alt+Shift+P" };
+
 /** Detiene la grabadora y cierra los archivos. Devuelve la duración en segundos. */
 async function pararGrabadora() {
   clearInterval(Estado.reloj);
   Estado.reloj = null;
+  Estado.pausada = false;
   let r = null;
   if (grabadora && !grabadora.isDestroyed()) {
     const espera = esperarGrabadora("detenida", 15000);
@@ -333,13 +362,16 @@ function actualizarBarra() {
   if (!barra || barra.isDestroyed()) return;
   const c = Config.leer(), grabando = Estado.fase === "grabando", listo = listoParaGrabar();
   const detalle = Estado.modo === "ventana" ? (Estado.ventana ? Estado.ventana.nombre : t("Elige una ventana"))
-    : Estado.modo === "area" && Estado.area ? `${Math.round(Estado.area.ancho)} × ${Math.round(Estado.area.alto)}` : "";
+    : Estado.modo === "area" && Estado.area ? `${Math.round(Estado.area.ancho)} × ${Math.round(Estado.area.alto)}`
+    : Estado.modo === "camara" ? t("Solo la cámara") : "";
   barra.webContents.send("barra", {
-    fase: Estado.fase, segundos: Estado.segundos, modo: Estado.modo, detalle, listo,
+    fase: Estado.fase, segundos: Estado.segundos, pausada: Estado.pausada, modo: Estado.modo, detalle, listo,
     camara: !!c.camara, microfono: !!c.microfono, teleprompter: !!c.teleprompter,
     textos: {
-      grabar: t("Grabar"), terminar: t("Terminar"), cuenta: Idioma.f("Empieza en {n}…", Estado.cuenta || 3),
+      grabar: t("Grabar"), terminar: t("Terminar"), cuenta: Idioma.f("Empieza en {n}…", Estado.cuenta || 3), en_pausa: t("En pausa"),
+      ayuda_pausar: t(Estado.pausada ? "Reanudar (Ctrl+Alt+Shift+P)" : "Pausar (Ctrl+Alt+Shift+P)"),
       ayuda_grabaciones: t("Mis grabaciones"), ayuda_pantalla: t("Toda la pantalla"), ayuda_ventana: t("Una ventana"), ayuda_area: t("Un área"),
+      ayuda_solocamara: t("Solo la cámara"),
       ayuda_camara: t("Cámara: cuál, forma y tamaño"), ayuda_microfono: t("Micrófono"),
       ayuda_guion: t(c.teleprompter ? "Ocultar el guion" : "Guion (teleprompter): solo tú lo ves"),
       ayuda_grabar: t(listo ? "Empezar a grabar" : "Elige una ventana primero"), ayuda_terminar: t("Terminar y guardar"),
@@ -373,6 +405,7 @@ const ACCIONES_BARRA = {
       : [{ label: t("No encontré ventanas abiertas."), enabled: false }], d);
   },
   area() { elegirArea(); },
+  solocamara() { Config.guardar({ camara: true }); elegirModo("camara"); },
   async camara(d) {
     const c = Config.leer(), forma = c.camara_forma || "circulo", tam = c.camara_tamano || "m";
     const guardar = (cambios) => { Config.guardar(cambios); actualizarBarra(); aplicarFlotantes(); actualizarBandeja(); enviarEstado(); };
@@ -393,6 +426,7 @@ const ACCIONES_BARRA = {
     const guardar = (cambios) => { Config.guardar(cambios); actualizarBarra(); actualizarBandeja(); enviarEstado(); };
     const mics = (await dispositivos()).filter((x) => x.tipo === "audioinput");
     const items = [{ label: t(c.microfono ? "Apagar el micrófono" : "Encender el micrófono"), click: () => guardar({ microfono: !c.microfono }) }];
+    if (ES_WIN) items.push({ label: t("Incluir el sonido del computador"), type: "checkbox", checked: !!c.sonido_sistema, click: () => guardar({ sonido_sistema: !c.sonido_sistema }) });
     if (mics.length > 1) {
       items.push({ type: "separator" }, { label: t("Micrófono"), submenu: mics.map((x, i) => ({ label: x.nombre || `${t("Micrófono")} ${i + 1}`, type: "radio",
         checked: (c.microfono_id || mics[0].id) === x.id, click: () => guardar({ microfono_id: x.id, microfono: true }) })) });
@@ -407,11 +441,12 @@ const ACCIONES_BARRA = {
   grabar() { iniciar(); },
   async grabaciones() { await cancelar(); mostrar(); },
   terminar() { detener(); },
+  pausar() { alternarPausa(); },
   cerrar() { cancelar(); },
 };
 ipcMain.on("barra", (e, accion, d) => {
   if (!barra || e.sender !== barra.webContents || !Object.hasOwn(ACCIONES_BARRA, accion)) return;
-  if (Estado.fase !== "preparando" && !["terminar", "cerrar"].includes(accion)) return;
+  if (Estado.fase !== "preparando" && !["terminar", "cerrar", "pausar"].includes(accion)) return;
   ACCIONES_BARRA[accion](d);
 });
 
@@ -449,7 +484,8 @@ ipcMain.on("area-elegida", (e, r) => {
 /** Cámara y teleprompter en vivo según lo elegido en la barra. */
 function aplicarFlotantes() {
   const c = Config.leer();
-  if (c.camara && Permisos.paraJS().camara) mostrarBurbuja(); else { cerrar(burbuja); burbuja = null; }
+  // Con «solo la cámara» se graba la cámara directo (no la pantalla): la burbuja no hace falta.
+  if (c.camara && Permisos.paraJS().camara && Estado.modo !== "camara") mostrarBurbuja(); else { cerrar(burbuja); burbuja = null; }
   if (c.teleprompter) { if (!teleprompter || teleprompter.isDestroyed()) mostrarTeleprompter(Estado.pantalla); } else { cerrar(teleprompter); teleprompter = null; }
 }
 
@@ -522,11 +558,12 @@ function actualizarBandeja() {
   if (Estado.fase === "preparando") {
     items.push({ label: t("Empezar a grabar"), click: () => iniciar() }, { label: t("Cerrar"), click: () => cancelar() });
   } else if (Estado.fase === "grabando" || Estado.fase === "cuenta") {
-    items.push({ label: t("Terminar grabación"), click: () => detener() }, { label: t("Descartar grabación"), click: () => cancelar() });
+    if (Estado.fase === "grabando") items.push({ label: t(Estado.pausada ? "Reanudar la grabación" : "Pausar la grabación"), accelerator: ATAJOS.pausar, click: () => alternarPausa() });
+    items.push({ label: t("Terminar grabación"), accelerator: ATAJOS.grabar, click: () => detener() }, { label: t("Descartar grabación"), click: () => cancelar() });
   } else if (Estado.fase === "terminando") {
     items.push({ label: t("Guardando…"), enabled: false });
   } else {
-    items.push({ label: t("Grabar pantalla"), click: () => grabar() },
+    items.push({ label: t("Grabar pantalla"), accelerator: ATAJOS.grabar, click: () => grabar() },
       { label: t("Cámara"), type: "checkbox", checked: Config.bool("camara"), click: () => alternar("camara") },
       { label: t("Micrófono"), type: "checkbox", checked: Config.bool("microfono"), click: () => alternar("microfono") });
   }
@@ -557,6 +594,31 @@ const ACCIONES = {
   },
   terminar() {
     if (Estado.fase === "grabando") detener();
+  },
+  pausar() {
+    alternarPausa();
+  },
+  async recortar(d) {
+    // No mientras se procesa esa misma grabación.
+    if (!rutaValida(d) || Procesador.enCurso === path.resolve(d.ruta)) return llamar("recortado", { ok: false, error: t("Espera a que termine de procesar y vuelve a intentarlo.") });
+    const c = path.resolve(d.ruta), inicio = Number(d.inicio), fin = Number(d.fin);
+    if (!(fin - inicio >= 1) || inicio < 0) return llamar("recortado", { ok: false, error: t("El recorte tiene que durar al menos un segundo.") });
+    let r = (await Procesador.correrJSON("recortar.py", ["preparar", c])) || { ok: false };
+    if (r.ok) {
+      try { await recortarVideo(c, inicio, fin); r = (await Procesador.correrJSON("recortar.py", ["textos", c, String(inicio), String(fin)])) || { ok: false, error: t("No pude recortar.") }; }
+      catch (e) { r = { ok: false, error: e.message }; }
+    }
+    llamar("recortado", r);
+    enviarEstado();
+  },
+  async deshacerRecorte(d) {
+    if (!rutaValida(d) || Procesador.enCurso === path.resolve(d.ruta)) return llamar("recortado", { ok: false, deshacer: true, error: t("Espera a que termine de procesar y vuelve a intentarlo.") });
+    const c = path.resolve(d.ruta);
+    let r;
+    try { deshacerRecorteVideo(c); r = (await Procesador.correrJSON("recortar.py", ["deshacer", c])) || { ok: false }; }
+    catch (e) { r = { ok: false, error: e.message }; }
+    llamar("recortado", { ...r, deshacer: true });
+    enviarEstado();
   },
   abrirCarpeta(d) {
     if (rutaValida(d)) shell.showItemInFolder(path.resolve(d.ruta));
@@ -747,6 +809,7 @@ async function salir() {
 
 app.on("second-instance", () => mostrar());
 app.on("window-all-closed", () => {}); // sigue viva en la bandeja
+app.on("will-quit", () => globalShortcut.unregisterAll());
 
 app.whenReady().then(() => {
   fs.mkdirSync(INTERNO, { recursive: true });
@@ -755,7 +818,9 @@ app.whenReady().then(() => {
   session.defaultSession.setDisplayMediaRequestHandler((_req, responder) => {
     desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } }).then((fuentes) => {
       const id = Estado.pantalla ? String(Estado.pantalla.id) : "";
-      responder({ video: fuentes.find((f) => f.display_id === id) || fuentes[0] });
+      // En Windows se puede sumar el sonido del computador ("loopback"); en Linux Chromium no lo ofrece.
+      const sonido = ES_WIN && Estado.sonidoSistema ? { audio: "loopback" } : {};
+      responder({ video: fuentes.find((f) => f.display_id === id) || fuentes[0], ...sonido });
     }).catch(() => responder({}));
   });
   // Cámara y micrófono para las páginas propias (Windows además respeta sus interruptores de privacidad).
@@ -774,6 +839,8 @@ app.whenReady().then(() => {
   }
   crearGrabadora();
   crearBandeja();
+  // Atajos globales (como ⌃⌥⌘R / ⌃⌥⌘P en Mac). Si otro programa ya los usa, la app sigue funcionando sin ellos.
+  try { globalShortcut.register(ATAJOS.grabar, atajoGrabar); globalShortcut.register(ATAJOS.pausar, alternarPausa); } catch (e) { console.error("Graba: atajos", e.message); }
   if (!process.argv.includes("--oculta") || !Config.texto("ia") || !Modelos.hayAlguno()) mostrar();
   // Versiones nuevas: al abrir y cada 6 horas (el aviso va dentro de la app, nunca una alerta del sistema).
   setTimeout(revisarActualizacion, 15000);
@@ -781,4 +848,4 @@ app.whenReady().then(() => {
 });
 
 // Pruebas automáticas (escritorio/pruebas): acceso al estado y a las acciones desde Playwright.
-if (process.env.GRABA_PRUEBAS === "1") global.grabaPruebas = { Estado, ACCIONES, ACCIONES_BARRA, grabar, iniciar, detener, cancelar, enviarEstado, mostrar, ventanas: () => ({ ventana, grabadora, barra, cuenta, burbuja, teleprompter }) };
+if (process.env.GRABA_PRUEBAS === "1") global.grabaPruebas = { Estado, ACCIONES, ACCIONES_BARRA, grabar, iniciar, detener, cancelar, alternarPausa, atajoGrabar, enviarEstado, mostrar, ventanas: () => ({ ventana, grabadora, barra, cuenta, burbuja, teleprompter }) };

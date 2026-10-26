@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("interno", {
   // Grabadora
   alEmpezar: (f) => ipcRenderer.on("empezar", (_e, d) => f(d)),
   alDetener: (f) => ipcRenderer.on("detener", () => f()),
+  alPausar: (f) => ipcRenderer.on("pausar", (_e, si) => f(!!si)),
   video: (buffer) => ipcRenderer.send("grabadora-video", Buffer.from(buffer)),
   pcm: (buffer) => ipcRenderer.send("grabadora-pcm", Buffer.from(buffer)),
   lista: (d) => ipcRenderer.send("grabadora-lista", d),

@@ -19,9 +19,9 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
 
 | Ruta | Qué es |
 |---|---|
-| `app/Sources/Graba/` | App de Mac (Swift, SwiftPM, macOS 15). `GrabaApp.swift`: arranque, flujo de grabación (`Estado`), grabaciones en disco (`Grabaciones`) y barra de menú. `Grabadora.swift`: ScreenCaptureKit + AVAssetWriter (pantalla + micrófono en AAC) y extracción del audio a WAV 16 kHz. `Flotantes.swift`: burbuja de la cámara (sale en el video) y controles (no salen). `Ventana.swift`: WKWebView + puente. `Servicios.swift`: rutas, configuración, idioma, permisos, IA, modelos y `Procesador`. |
+| `app/Sources/Graba/` | App de Mac (Swift, SwiftPM, macOS 15). `GrabaApp.swift`: arranque, flujo de grabación (`Estado`), grabaciones en disco (`Grabaciones`) y barra de menú. `Grabadora.swift`: ScreenCaptureKit + AVAssetWriter (pantalla + micrófono en AAC; pausa corriendo los tiempos; sonido del Mac aparte en `sistema.m4a` y mezclado al final), extracción del audio a WAV 16 kHz y `mezclarSonido`. `Atajos.swift`: ⌃⌥⌘R / ⌃⌥⌘P globales con `RegisterEventHotKey` (sin permiso de Accesibilidad). `Recorte.swift`: recortar sin recomprimir (`AVAssetExportPresetPassthrough`) y deshacer. `Flotantes.swift`: burbuja de la cámara (sale en el video) y controles (no salen). `Ventana.swift`: WKWebView + puente. `Servicios.swift`: rutas, configuración, idioma, permisos, IA, modelos y `Procesador`. |
 | `app/Sources/Transcribir/` | Binario `graba-transcribir`: whisper.cpp (xcframework oficial, Metal) con las mismas opciones que `whisper-cli`. |
-| `bin/` | Python **solo biblioteca estándar**: `ia.py` (configuración y `ejecutar_ia`), `procesar.py` (transcribir → subtítulos → IA → `grabacion.md` → renombrar la carpeta). |
+| `bin/` | Python **solo biblioteca estándar**: `ia.py` (configuración y `ejecutar_ia`), `procesar.py` (transcribir → subtítulos → IA → `grabacion.md` → renombrar la carpeta), `recortar.py` (corre los tiempos de transcripción, subtítulos, capítulos y duración al recortar; copia y deshacer en `.original/`). |
 | `ui/` | Interfaz web única (`app.js`, `app.css`), `demo.json` (datos ficticios para la vista previa) e `idiomas/en.json`. |
 | `herramientas/` | `empaquetar.sh` (arma `dist/Graba.app` + zip + `.sha256`) y `revisar_privacidad.sh`. |
 | `build.sh` | Empaqueta e instala en `~/Applications/Graba.app` (se niega si hay una grabación o un procesamiento en curso). |
@@ -36,6 +36,15 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
 - **Grabar:** menú ⏺ o botón Grabar → cuenta 3-2-1 en la barra de controles → `SCStream` de la pantalla bajo el mouse (hasta 1920 px de
   ancho, 30 fps) excluyendo la ventana de controles; la burbuja de la cámara es otra ventana y sí sale. `AVAssetWriter` escribe H.264 +
   micrófono AAC (no se usa `SCRecordingOutput`: con micrófono deja archivos dañados en macOS 15).
+- **Pausa:** `Grabadora.pausar()/reanudar()` dejan de escribir y, al reanudar, corren todos los tiempos lo que duró la pausa (el video no
+  queda con un hueco). En Electron, `MediaRecorder.pause()/resume()` y el micrófono a 16 kHz deja de mandarse.
+- **Solo la cámara:** en Mac la burbuja se agranda al centro (16:9, sin borde) y se graba solo esa ventana; en Electron se graba la cámara
+  directo con `getUserMedia`.
+- **Sonido del Mac:** `SCStreamConfiguration.capturesAudio` a `sistema.m4a`; al terminar, `audio.wav` sale del micrófono (la voz) y
+  después `mezclarSonido` deja una sola pista AAC en `video.mp4` (el video se copia sin recomprimir). En Windows, `getDisplayMedia` con
+  "loopback" y una mezcla con Web Audio; la transcripción usa `microfono.wav`. En Linux no hay cómo.
+- **Recortar:** la app guarda el video original en `.original/video.mp4` y corta (Mac sin recomprimir; Electron con ffmpeg, exacto);
+  `recortar.py preparar` → corte → `recortar.py textos <inicio> <fin>`. «Volver al original» devuelve video y textos.
 - **Terminar:** se cierra el archivo, se extrae `audio.wav` (16 kHz mono) y se encola `bin/procesar.py <carpeta> <salida.json>`,
   que va dejando el avance en `estado.json` (`procesando`, `paso`/`total`, `texto`) y al final `estado: lista` o `error`.
 - **IA:** `ia.ejecutar_ia(prompt)` en una carpeta temporal y modo solo lectura. La respuesta debe tener los marcadores de
@@ -67,7 +76,7 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
 
 ## Puente interfaz ↔ app
 La UI llama `host.enviar(accion, datos)`; Mac lo atiende en el `switch` de `Ventana.swift` y responde con `window.Graba.<funcion>(json)`
-(`estado`, `iaProbada`, `modeloProgreso`, `modeloListo`). Una acción nueva va en Swift, en Electron (`ACCIONES`) y simulada en `simular()`
+(`estado`, `iaProbada`, `modeloProgreso`, `modeloListo`, `recortado`…; acciones nuevas: `pausar`, `recortar`, `deshacerRecorte`). Una acción nueva va en Swift, en Electron (`ACCIONES`) y simulada en `simular()`
 para la vista previa. `pruebas/contrato.py` lo revisa.
 
 ## Reglas al cambiar cosas

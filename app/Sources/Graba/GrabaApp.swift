@@ -23,6 +23,7 @@ final class GrabaApp: NSObject, NSApplicationDelegate {
             Config.guardar(["idioma_audio": ["es", "en", "pt", "fr", "de", "it"].contains(sistema) ? sistema : "auto"])
         }
         BarraMenu.shared.instalar()
+        Atajos.instalar()
         Actualizaciones.revisarCadaRato()
         // La primera vez (o si falta algo para funcionar) se abre la ventana con el asistente.
         if Config.texto("ia").isEmpty || !Modelos.lista.contains(where: Modelos.existe) { Ventana.shared.mostrar() }
@@ -42,6 +43,8 @@ enum Estado {
     /// Cada cambio de fase llega a la barra de menú y a la ventana: el botón Grabar de la ventana dice siempre lo mismo que la barra.
     static var fase = Fase.inactiva { didSet { BarraMenu.shared.actualizar(); Ventana.shared.enviarEstado() } }
     static var segundos = 0
+    /// En pausa: no se escribe nada y el reloj se detiene (la fase sigue siendo .grabando).
+    static var pausada = false { didSet { BarraMenu.shared.actualizar(); Barra.shared.estado.pausada = pausada; Ventana.shared.enviarEstado() } }
     /// Cuándo empezó a grabar de verdad (después de la cuenta 3-2-1), para que la ventana muestre el mismo reloj.
     static var desde: Date?
     private static let grabadora = Grabadora()
@@ -67,6 +70,7 @@ enum Estado {
     private static func iniciar(_ p: Preparacion) {
         let pantalla = p.pantalla
         let microfono = p.microfono && AVCaptureDevice.authorizationStatus(for: .audio) != .denied
+        let sonidoMac = p.sonidoMac
         let fuente: Grabadora.Fuente
         switch p.modo {
         case "ventana":
@@ -76,6 +80,9 @@ enum Estado {
         case "area":
             guard let r = p.area else { fase = .inactiva; return }
             fuente = .area(pantalla, r)
+        case "camara":
+            guard let id = Burbuja.shared.ventana else { fallo(Idioma.t("No encontré la cámara.")); return }
+            fuente = .ventana(id)
         default:
             fuente = .pantalla(pantalla)
         }
@@ -92,16 +99,19 @@ enum Estado {
             do {
                 // Lo que solo ve la persona (controles, teleprompter, marco del área) queda fuera; la cámara siempre entra.
                 let fuera = [Barra.shared.ventana, Teleprompter.shared.ventana, MarcoArea.shared.id].compactMap { $0 }
+                let camara = p.modo == "camara" ? [] : [Burbuja.shared.ventana].compactMap { $0 }
                 try await grabadora.empezar(en: c.appendingPathComponent("video.mp4"), fuente: fuente, excluyendo: fuera,
-                                            incluyendo: [Burbuja.shared.ventana].compactMap { $0 }, microfono: microfono)
+                                            incluyendo: camara, microfono: microfono, sonidoMac: sonidoMac)
                 grabadora.alFallar = { mensaje in Task { @MainActor in fallo(mensaje) } }
                 segundos = 0
+                pausada = false
                 desde = Date()
                 fase = .grabando
                 Barra.shared.grabando()
                 if p.teleprompter { Teleprompter.shared.empezar() }
                 reloj = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
                     Task { @MainActor in
+                        guard !pausada else { return }
                         segundos += 1
                         Barra.shared.estado.segundos = segundos
                         BarraMenu.shared.actualizar()
@@ -111,6 +121,27 @@ enum Estado {
                 fallo(error.localizedDescription)
             }
         }
+    }
+
+    /// ⌃⌥⌘R: sin grabar, abre la barra y empieza al tiro con lo último elegido; preparando, empieza; grabando, termina.
+    static func atajoGrabar() {
+        switch fase {
+        case .inactiva:
+            grabar()
+            if fase == .preparando { Barra.shared.grabarAhora() }
+        case .preparando: Barra.shared.grabarAhora()
+        case .grabando: detener()
+        case .cuenta, .terminando: break
+        }
+    }
+
+    /// Pausa o reanuda (botón ⏸ de la barra, menú o ⌃⌥⌘P). El video sigue de corrido: la pausa no deja un hueco.
+    static func alternarPausa() {
+        guard fase == .grabando else { return }
+        pausada.toggle()
+        if pausada { grabadora.pausar(); Teleprompter.shared.pausar(true) } else { grabadora.reanudar(); Teleprompter.shared.pausar(false) }
+        // El reloj de la ventana se calcula desde `desde`: se corre lo que duró la pausa.
+        desde = pausada ? nil : Date().addingTimeInterval(-Double(segundos))
     }
 
     /// Cierra todo lo que flota sobre la pantalla.
@@ -124,6 +155,7 @@ enum Estado {
     static func detener() {
         guard fase == .grabando, let c = carpeta else { if fase == .cuenta { cancelar() }; return }
         desde = nil
+        pausada = false
         fase = .terminando
         reloj?.invalidate()
         limpiarFlotantes()
@@ -139,7 +171,16 @@ enum Estado {
             Grabaciones.actualizarMeta(c, ["duracion_seg": Int(duracion.rounded())])
             Grabaciones.escribirEstado(c.path, ["estado": "procesando", "paso": 0, "total": 3, "texto": "Preparando el audio…"])
             Ventana.shared.mostrar(seleccionar: c.path)
+            // La transcripción usa solo la voz: audio.wav sale del micrófono ANTES de mezclar el sonido del Mac en el video.
             _ = try? await Grabadora.extraerAudio(de: c.appendingPathComponent("video.mp4"), a: c.appendingPathComponent("audio.wav"))
+            let sistema = c.appendingPathComponent("sistema.m4a")
+            if FileManager.default.fileExists(atPath: sistema.path) {
+                Grabaciones.escribirEstado(c.path, ["estado": "procesando", "paso": 0, "total": 3, "texto": "Mezclando el sonido del Mac…"])
+                Ventana.shared.enviarEstado()
+                if (try? await Grabadora.mezclarSonido(video: c.appendingPathComponent("video.mp4"), sistema: sistema)) == true {
+                    try? FileManager.default.removeItem(at: sistema)
+                }
+            }
             Procesador.encolar(c.path) { Ventana.shared.enviarEstado() }
             Ventana.shared.enviarEstado()
         }
@@ -239,6 +280,9 @@ enum Grabaciones {
                           "md": md ?? NSNull(),
                           "srt": fm.fileExists(atPath: srt.path) ? srt.path : NSNull(),
                           "audio": fm.fileExists(atPath: c.appendingPathComponent("audio.wav").path),
+                          // Recortada: se puede volver al original. version: cambia cuando el video cambia (así la ventana no muestra el viejo).
+                          "recortada": fm.fileExists(atPath: c.appendingPathComponent(".original/video.mp4").path),
+                          "version": Int(((try? fm.attributesOfItem(atPath: video.path)[.modificationDate]) as? Date)?.timeIntervalSince1970 ?? 0),
                           "youtube": leerJSON(c.appendingPathComponent("youtube.json"))])
         }
         return lista.sorted { (($0["meta"] as? [String: Any])?["inicio"] as? String ?? "") > (($1["meta"] as? [String: Any])?["inicio"] as? String ?? "") }
@@ -264,29 +308,33 @@ final class BarraMenu: NSObject, NSMenuDelegate {
     func actualizar() {
         guard let boton = item?.button else { return }
         let grabando = Estado.fase == .grabando
-        let img = NSImage(systemSymbolName: grabando ? "record.circle.fill" : "record.circle", accessibilityDescription: "Graba")
+        let simbolo = grabando ? (Estado.pausada ? "pause.circle.fill" : "record.circle.fill") : "record.circle"
+        let img = NSImage(systemSymbolName: simbolo, accessibilityDescription: "Graba")
         img?.isTemplate = !grabando
-        boton.image = grabando ? img?.withSymbolConfiguration(.init(paletteColors: [.systemRed])) : img
+        boton.image = grabando ? img?.withSymbolConfiguration(.init(paletteColors: [Estado.pausada ? .systemOrange : .systemRed])) : img
         boton.title = grabando ? " " + reloj(Estado.segundos) : ""
         boton.imagePosition = .imageLeading
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
-        func agregar(_ titulo: String, _ accion: Selector, tecla: String = "", marca: Bool? = nil) {
+        func agregar(_ titulo: String, _ accion: Selector, tecla: String = "", marca: Bool? = nil, global: Bool = false) {
             let m = NSMenuItem(title: Idioma.t(titulo), action: accion, keyEquivalent: tecla)
             m.target = self
+            // Los atajos globales se muestran en el menú tal como funcionan en cualquier app: ⌃⌥⌘.
+            if global { m.keyEquivalentModifierMask = [.control, .option, .command] }
             if let marca { m.state = marca ? .on : .off }
             menu.addItem(m)
         }
         switch Estado.fase {
         case .grabando, .cuenta:
-            agregar("Terminar grabación", #selector(terminar))
+            if Estado.fase == .grabando { agregar(Estado.pausada ? "Reanudar la grabación" : "Pausar la grabación", #selector(pausar), tecla: "p", global: true) }
+            agregar("Terminar grabación", #selector(terminar), tecla: "r", global: true)
             agregar("Descartar grabación", #selector(descartar))
         case .terminando, .preparando:
             menu.addItem(NSMenuItem(title: Idioma.t(Estado.fase == .preparando ? "Preparando la grabación…" : "Guardando…"), action: nil, keyEquivalent: ""))
         case .inactiva:
-            agregar("Grabar pantalla", #selector(grabar), tecla: "r")
+            agregar("Grabar pantalla", #selector(grabar), tecla: "r", global: true)
             agregar("Cámara", #selector(alternarCamara), marca: Config.bool("camara"))
             agregar("Micrófono", #selector(alternarMicrofono), marca: Config.bool("microfono"))
         }
@@ -300,6 +348,7 @@ final class BarraMenu: NSObject, NSMenuDelegate {
 
     @objc func grabar() { Estado.grabar() }
     @objc func terminar() { Estado.detener() }
+    @objc func pausar() { Estado.alternarPausa() }
     @objc func descartar() { Estado.cancelar() }
     @objc func alternarCamara() { Config.guardar(["camara": !Config.bool("camara")]); Ventana.shared.enviarEstado() }
     @objc func alternarMicrofono() { Config.guardar(["microfono": !Config.bool("microfono")]); Ventana.shared.enviarEstado() }

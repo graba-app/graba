@@ -11,6 +11,7 @@ final class EstadoBarra: ObservableObject {
     @Published var fase = Fase.preparando
     @Published var cuenta = 0
     @Published var segundos = 0
+    @Published var pausada = false
 }
 
 @MainActor
@@ -21,6 +22,9 @@ final class Barra {
     private var panel: PanelFlotante?
     private var anfitrion: NSView?
     private var acciones: (grabar: () -> Void, terminar: () -> Void, cancelar: () -> Void)?
+
+    /// Empieza con lo que esté elegido en la barra (lo usa el atajo de teclado).
+    func grabarAhora() { if p.listo { acciones?.grabar() } }
 
     var ventana: CGWindowID? { panel.map { CGWindowID($0.windowNumber) } }
 
@@ -33,6 +37,7 @@ final class Barra {
         estado.fase = .preparando
         estado.cuenta = 0
         estado.segundos = 0
+        estado.pausada = false
         acciones = (grabar: { [weak self] in guard let self else { return }; grabar(self.p) }, terminar: terminar, cancelar: cancelar)
         let vista = VistaBarra(p: p, e: estado,
                                grabar: { [weak self] in self?.acciones?.grabar() },
@@ -126,9 +131,17 @@ private struct VistaBarra: View {
                     .padding(.horizontal, 12)
                 botonCerrar
             case .grabando:
-                Circle().fill(rojo).frame(width: 9, height: 9).padding(.leading, 10)
-                Text(reloj(e.segundos)).font(.system(size: 13, weight: .medium).monospacedDigit()).foregroundStyle(.white)
-                    .frame(minWidth: 46, alignment: .leading)
+                Circle().fill(e.pausada ? Color.orange : rojo).frame(width: 9, height: 9).padding(.leading, 10)
+                Text(e.pausada ? Idioma.t("En pausa") : reloj(e.segundos)).font(.system(size: 13, weight: .medium).monospacedDigit())
+                    .foregroundStyle(.white).frame(minWidth: 62, alignment: .leading)
+                Button { Estado.alternarPausa() } label: {
+                    Image(systemName: e.pausada ? "play.fill" : "pause.fill").font(.system(size: 13, weight: .semibold))
+                        .frame(width: 34, height: 32).foregroundStyle(.white)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(e.pausada ? 0.2 : 0.1)))
+                        .contentShape(Rectangle())
+                }.buttonStyle(.plain)
+                    .help(e.pausada ? Idioma.t("Reanudar (⌃⌥⌘P)") : Idioma.t("Pausar (⌃⌥⌘P)"))
+                    .accessibilityLabel(e.pausada ? Idioma.t("Reanudar la grabación") : Idioma.t("Pausar la grabación"))
                 Button(action: terminar) {
                     Label(Idioma.t("Terminar"), systemImage: "stop.fill").font(.system(size: 13, weight: .semibold))
                         .padding(.horizontal, 14).frame(height: 32)
@@ -149,12 +162,12 @@ private struct VistaBarra: View {
         icono("rectangle.stack", "Mis grabaciones", activo: false) { Estado.cancelar(); Ventana.shared.mostrar() }
         separador
         // Qué grabar
-        icono("display", "Toda la pantalla", activo: p.modo == "pantalla") { p.modo = "pantalla"; p.area = nil; MarcoArea.shared.ocultar(); p.guardar(); Barra.shared.ajustar() }
+        icono("display", "Toda la pantalla", activo: p.modo == "pantalla") { p.modo = "pantalla"; p.area = nil; MarcoArea.shared.ocultar(); p.aplicar(); Barra.shared.ajustar() }
         Menu {
             if p.ventanas.isEmpty { Text(Idioma.t("No encontré ventanas abiertas.")) }
             ForEach(p.ventanas) { v in
                 Button(v.titulo.isEmpty ? v.app : "\(v.app) — \(v.titulo.prefix(50))") {
-                    p.ventanaElegida = v.id; p.modo = "ventana"; p.area = nil; MarcoArea.shared.ocultar(); p.guardar(); Barra.shared.ajustar()
+                    p.ventanaElegida = v.id; p.modo = "ventana"; p.area = nil; MarcoArea.shared.ocultar(); p.aplicar(); Barra.shared.ajustar()
                 }
             }
         } label: {
@@ -165,6 +178,9 @@ private struct VistaBarra: View {
         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help(Idioma.t("Una ventana"))
         .simultaneousGesture(TapGesture().onEnded { Task { await p.cargarVentanas() } })
         icono("rectangle.dashed", "Un área", activo: p.modo == "area") { elegirArea() }
+        icono("person.crop.rectangle", "Solo la cámara", activo: p.modo == "camara") {
+            p.modo = "camara"; p.area = nil; MarcoArea.shared.ocultar(); p.aplicar(); Barra.shared.ajustar()
+        }
         if let nombre = detalle {
             Text(nombre).font(.system(size: 12, weight: .medium)).foregroundStyle(.white.opacity(0.75)).lineLimit(1)
                 .frame(maxWidth: 150).padding(.horizontal, 6)
@@ -198,6 +214,7 @@ private struct VistaBarra: View {
         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help(Idioma.t("Cámara: cuál, forma y tamaño"))
         Menu {
             Button(p.microfono ? Idioma.t("Apagar el micrófono") : Idioma.t("Encender el micrófono")) { p.microfono.toggle(); p.guardar() }
+            Toggle(Idioma.t("Incluir el sonido del Mac"), isOn: Binding(get: { p.sonidoMac }, set: { p.sonidoMac = $0; p.guardar() }))
             let mics = Preparacion.dispositivos(.audio)
             if !mics.isEmpty {
                 Divider()
@@ -207,11 +224,11 @@ private struct VistaBarra: View {
                 }.pickerStyle(.inline)
             }
         } label: {
-            Image(systemName: p.microfono ? "mic.fill" : "mic.slash").font(.system(size: 14)).frame(width: 34, height: 32)
+            Image(systemName: p.microfono ? (p.sonidoMac ? "speaker.wave.2.fill" : "mic.fill") : (p.sonidoMac ? "speaker.wave.2" : "mic.slash")).font(.system(size: 14)).frame(width: 34, height: 32)
                 .foregroundStyle(p.microfono ? Color.white : Color.white.opacity(0.45))
                 .background(RoundedRectangle(cornerRadius: 8).fill(p.microfono ? Color.white.opacity(0.14) : .clear))
         }
-        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help(Idioma.t("Micrófono"))
+        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help(Idioma.t("Micrófono y sonido del Mac"))
         icono("text.alignleft", p.teleprompter ? "Ocultar el guion" : "Guion (teleprompter): solo tú lo ves", activo: p.teleprompter) {
             p.teleprompter.toggle(); p.aplicar()
         }
@@ -234,6 +251,7 @@ private struct VistaBarra: View {
         switch p.modo {
         case "ventana": return p.ventanas.first { $0.id == p.ventanaElegida }?.app ?? Idioma.t("Elige una ventana")
         case "area": return p.area.map { "\(Int($0.width)) × \(Int($0.height))" }
+        case "camara": return Idioma.t("Solo la cámara")
         default: return nil
         }
     }

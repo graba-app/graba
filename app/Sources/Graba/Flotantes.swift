@@ -44,6 +44,8 @@ final class Burbuja: NSObject, NSWindowDelegate {
     private var vista: NSView?
     private(set) var forma = Forma.circulo
     private var dispositivo = ""
+    /// «Solo la cámara»: la cámara grande al centro, sin borde ni esquinas redondas; se graba solo esta ventana.
+    private(set) var soloCamara = false
 
     var ventana: CGWindowID? { panel.map { CGWindowID($0.windowNumber) } }
     var visible: Bool { panel != nil }
@@ -54,13 +56,18 @@ final class Burbuja: NSObject, NSWindowDelegate {
     static func ladoBase(_ tamano: String) -> CGFloat { ["s": 140, "m": 200, "l": 290, "xl": 400][tamano] ?? 200 }
 
     /// Muestra (o ajusta) la cámara con la forma y el tamaño elegidos. Si se da un área, la pone abajo a la izquierda dentro de ella.
-    func mostrar(en pantalla: NSScreen, forma f: Forma, tamano: String, dentroDe area: CGRect? = nil) {
-        forma = f
-        let lado = Burbuja.ladoBase(tamano), prop = Burbuja.proporcion(f)
-        let tam = prop >= 1 ? NSSize(width: lado * prop, height: lado) : NSSize(width: lado, height: lado / prop)
-        // Si cambió la cámara elegida, se vuelve a abrir con la nueva.
+    func mostrar(en pantalla: NSScreen, forma f: Forma, tamano: String, dentroDe area: CGRect? = nil, soloCamara solo: Bool = false) {
+        forma = solo ? .horizontal : f
+        let lado = Burbuja.ladoBase(tamano), prop = Burbuja.proporcion(forma)
+        var tam = prop >= 1 ? NSSize(width: lado * prop, height: lado) : NSSize(width: lado, height: lado / prop)
+        if solo {
+            let ancho = min(pantalla.visibleFrame.width * 0.72, 1280)
+            tam = NSSize(width: ancho, height: ancho * 9 / 16)
+        }
+        // Si cambió la cámara elegida (o se entra o sale de «solo la cámara»), se vuelve a abrir.
         let elegida = Config.texto("camara_id")
-        if panel != nil, elegida != dispositivo { ocultar() }
+        if panel != nil, elegida != dispositivo || solo != soloCamara { ocultar() }
+        soloCamara = solo
         if let panel {
             var marco = panel.frame
             marco.size = tam
@@ -83,7 +90,7 @@ final class Burbuja: NSObject, NSWindowDelegate {
         let v = NSView(frame: NSRect(origin: .zero, size: tam))
         v.wantsLayer = true
         v.layer?.masksToBounds = true
-        v.layer?.borderWidth = 3
+        v.layer?.borderWidth = solo ? 0 : 3
         v.layer?.borderColor = NSColor.white.withAlphaComponent(0.9).cgColor
         let capa = AVCaptureVideoPreviewLayer(session: s)
         capa.videoGravity = .resizeAspectFill
@@ -93,7 +100,11 @@ final class Burbuja: NSObject, NSWindowDelegate {
         v.layer?.addSublayer(capa)
         p.contentView = v
         let f0 = area ?? pantalla.visibleFrame
-        p.setFrameOrigin(NSPoint(x: f0.minX + 24, y: f0.minY + 24))
+        if solo {
+            p.setFrameOrigin(NSPoint(x: f0.midX - tam.width / 2, y: f0.midY - tam.height / 2 + 40))
+        } else {
+            p.setFrameOrigin(NSPoint(x: f0.minX + 24, y: f0.minY + 24))
+        }
         p.orderFrontRegardless()
         panel = p
         sesion = s
@@ -105,7 +116,7 @@ final class Burbuja: NSObject, NSWindowDelegate {
     private func ajustarEsquinas() {
         guard let v = vista else { return }
         let b = v.bounds
-        v.layer?.cornerRadius = forma == .circulo ? min(b.width, b.height) / 2 : min(b.width, b.height) * 0.12
+        v.layer?.cornerRadius = soloCamara ? 0 : forma == .circulo ? min(b.width, b.height) / 2 : min(b.width, b.height) * 0.12
     }
 
     func windowDidResize(_ notification: Notification) { ajustarEsquinas() }
@@ -179,6 +190,13 @@ final class Teleprompter {
                 if e.corriendo { e.desplazamiento += CGFloat(e.velocidad / 30) }
             }
         }
+    }
+
+    /// Con la grabación en pausa el texto también se detiene; al reanudar sigue (si estaba corriendo).
+    private var corriaAntesDePausa = false
+    func pausar(_ si: Bool) {
+        guard reloj != nil else { return }
+        if si { corriaAntesDePausa = estado.corriendo; estado.corriendo = false } else if corriaAntesDePausa { estado.corriendo = true }
     }
 
     func ocultar() {
