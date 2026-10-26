@@ -132,11 +132,17 @@ function esperarGrabadora(tipo, ms) {
   });
 }
 
+/** Primer uso (como GrabaApp.faltaIdioma en Mac): mientras la persona no elija el idioma (paso 0 de la bienvenida) no se muestra ni
+ * se pide nada más. Si ya tenía todo listo y nunca eligió idioma, no se le vuelve a preguntar. */
+const faltaIdioma = () => !Config.texto("idioma_ui") && (!Config.texto("ia") || !Modelos.hayAlguno());
+
 /** Abre la barra para preparar la grabación (equivale a Estado.grabar en Mac). */
 function grabar() {
   // Con la barra ya abierta, "Grabar" en la ventana solo lleva de vuelta a ella: grabar empieza con su botón rojo.
   if (Estado.fase === "preparando") { ocultar(); if (barra && !barra.isDestroyed()) barra.showInactive(); return; }
   if (Estado.fase !== "inactiva") return;
+  // El idioma va primero (también si llega el atajo): se abre la ventana para elegirlo.
+  if (faltaIdioma()) return mostrar();
   if (!grabadora || grabadora.isDestroyed()) crearGrabadora();
   Estado.pantalla = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   Estado.modo = "pantalla"; Estado.ventana = null; Estado.area = null;
@@ -554,6 +560,11 @@ function actualizarBandeja() {
   const grabando = Estado.fase === "grabando";
   bandeja.setImage(icono(`${grabando ? "bandeja-grabando" : "bandeja"}-${ES_WIN ? 16 : 32}.png`));
   bandeja.setToolTip(grabando ? `Graba · ${reloj(Estado.segundos)}` : "Graba");
+  // Primer uso: el idioma va primero. Estos textos son bilingües a propósito (aún no se sabe cuál prefiere la persona).
+  if (faltaIdioma()) {
+    return bandeja.setContextMenu(Menu.buildFromTemplate([{ label: "Elegir idioma · Choose language…", click: () => mostrar() },
+      { type: "separator" }, { label: "Salir · Quit", click: () => salir() }]));
+  }
   const items = [];
   if (Estado.fase === "preparando") {
     items.push({ label: t("Empezar a grabar"), click: () => iniciar() }, { label: t("Cerrar"), click: () => cancelar() });
@@ -647,6 +658,8 @@ const ACCIONES = {
     Config.guardar(Object.fromEntries(Object.entries(d || {}).filter(([k]) => Config.editables.includes(k))));
     actualizarBandeja();
     enviarEstado();
+    // El aviso de versión nueva se escribió en el idioma de antes: se vuelve a revisar para que salga en el elegido.
+    if (d && d.idioma_ui && Actualizaciones.disponible.hay) revisarActualizacion();
   },
   async probarIA(d) {
     const id = String(d.id || "");

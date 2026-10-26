@@ -9,7 +9,7 @@
   const E = {
     fase: "inactiva", grabaciones: [], config: {}, ias: [], modelos: { lista: [] }, permisos: {}, carpeta: "", version: "", procesando: null,
     sel: null, pestana: "notas", ajustes: false, bv: null, bvCerrada: false, probando: {}, resultadoIA: {}, descarga: null,
-    borrar: null, idioma: "es", textos: {}, actualizacion: { hay: false }, act: null, buscando: null, youtube: { conectado: false }, conectandoYT: false,
+    borrar: null, idioma: "es", idiomaFoco: null, textos: {}, actualizacion: { hay: false }, act: null, buscando: null, youtube: { conectado: false }, conectandoYT: false,
   };
   const ENLACES = { sitio: "https://graba-app.github.io/graba/", codigo: "https://github.com/graba-app/graba",
     comunidad: "https://github.com/graba-app/graba/discussions", guiaIA: "https://graba-app.github.io/graba/ia.html" };
@@ -54,9 +54,12 @@
       for (const a of ["title", "aria-label", "placeholder"]) { const v = el.getAttribute(a); if (v) el.setAttribute(a, tr(v)); }
     }
   }
+  /** Idioma del sistema: el que se sugiere en la pantalla de idioma y el que se usa mientras la persona no elige. */
+  const idiomaSistema = () => ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en");
   async function cargarIdioma() {
+    // Lo que eligió la persona manda; ?idioma=en es solo para la vista previa cuando aún no hay nada elegido.
     const pedido = new URLSearchParams(location.search).get("idioma");
-    const codigo = pedido || E.config.idioma_ui || ((navigator.language || "es").startsWith("es") ? "es" : "en");
+    const codigo = E.config.idioma_ui || pedido || idiomaSistema();
     if (codigo === E.idioma && (codigo === "es" || Object.keys(E.textos).length)) return;
     E.idioma = codigo;
     E.textos = {};
@@ -67,6 +70,7 @@
   }
 
   function toast(texto) {
+    if (E.bv === 0) return; // en la pantalla de idioma no se muestra nada más
     const t = $("#toast");
     t.textContent = tr(texto);
     t.classList.add("visible");
@@ -137,6 +141,14 @@
   // ───────────── Pintar ─────────────
   function render() {
     const raiz = $("#app");
+    // Primer uso: lo primero es elegir el idioma, sola en la pantalla (sin la app detrás ni avisos).
+    if (E.bv === 0) {
+      const foco = document.activeElement?.dataset?.idiomaUi || E.idiomaFoco || idiomaSistema();
+      raiz.innerHTML = pantallaIdioma();
+      document.documentElement.lang = E.idioma;
+      $(`[data-idioma-ui="${foco}"]`)?.focus();
+      return;
+    }
     const scroll = $(".principal-area")?.scrollTop || 0;
     raiz.innerHTML = `<div class="app">${lateral()}<main class="principal-area" data-pagina>${avisoActualizacion()}${principal()}</main></div>${dialogos()}`;
     traducirDOM(raiz);
@@ -445,11 +457,31 @@
       <div class="pie-dialogo"><button class="boton principal" data-accion="cerrar">Listo</button></div></div></div>`;
   }
 
+  /** Paso 0 de la bienvenida: el idioma, antes que cualquier otra cosa. Cada opción va escrita en su propio idioma y no se traduce. */
+  function pantallaIdioma() {
+    const sugerido = idiomaSistema();
+    const opcion = (codigo, nombre, nota) => `<button class="opcion-idioma ${codigo === sugerido ? "sugerido" : ""}" lang="${codigo}" data-idioma-ui="${codigo}"
+        ${codigo === sugerido ? `aria-describedby="nota-${codigo}"` : ""}><b>${nombre}</b>${codigo === sugerido ? `<small id="nota-${codigo}">${nota}</small>` : ""}</button>`;
+    return `<div class="pantalla-idioma" data-sin-traducir><div class="tarjeta-idioma" role="dialog" aria-modal="true" aria-labelledby="t-idioma">${LOGO}
+      <h1 id="t-idioma"><span lang="es">Elige tu idioma<span aria-hidden="true">&nbsp;·</span></span> <span lang="en">Choose your language</span></h1>
+      <div class="opciones-idioma" role="group" aria-labelledby="t-idioma">
+        ${opcion("es", "Español", "Idioma de tu sistema")}${opcion("en", "English", "Your system language")}</div></div></div>`;
+  }
+  async function elegirIdioma(codigo) {
+    E.config.idioma_ui = codigo;
+    host.enviar("config", { idioma_ui: codigo }); // el mismo camino que Ajustes
+    await cargarIdioma();
+    E.bv = 1;
+    render();
+    $("#t-bv")?.focus();
+  }
+
   function bienvenida() {
     const paso = E.bv;
-    const marcas = `<div class="pasos-bv">${[0, 1, 2, 3].map((i) => `<i class="${i <= paso ? "hecho" : ""}"></i>`).join("")}</div>`;
+    const marcas = `<div class="pasos-bv">${[1, 2, 3, 4].map((i) => `<i class="${i <= paso ? "hecho" : ""}"></i>`).join("")}</div>`;
     const iaLista = !!E.config.ia, modeloListo = (E.modelos.lista || []).some((m) => m.listo && m.id === E.config.modelo);
     const pasos = [
+      null, // el idioma (pantallaIdioma)
       [`Hola, esto es Graba`, `Graba tu pantalla con tu cámara y tu voz. Al terminar, la app transcribe en tu computador y tu propia IA escribe notas, un guion para YouTube, títulos, descripción con capítulos y subtítulos. Nada se sube a ningún servidor.`, "", true],
       [`Elige tu IA`, `Graba usa la IA que ya tienes, con tu cuenta. La probamos con una pregunta corta.`, filasIA(), iaLista],
       [`Descarga el transcriptor`, `Convierte tu voz en texto dentro de tu computador. Se descarga una sola vez.`, filasModelo(), modeloListo],
@@ -457,18 +489,19 @@
     ];
     const [titulo, texto, filas, puede] = pasos[paso];
     return `<div class="capa"><div class="dialogo" role="dialog" aria-modal="true" aria-labelledby="t-bv">${marcas}
-      <h2 id="t-bv">${titulo}</h2><p>${texto}</p><div class="seccion">${filas}</div>
-      <div class="pie-dialogo">${paso > 0 ? `<button class="boton" data-bv="${paso - 1}">Atrás</button>` : ""}
+      <h2 id="t-bv" tabindex="-1">${titulo}</h2><p>${texto}</p><div class="seccion">${filas}</div>
+      <div class="pie-dialogo"><button class="boton" data-bv="${paso - 1}">Atrás</button>
         <button class="boton" data-accion="bv-despues">Lo hago después</button>
-        ${paso < 3 ? `<button class="boton principal" data-bv="${paso + 1}" ${puede ? "" : "disabled"}>Siguiente</button>`
+        ${paso < 4 ? `<button class="boton principal" data-bv="${paso + 1}" ${puede ? "" : "disabled"}>Siguiente</button>`
           : `<button class="boton principal" data-accion="bv-fin">Empezar</button>`}</div></div></div>`;
   }
 
   // ───────────── Eventos ─────────────
   document.addEventListener("click", (ev) => {
-    const el = ev.target.closest("[data-accion],[data-sel],[data-pestana],[data-copiar],[data-teleprompter],[data-quitar-archivo],[data-alternar],[data-probar],[data-modelo],[data-modelo-usar],[data-permiso],[data-bv],[data-enlace],[data-ir]");
+    const el = ev.target.closest("[data-accion],[data-sel],[data-pestana],[data-copiar],[data-teleprompter],[data-quitar-archivo],[data-alternar],[data-probar],[data-modelo],[data-modelo-usar],[data-permiso],[data-bv],[data-enlace],[data-ir],[data-idioma-ui]");
     if (!el) return;
     const d = el.dataset;
+    if (d.idiomaUi) return elegirIdioma(d.idiomaUi === "en" ? "en" : "es");
     if (d.enlace) { ev.preventDefault(); return host.enviar("abrirEnlace", { url: d.enlace }); }
     if (d.ir) { const v = $("#video"); if (v) { v.currentTime = Number(d.ir); v.play?.(); } return; }
     if (d.sel) { E.sel = d.sel; return render(); }
@@ -580,6 +613,14 @@
     render();
   });
   document.addEventListener("keydown", (ev) => {
+    // Pantalla de idioma: las flechas pasan de una opción a la otra (Tab y Enter funcionan solos).
+    const opcion = ev.target.closest?.("[data-idioma-ui]");
+    if (opcion && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(ev.key)) {
+      ev.preventDefault();
+      const otra = $(`[data-idioma-ui="${opcion.dataset.idiomaUi === "es" ? "en" : "es"}"]`);
+      E.idiomaFoco = otra?.dataset.idiomaUi; otra?.focus();
+      return;
+    }
     if (ev.key === "Escape" && E.recorte && !E.recorte.enviando && !E.ajustes && !E.borrar && !E.corregir && !E.guion) { E.recorte = null; return render(); }
     if (ev.key === "Escape" && (E.ajustes || E.borrar || E.guion || (E.corregir && !E.corregir.enviando))) { E.ajustes = false; E.borrar = null; E.corregir = null; E.guion = null; render(); }
     if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey) && E.corregir && !E.corregir.enviando) $("[data-accion=enviar-correccion]")?.click();
@@ -600,7 +641,8 @@
       }
       if (!E.sel && E.grabaciones.length) E.sel = E.grabaciones[0].ruta;
       const falta = !E.config.ia || !(E.modelos.lista || []).some((m) => m.listo);
-      if (falta && E.bv === null && !E.bvCerrada) E.bv = 0;
+      // Con la bienvenida pendiente, el idioma va primero (si ya lo eligió, se parte en el saludo).
+      if (falta && E.bv === null && !E.bvCerrada) E.bv = E.config.idioma_ui ? 1 : 0;
       await cargarIdioma();
       if (e.aviso) toast(e.aviso);
       // No se repinta si nada cambió (así el video no se reinicia cada segundo).
@@ -693,7 +735,7 @@
   async function iniciar() {
     if (HOST === "web") {
       try { DEMO = await (await fetch("demo.json")).json(); } catch { DEMO = { grabaciones: [], config: {}, ias: [], modelos: { lista: [] }, permisos: {} }; }
-      if (new URLSearchParams(location.search).has("bienvenida")) { DEMO.config.ia = ""; } else { E.bvCerrada = true; }
+      if (new URLSearchParams(location.search).has("bienvenida")) { DEMO.config.ia = ""; DEMO.config.idioma_ui = ""; } else { E.bvCerrada = true; }
     }
     host.enviar("listo");
   }

@@ -33,6 +33,13 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
 | `.github/workflows/` | `revisar.yml` (en cada cambio y PR) y `publicar.yml` (al subir la versión en `app/Info.plist`). |
 
 ## Cómo funciona
+- **Primer uso: el idioma va primero.** Mientras falte la IA o el transcriptor se abre la bienvenida, y si `idioma_ui` está vacío su
+  paso 0 es la pantalla de idioma (`pantallaIdioma()` en `ui/app.js`): sola, sin la app detrás ni avisos, título bilingüe fijo y
+  «Español»/«English» escritos en su propio idioma (sin traducir; el del sistema sugerido y con el foco). Elegir guarda `idioma_ui` con
+  la acción `config` (igual que Ajustes) y sigue al saludo ya traducido. Hasta entonces la app nativa no abre la barra de grabar ni pide
+  permisos (`GrabaApp.faltaIdioma` / `faltaIdioma()` en `escritorio/src/main.js`; el atajo solo trae la ventana) y el menú de la barra
+  o bandeja solo ofrece «Elegir idioma · Choose language…» y «Salir · Quit». Quien ya tenía todo listo sin haber elegido idioma no lo
+  ve: sigue con el del sistema y lo cambia en Ajustes. Menús, barra de grabar y avisos nativos leen `idioma_ui` cada vez (`Idioma.t`).
 - **Grabar:** menú ⏺ o botón Grabar → cuenta 3-2-1 en la barra de controles → `SCStream` de la pantalla bajo el mouse (hasta 1920 px de
   ancho, 30 fps) excluyendo la ventana de controles; la burbuja de la cámara es otra ventana y sí sale. `AVAssetWriter` escribe H.264 +
   micrófono AAC (no se usa `SCRecordingOutput`: con micrófono deja archivos dañados en macOS 15).

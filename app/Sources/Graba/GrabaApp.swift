@@ -29,6 +29,12 @@ final class GrabaApp: NSObject, NSApplicationDelegate {
         if Config.texto("ia").isEmpty || !Modelos.lista.contains(where: Modelos.existe) { Ventana.shared.mostrar() }
     }
 
+    /// Primer uso: mientras la persona no elija el idioma (paso 0 de la bienvenida) no se muestra ni se pide nada más:
+    /// ni la barra de grabar ni los permisos de macOS. Si ya tenía todo listo y nunca eligió idioma, no se le vuelve a preguntar.
+    static var faltaIdioma: Bool {
+        Config.texto("idioma_ui").isEmpty && (Config.texto("ia").isEmpty || !Modelos.lista.contains(where: Modelos.existe))
+    }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
         Ventana.shared.mostrar()
         return true
@@ -57,6 +63,8 @@ enum Estado {
         // Si la barra ya está abierta (preparando), "Grabar" en la ventana solo lleva de vuelta a la barra: grabar empieza con su botón rojo.
         if fase == .preparando { Ventana.shared.ocultar(); Barra.shared.alFrente(); return }
         guard fase == .inactiva else { return }
+        // El idioma va primero (también si llega el atajo ⌃⌥⌘R): se abre la ventana para elegirlo.
+        guard !GrabaApp.faltaIdioma else { Ventana.shared.mostrar(); return }
         guard CGPreflightScreenCaptureAccess() else {
             Permisos.pedir("pantalla") {}
             Ventana.shared.mostrar()
@@ -318,6 +326,17 @@ final class BarraMenu: NSObject, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
+        // Primer uso: el idioma va primero. Estos dos textos son bilingües a propósito (aún no se sabe cuál prefiere la persona).
+        if GrabaApp.faltaIdioma {
+            let elegir = NSMenuItem(title: "Elegir idioma · Choose language…", action: #selector(abrir), keyEquivalent: "")
+            elegir.target = self
+            let fin = NSMenuItem(title: "Salir · Quit", action: #selector(salir), keyEquivalent: "q")
+            fin.target = self
+            menu.addItem(elegir)
+            menu.addItem(.separator())
+            menu.addItem(fin)
+            return
+        }
         func agregar(_ titulo: String, _ accion: Selector, tecla: String = "", marca: Bool? = nil, global: Bool = false) {
             let m = NSMenuItem(title: Idioma.t(titulo), action: accion, keyEquivalent: tecla)
             m.target = self

@@ -51,7 +51,12 @@ const r = await ventana.evaluate(() => new Promise((ok) => {
 }));
 console.log("probarIA:", JSON.stringify(r));
 if (process.env.IA_FALSA && !r.ok) falla("probarIA no funcionó con la IA de mentira");
-await ventana.evaluate(() => window.grabaEscritorio.enviar({ accion: "config", datos: { camara: true, microfono: true, inventada: 1 } }));
+// Primer uso: la primera pantalla es la de idioma y, hasta elegirlo, grabar (o el atajo) solo trae la ventana.
+if (!(await ventana.$(".pantalla-idioma"))) falla("la primera pantalla no es la de idioma");
+await app.evaluate(() => { global.grabaPruebas.grabar(); });
+await espera(300);
+if ((await app.evaluate(() => global.grabaPruebas.Estado.fase)) !== "inactiva") falla("se pudo grabar antes de elegir el idioma");
+await ventana.evaluate(() => window.grabaEscritorio.enviar({ accion: "config", datos: { camara: true, microfono: true, idioma_ui: "es", inventada: 1 } }));
 await espera(400);
 const config = JSON.parse(fs.readFileSync(path.join(process.env.HOME, "Graba", ".graba", "config.json"), "utf8"));
 if ("inventada" in config) falla("config aceptó una clave desconocida");

@@ -166,6 +166,24 @@ input.texto { width: 100%; font: inherit; padding: 8px 10px; border-radius: 8px;
 .interruptor:checked { background: var(--acento); }
 .interruptor:checked::after { transform: translateX(16px); }
 .pie-dialogo { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+/* Pantalla de idioma: lo primero en el primer uso, sola y centrada. */
+.pantalla-idioma { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+.tarjeta-idioma { width: min(520px, 100%); background: var(--panel); border: 1px solid var(--linea); border-radius: 18px; padding: 34px 28px 30px;
+  box-shadow: var(--sombra); text-align: center; }
+html.vidrio .tarjeta-idioma { background: var(--solido); -webkit-backdrop-filter: blur(30px) saturate(1.4); backdrop-filter: blur(30px) saturate(1.4); }
+.tarjeta-idioma .logo { width: 52px; height: 52px; margin-bottom: 16px; }
+.tarjeta-idioma h1 { font-size: 21px; font-weight: 650; margin-bottom: 24px; text-wrap: balance; }
+.tarjeta-idioma h1 span[lang] { display: inline-block; }
+.opciones-idioma { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.opcion-idioma { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 104px; padding: 18px 14px;
+  border: 1.5px solid var(--linea); border-radius: 14px; background: var(--panel); color: var(--texto); }
+.opcion-idioma b { font-size: 20px; font-weight: 650; }
+.opcion-idioma small { font-size: 12.5px; color: var(--suave); }
+.opcion-idioma:hover { border-color: var(--acento); }
+.opcion-idioma.sugerido { border-color: var(--acento); background: var(--acento-suave); }
+.opcion-idioma:focus-visible { outline: 3px solid var(--acento); outline-offset: 3px; }
+@media (max-width: 480px) { .opciones-idioma { grid-template-columns: 1fr; } .opcion-idioma { min-height: 76px; } .tarjeta-idioma { padding: 28px 18px 22px; } }
+#t-bv:focus { outline: none; }
 .pasos-bv { display: flex; gap: 6px; margin-bottom: 18px; }
 .pasos-bv i { height: 4px; flex: 1; border-radius: 99px; background: var(--linea); }
 .pasos-bv i.hecho { background: var(--acento); }

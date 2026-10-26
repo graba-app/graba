@@ -166,6 +166,10 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
         case "config":
             Config.guardar(d)
             enviarEstado()
+            // El aviso de versión nueva se escribió en el idioma de antes: se vuelve a revisar para que salga en el elegido.
+            if d["idioma_ui"] != nil, Actualizaciones.disponible["hay"] as? Bool == true {
+                Actualizaciones.revisar { _, _ in Ventana.shared.enviarEstado() }
+            }
         case "probarIA":
             let id = d["id"] as? String ?? ""
             IA.probar(id) { ok, texto in
