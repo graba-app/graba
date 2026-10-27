@@ -132,6 +132,8 @@ Graba incluye, como programas aparte y sin modificarlos: [whisper.cpp](https://g
 y [FFmpeg](https://ffmpeg.org/) (GPL, binarios estáticos de [ffmpeg-static](https://github.com/eugeneware/ffmpeg-static); su código fuente
 está en [ffmpeg.org](https://ffmpeg.org/download.html)). Cada descarga se verifica con una huella SHA-256 fija (`escritorio/herramientas/preparar.sh`).
 
+🔒 ¿Encontraste una falla de seguridad? Avísanos en privado: [SECURITY.md](SECURITY.md). · Security issues: please report them privately ([SECURITY.md](SECURITY.md)).
+
 ## Licencia / License
 
 [MIT](LICENSE). **English:** Graba is a free, open-source, non-profit Loom-like screen recorder for Mac, Windows and Linux. Your own AI CLI prepares

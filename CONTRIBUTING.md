@@ -32,6 +32,8 @@ Si algo falta te lo pedimos con un comentario; casi nunca cerramos un aporte sin
 ¿Buscas por dónde empezar? Mira los issues con la etiqueta
 [`good first issue`](https://github.com/graba-app/graba/labels/good%20first%20issue) o pregunta en Discussions.
 
+**Fallas de seguridad:** nunca en un issue público. Avísanos en privado como explica [SECURITY.md](SECURITY.md).
+
 Al participar aceptas el [código de conducta](CODE_OF_CONDUCT.md).
 
 ---
@@ -42,3 +44,4 @@ Al participar aceptas el [código de conducta](CODE_OF_CONDUCT.md).
 - **Code (with or without AI):** read [`AGENTS.md`](AGENTS.md), fork, branch, run `bash pruebas/correr.sh` and open a pull request.
   Code and comments are in Spanish; UI text needs its English entry in `ui/idiomas/en.json`; never commit personal data.
 - **Review:** everything goes through a pull request and a maintainer merges it. We check tests, privacy and the recordings format.
+- **Security issues:** never in a public issue; report them privately as described in [SECURITY.md](SECURITY.md).

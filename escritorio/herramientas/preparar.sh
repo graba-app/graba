@@ -15,9 +15,17 @@ mkdir -p "$CACHE" "$DESTINO/herramientas"
 
 PY_TAG=20261003; PY_VER=3.13.16
 WHISPER_VER=v1.8.3
-# ffmpeg estático de ffmpeg-static (github.com/eugeneware/ffmpeg-static, versión fija b6.1.1 = ffmpeg 6.1.1, con libx264).
-# Linux: compilación de johnvansickle.com; Windows: de gyan.dev. Licencia GPL (es un programa aparte que la app ejecuta).
-# Esas versiones no publican huellas: las de abajo se tomaron al descargarlas y quedan fijas (si el archivo cambia, no se usa).
+# Commit exacto de esa etiqueta (una etiqueta se puede mover; el commit no): si no coincide, no se compila.
+WHISPER_COMMIT=2eeeba56e9edd762b4b38467bab96c2517163158
+# zig (compilador) desde PyPI con versión fija.
+ZIG_VER=0.17.0
+# ffmpeg estático de ffmpeg-static (github.com/eugeneware/ffmpeg-static, etiqueta b6.1.1, con libx264). Licencia GPL (es un
+# programa aparte que la app ejecuta). ffmpeg-static no publica huellas: las de abajo quedan fijas (si el archivo cambia, no se usa).
+# Revisión contra la fuente oficial (oct. 2026, issue #14):
+#   Windows: el ffmpeg.exe de adentro es idéntico byte a byte (SHA-256 04e13079…b94ad00) al de gyan.dev
+#            «ffmpeg-6.1.1-essentials_build.zip» (github.com/GyanD/codexffmpeg, release 6.1.1).
+#   Linux:   el binario dice ser «7.0.2-static» de johnvansickle.com (no 6.1.1, a pesar de la etiqueta); johnvansickle.com no
+#            publica versiones antiguas con huella, así que esta no se pudo comparar con su origen.
 FFMPEG_VER=b6.1.1
 GH=https://github.com
 if [ "$OS" = linux ]; then
@@ -55,8 +63,9 @@ gzip -dc "$CACHE/$FFMPEG_VER-$FFMPEG_ARCHIVO" > "$DESTINO/herramientas/ffmpeg$EX
 
 # ── whisper-cli: compilado con zig → un solo ejecutable sin dependencias (Linux: glibc 2.28+; Windows 10+) ──
 if [ ! -x "$CACHE/whisper-$OS/whisper-cli$EXE" ]; then
-  python3 -m ziglang version >/dev/null 2>&1 || python3 -m pip install --user --break-system-packages -q ziglang 2>/dev/null || python3 -m pip install --user -q ziglang
+  python3 -m ziglang version >/dev/null 2>&1 || python3 -m pip install --user --break-system-packages -q "ziglang==$ZIG_VER" 2>/dev/null || python3 -m pip install --user -q "ziglang==$ZIG_VER"
   [ -d "$CACHE/whisper.cpp" ] || git clone -q --depth 1 --branch "$WHISPER_VER" https://github.com/ggml-org/whisper.cpp "$CACHE/whisper.cpp"
+  [ "$(git -C "$CACHE/whisper.cpp" rev-parse HEAD)" = "$WHISPER_COMMIT" ] || { echo "whisper.cpp $WHISPER_VER no es el commit esperado"; exit 1; }
   Z="$CACHE/zig-$OS"; mkdir -p "$Z"
   OBJETIVO=$([ "$OS" = linux ] && echo x86_64-linux-gnu.2.28 || echo x86_64-windows-gnu)
   for h in cc c++; do printf '#!/bin/bash\nexec python3 -m ziglang %s -target %s "$@"\n' "$h" "$OBJETIVO" > "$Z/$h"; done
