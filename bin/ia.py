@@ -56,6 +56,19 @@ COMANDO = next((r for r in map(shutil.which, IAS[IA][0]) if r), IAS[IA][0][0])
 ES_AGY = os.path.basename(COMANDO).lower().split(".")[0] in ("agy", "antigravity")
 
 
+#: Claude Code sin servidores MCP y sin herramientas (o, si hay archivos adjuntos, solo «Read» para leer sus copias en la
+#: carpeta temporal). Así, aunque una transcripción o un archivo traiga instrucciones escondidas («prompt injection»), la IA
+#: no puede ejecutar comandos, cambiar archivos ni usar otras cuentas conectadas: solo responde con texto.
+def claude_solo_texto(con_archivos=False):
+    return ["--strict-mcp-config", "--tools", "Read" if con_archivos else ""]  # --tools al final: acepta varios valores
+
+
+def _opcion_desconocida(r):
+    """¿El CLI es antiguo y no conoce --tools o --strict-mcp-config? (entonces se reintenta sin ellas)."""
+    err = (r.stderr or "").lower()
+    return r.returncode != 0 and ("unknown option" in err or "unrecognized" in err) and ("--tools" in err or "--strict-mcp-config" in err)
+
+
 def ejecutar_ia(prompt, timeout=900, archivos=()):
     """Le pasa el prompt a la IA del usuario y devuelve un CompletedProcess (stdout = respuesta).
     Corre en una carpeta temporal y en modo solo lectura: la IA ve solo el texto que le damos y, si se indican, copias de
@@ -86,7 +99,12 @@ def ejecutar_ia(prompt, timeout=900, archivos=()):
         if IA == "gemini":
             cmd = [COMANDO, "-p", "Responde a las instrucciones de arriba. Entrega solo el resultado pedido.", "-o", "text"]
         else:
-            cmd = [COMANDO, "-p", "--output-format", "text"]
+            base = [COMANDO, "-p", "--output-format", "text"]
+            r = subprocess.run(base + claude_solo_texto(bool(archivos)), input=prompt, text=True, encoding="utf-8",
+                               capture_output=True, timeout=timeout, cwd=tmp)
+            if _opcion_desconocida(r):
+                r = subprocess.run(base, input=prompt, text=True, encoding="utf-8", capture_output=True, timeout=timeout, cwd=tmp)
+            return r
         return subprocess.run(cmd, input=prompt, text=True, encoding="utf-8", capture_output=True, timeout=timeout, cwd=tmp)
 
 

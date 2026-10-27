@@ -56,7 +56,7 @@ function crearVentana() {
     width: guardado.width || 1120, height: guardado.height || 740, x: guardado.x, y: guardado.y, minWidth: 760, minHeight: 520,
     show: false, autoHideMenuBar: true, backgroundColor: VIDRIO ? "#00000000" : "#17151c", title: "Graba", icon: icono("graba-256.png"),
     ...(VIDRIO ? { backgroundMaterial: "acrylic" } : {}),
-    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, sandbox: false, spellcheck: false },
+    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, sandbox: true, spellcheck: false },
   });
   ventana.setMenuBarVisibility(false);
   ventana.loadURL("graba://ui/index.html" + (VIDRIO ? "?vidrio=1" : ""));
@@ -318,7 +318,7 @@ ipcMain.on("burbuja-sin-camara", () => { cerrar(burbuja); burbuja = null; });
 
 function crearGrabadora() {
   grabadora = new BrowserWindow({ show: false, width: 320, height: 240, skipTaskbar: true,
-    webPreferences: { preload: path.join(__dirname, "preload-interno.js"), contextIsolation: true, sandbox: false, backgroundThrottling: false } });
+    webPreferences: { preload: path.join(__dirname, "preload-interno.js"), contextIsolation: true, sandbox: true, backgroundThrottling: false } });
   grabadora.loadURL("graba://app/grabadora.html");
   grabadora.on("closed", () => { grabadora = null; });
 }
@@ -335,7 +335,7 @@ async function dispositivos() {
 const flotante = (extra) => new BrowserWindow({
   frame: false, transparent: true, resizable: false, maximizable: false, minimizable: false, fullscreenable: false, skipTaskbar: true,
   alwaysOnTop: true, hasShadow: false, show: false, backgroundColor: "#00000000",
-  webPreferences: { preload: path.join(__dirname, "preload-interno.js"), contextIsolation: true, sandbox: false, backgroundThrottling: false },
+  webPreferences: { preload: path.join(__dirname, "preload-interno.js"), contextIsolation: true, sandbox: true, backgroundThrottling: false },
   ...extra,
 });
 const cerrar = (w) => { if (w && !w.isDestroyed()) w.close(); };

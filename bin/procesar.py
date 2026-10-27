@@ -23,8 +23,9 @@ MARCADORES = ["## Resumen", "## Notas", "## Guion para YouTube", "## Para public
 
 
 def guardar_json(ruta, datos):
+    # Solo la persona puede leerlo (0600): a veces lleva un token (youtube.py conectar) y la salida va a la carpeta temporal.
     tmp = ruta + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
+    with open(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, indent=2)
     os.replace(tmp, ruta)
 

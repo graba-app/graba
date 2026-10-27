@@ -90,6 +90,11 @@ para la vista previa. `pruebas/contrato.py` lo revisa.
 - Código, comentarios, commits y textos en **español** (de Chile neutro). Todo texto nuevo visible (JS o Swift) va con su traducción en
   `ui/idiomas/en.json` en el mismo cambio; frases completas, nunca pedazos pegados.
 - Contenido del usuario (títulos, notas, transcripción) con `esc()` y `data-sin-traducir`.
+- **Seguridad** (ver `SECURITY.md`): `ui/index.html` tiene una CSP sin código en línea (no agregues `onclick=`, `<script>` en
+  línea ni recursos de otros dominios). La IA corre solo con texto (`ia.claude_solo_texto`: sin MCP y sin herramientas, o solo
+  `Read` con archivos adjuntos). Las ventanas de Electron van con `sandbox: true` y la de Mac solo navega dentro de `ui/`. En los
+  workflows: actions fijadas por SHA (Dependabot las sube), permisos mínimos, `persist-credentials: false`, nunca
+  `pull_request_target` ni `${{ … }}` dentro de `run:`.
 - Antes de cerrar un cambio: `bash pruebas/correr.sh` y mirar la interfaz (`cd ui && python3 -m http.server 8765`, `?idioma=en`,
   `?bienvenida`, `window.Graba._probar(E => …)`). Swift solo compila en un Mac (o en el job `mac` de GitHub).
 - Privacidad: `bash herramientas/revisar_privacidad.sh` antes de cada commit (usa `.terminos-privados`, local y nunca versionado).

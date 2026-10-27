@@ -5,7 +5,7 @@ import WebKit
 /// Ventana principal: la interfaz web (ui/) dentro de un WKWebView. La interfaz llama `host.enviar(accion, datos)`
 /// y la app responde con `window.Graba.<funcion>(json)`. Cada acción está también en escritorio/ (Windows y Linux).
 @MainActor
-final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
+final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavigationDelegate {
     static let shared = Ventana()
     private var ventana: NSWindow?
     private var web: WKWebView?
@@ -37,6 +37,7 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
         conf.userContentController = control
         conf.mediaTypesRequiringUserActionForPlayback = []
         let w = WKWebView(frame: NSRect(x: 0, y: 0, width: 1120, height: 740), configuration: conf)
+        w.navigationDelegate = self
         w.setValue(false, forKey: "drawsBackground")
         let v = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1120, height: 740),
                          styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
@@ -255,6 +256,18 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler {
         default:
             break
         }
+    }
+}
+
+extension Ventana {
+    /// La ventana solo muestra la interfaz de la app: nunca navega a otra página ni a otro archivo. Un enlace web se abre en el
+    /// navegador; cualquier otro esquema se ignora.
+    func webView(_ webView: WKWebView, decidePolicyFor accion: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let url = accion.request.url else { return decisionHandler(.cancel) }
+        let interfaz = Rutas.recursos.appendingPathComponent("ui").standardizedFileURL.path + "/"
+        if url.isFileURL, url.standardizedFileURL.path.hasPrefix(interfaz) { return decisionHandler(.allow) }
+        if accion.navigationType == .linkActivated, url.scheme?.lowercased() == "https" { NSWorkspace.shared.open(url) }
+        decisionHandler(.cancel)
     }
 }
 

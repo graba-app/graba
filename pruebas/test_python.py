@@ -252,6 +252,48 @@ class Guion(unittest.TestCase):
             self.assertFalse(json.load(f)["ok"])
 
 
+def cli_falso(guion):
+    ruta = os.path.join(FALSOS, "claude")
+    with open(ruta, "w", encoding="utf-8") as f:
+        f.write("#!/bin/bash\n" + guion)
+    os.chmod(ruta, 0o755)
+    procesar.ia.COMANDO = ruta
+
+
+class IASoloTexto(unittest.TestCase):
+    """La IA responde solo con texto: sin MCP ni herramientas (solo Read si hay archivos adjuntos)."""
+    def argumentos(self, archivos=()):
+        args = os.path.join(DATOS, "args.txt")
+        cli_falso(f'printf "%s\\n" "$@" > "{args}"\ncat > /dev/null\necho listo\n')
+        self.assertEqual(procesar.ia.ejecutar_ia("hola", timeout=30, archivos=archivos).stdout.strip(), "listo")
+        with open(args, encoding="utf-8") as f:
+            recibidos = f.read().split("\n")
+        self.assertIn("--strict-mcp-config", recibidos)
+        return recibidos[recibidos.index("--tools") + 1]
+
+    def test_sin_herramientas(self):
+        self.assertEqual(self.argumentos(), "")
+
+    def test_con_archivos_solo_leer(self):
+        adjunto = os.path.join(DATOS, "adjunto.txt")
+        open(adjunto, "w").close()
+        self.assertEqual(self.argumentos([adjunto]), "Read")
+
+    def test_cli_antiguo_sin_tools(self):
+        cli_falso('for a in "$@"; do [ "$a" = "--tools" ] && { echo "error: unknown option \'--tools\'" >&2; exit 1; }; done\n'
+                  'cat > /dev/null\necho listo\n')
+        self.assertEqual(procesar.ia.ejecutar_ia("hola", timeout=30).stdout.strip(), "listo")
+
+
+class JSONPrivado(unittest.TestCase):
+    def test_solo_la_persona_lo_lee(self):
+        # La salida de youtube.py conectar lleva el token y va a la carpeta temporal: 0600.
+        ruta = os.path.join(DATOS, "privado.json")
+        procesar.guardar_json(ruta, {"ok": True})
+        if os.name != "nt":
+            self.assertEqual(os.stat(ruta).st_mode & 0o777, 0o600)
+
+
 class YouTube(unittest.TestCase):
     def test_metadatos_para_subir(self):
         import youtube

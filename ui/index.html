@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Política de contenido: solo corre el código de la app (nada en línea ni de afuera) y no se conecta a internet.
+     Si algo llegara a colarse en el HTML (un título, una transcripción), el navegador no lo ejecuta.
+     file: es para la app de Mac (interfaz y videos desde el disco); graba: es el protocolo de Windows/Linux. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file: graba:; script-src 'self' file: graba:; style-src 'self' 'unsafe-inline' file: graba:; img-src 'self' data: blob: file: graba:; media-src 'self' data: blob: file: graba:; font-src 'self' data: file: graba:; connect-src 'self' file: graba:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'">
 <title>Graba</title>
 <link rel="stylesheet" href="app.css">
 </head>
