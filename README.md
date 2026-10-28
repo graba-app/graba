@@ -5,7 +5,9 @@
 <p align="center"><b>Graba tu pantalla con tu cámara. Tu IA te deja notas, un guion para YouTube, títulos, descripción con capítulos y subtítulos.</b><br>
 Gratis, open source y sin fines de lucro. Mac, Windows y Linux. Todo pasa en tu computador.</p>
 
-<p align="center"><a href="https://graba-app.github.io/graba/">Sitio</a> · <a href="#instalar">Instalar</a> · <a href="https://github.com/graba-app/graba/discussions">Comunidad</a> · <a href="CONTRIBUTING.md">Cómo aportar</a></p>
+<p align="center"><a href="https://github.com/graba-app/graba/releases/latest"><b>Descargar</b></a> · <a href="https://graba-app.github.io/graba/"><b>Página</b></a> · <a href="#instalar">Instalar</a> · <a href="https://github.com/graba-app/graba/discussions">Comunidad</a> · <a href="CONTRIBUTING.md">Cómo aportar</a> · <a href="#licencia--license">English</a></p>
+
+<p align="center"><picture><source srcset="docs/img/app-oscuro.jpg" media="(prefers-color-scheme: dark)"><img src="docs/img/app-claro.jpg" width="860" alt="Graba con una grabación abierta: títulos, descripción con capítulos y etiquetas listas para YouTube (datos ficticios)"></picture></p>
 
 ---
 
@@ -138,4 +140,9 @@ está en [ffmpeg.org](https://ffmpeg.org/download.html)). Cada descarga se verif
 
 [MIT](LICENSE). **English:** Graba is a free, open-source, non-profit Loom-like screen recorder for Mac, Windows and Linux. Your own AI CLI prepares
 the script for a teleprompter that isn't recorded, and afterwards writes notes, titles, a description with chapters and subtitles.
-Transcription is local; everything stays on your computer.
+Transcription is local; everything stays on your computer. Record the whole screen, a window, an area or just the camera, with your
+camera in any shape, your mic and, if you want, the Mac's sound; pause and resume without gaps, use global shortcuts (⌃⌥⌘R / ⌃⌥⌘P,
+Ctrl+Alt+Shift+R / P on Windows and Linux) and trim the start and end (transcript, subtitles and chapters shift on their own).
+**Install:** Mac and Linux `curl -fsSL https://raw.githubusercontent.com/graba-app/graba/main/instalar.sh | bash` · Windows (PowerShell)
+`irm https://raw.githubusercontent.com/graba-app/graba/main/instalar.ps1 | iex` · or the [latest release](https://github.com/graba-app/graba/releases/latest).
+Questions and ideas are welcome in [Discussions](https://github.com/graba-app/graba/discussions), in English or Spanish.
