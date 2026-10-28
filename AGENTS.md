@@ -30,6 +30,7 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
 | `escritorio/` | App de **Windows y Linux** (Electron): misma `ui/` y mismo `bin/`. Ver "Windows y Linux" abajo. |
 | `instalar.ps1` | Instalador de un comando para Windows (`irm … \| iex`). |
 | `docs/` | Página pública (GitHub Pages). |
+| `CHANGELOG.md` | Lo que cambia para quien usa la app, en palabras simples (ver «Lo que rodea a un cambio»). |
 | `.github/workflows/` | `revisar.yml` (en cada cambio y PR) y `publicar.yml` (al subir la versión en `app/Info.plist`). |
 
 ## Cómo funciona
@@ -108,6 +109,25 @@ su `.sha256` (nombres fijos: los usan `instalar.sh` e `instalar.ps1`).
 ## Desarrollo en el Mac
 `~/Developer/graba` es el checkout. Antes de reinstalar, comprobar que no esté grabando ni procesando (`build.sh` ya lo revisa).
 Compilar en segundo plano (`nohup bash build.sh > /tmp/graba-build.log`), revisar en tramos cortos y reabrir con `open ~/Applications/Graba.app`.
+
+## Lo que rodea a un cambio
+Un cambio está listo cuando la app **y lo que la cuenta** dicen lo mismo. Antes de empezar, anota qué tipo de cambio es; al terminar,
+revisa cada fila ("no aplica" se decide, no se supone):
+
+| Si el cambio… | Deja al día |
+|---|---|
+| agrega o cambia una función | la página (`docs/`: funciones, «cómo funciona», comparación, preguntas frecuentes), el README y la guía si la hay |
+| cambia lo que se ve | capturas de la página y del README (datos ficticios, español e inglés, normal y celular) e imagen para compartir si sale esa vista |
+| cambia un flujo o un paso | instrucciones paso a paso, preguntas frecuentes, textos de la bienvenida e instalación si la toca |
+| quita algo | bórralo de la página, el README y las guías: nada que prometa lo que ya no hace |
+| cambia el formato de datos o el puente | la documentación del formato, `ejemplos/` si existe y esta guía |
+| cambia carpetas, reglas o pruebas | esta guía (`AGENTS.md`) y `CONTRIBUTING.md` |
+| resuelve un issue | ciérralo con «Resuelto en …» dando crédito y abre issues para lo que quedó pendiente |
+| lo nota quien usa Graba | `CHANGELOG.md`: una línea en «Sin publicar», en lenguaje de persona («Ahora puedes…»), en español e inglés |
+
+Todo texto nuevo de la página y del README va en los dos idiomas, sin nada inventado. Antes de cerrar, busca con `grep` en `docs/` y el
+README el nombre o el texto viejo de lo que cambió. Al publicar una versión, las líneas de «Sin publicar» pasan a su número.
+Los issues que abrimos para una tarea traen una sección «Qué actualizar alrededor» con las filas de esta tabla que le tocan.
 
 ## Revisar aportes
 Todo entra por pull request y lo junta quien mantiene el proyecto, solo con su aprobación. Leer todo el diff antes de correr nada
