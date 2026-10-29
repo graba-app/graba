@@ -75,15 +75,32 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavig
         return false
     }
 
-    /// Mientras se procesa una grabación, la interfaz se actualiza sola cada segundo (avance por pasos).
+    /// Mientras se procesa una grabación, la interfaz se actualiza sola cada segundo (avance por pasos), pero solo si el avance
+    /// cambió: releer todas las grabaciones (con sus notas) y mandarlas cada segundo sobra.
     private func iniciarRefresco() {
         refresco?.invalidate()
         refresco = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             Task { @MainActor in
-                guard Ventana.shared.ventana?.isVisible == true else { return }
-                if Procesador.enCurso != nil || !YouTube.subiendo.isEmpty { Ventana.shared.enviarEstado() }
+                let v = Ventana.shared
+                guard v.ventana?.isVisible == true, Procesador.enCurso != nil || !YouTube.subiendo.isEmpty else { return }
+                let firma = Ventana.firmaAvance([Procesador.enCurso].compactMap { $0 } + YouTube.subiendo.sorted())
+                guard firma != v.ultimaFirma else { return }
+                v.ultimaFirma = firma
+                v.enviarEstado()
             }
         }
+    }
+
+    private var ultimaFirma = ""
+
+    /// Lo mismo que firmaAvance en escritorio/src/avance.js: estado.json y youtube.json de las carpetas activas, tal cual.
+    static func firmaAvance(_ carpetas: [String]) -> String {
+        var vistas = Set<String>()
+        return carpetas.filter { vistas.insert($0).inserted }.map { c in
+            let u = URL(fileURLWithPath: c)
+            let leer = { (n: String) in (try? String(contentsOf: u.appendingPathComponent(n), encoding: .utf8)) ?? "" }
+            return [c, leer("estado.json"), leer("youtube.json")].joined(separator: "\u{1}")
+        }.joined(separator: "\u{2}")
     }
 
     // MARK: Hacia la interfaz

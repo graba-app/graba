@@ -26,7 +26,7 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
 | `herramientas/` | `empaquetar.sh` (arma `dist/Graba.app` + zip + `.sha256`) y `revisar_privacidad.sh`. |
 | `build.sh` | Empaqueta e instala en `~/Applications/Graba.app` (se niega si hay una grabación o un procesamiento en curso). |
 | `instalar.sh` | Instalador de un comando (`curl … \| bash`): última Release, verifica SHA-256, instala. |
-| `pruebas/` | `correr.sh` (todo), `test_python.py`, `contrato.py`, `interfaz.mjs`. |
+| `pruebas/` | `correr.sh` (todo), `test_python.py`, `contrato.py`, `avance.mjs` (la ventana se refresca solo si cambia el avance), `interfaz.mjs`. |
 | `escritorio/` | App de **Windows y Linux** (Electron): misma `ui/` y mismo `bin/`. Ver "Windows y Linux" abajo. |
 | `instalar.ps1` | Instalador de un comando para Windows (`irm … \| iex`). |
 | `docs/` | Página pública (GitHub Pages). |
@@ -55,6 +55,8 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
   `recortar.py preparar` → corte → `recortar.py textos <inicio> <fin>`. «Volver al original» devuelve video y textos.
 - **Terminar:** se cierra el archivo, se extrae `audio.wav` (16 kHz mono) y se encola `bin/procesar.py <carpeta> <salida.json>`,
   que va dejando el avance en `estado.json` (`procesando`, `paso`/`total`, `texto`) y al final `estado: lista` o `error`.
+  Mientras tanto la ventana revisa cada segundo la firma del avance (`estado.json` y `youtube.json` de las carpetas activas:
+  `firmaAvance` en `Ventana.swift` y `escritorio/src/avance.js`) y solo manda el estado completo cuando cambia.
 - **IA:** `ia.ejecutar_ia(prompt)` en una carpeta temporal y modo solo lectura. La respuesta debe tener los marcadores de
   `procesar.MARCADORES` (siempre en español); si faltan, no se escribe nada y queda `error` con la transcripción guardada (botón Reintentar).
   Los capítulos se corrigen solos (orden, duración, primero en 00:00).
