@@ -55,7 +55,7 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
   `recortar.py preparar` → corte → `recortar.py textos <inicio> <fin>`. «Volver al original» devuelve video y textos.
 - **Terminar:** se cierra el archivo, se extrae `audio.wav` (16 kHz mono) y se encola `bin/procesar.py <carpeta> <salida.json>`,
   que va dejando el avance en `estado.json` (`procesando`, `paso`/`total`, `texto`) y al final `estado: lista` o `error`.
-- **IA:** `ia.ejecutar_ia(prompt)` en una carpeta temporal y modo solo lectura. La respuesta debe tener los marcadores de
+- **IA:** `ia.ejecutar_ia(prompt)` en una carpeta temporal y modo solo lectura (pedido por la entrada estándar o en un archivo). La respuesta debe tener los marcadores de
   `procesar.MARCADORES` (siempre en español); si faltan, no se escribe nada y queda `error` con la transcripción guardada (botón Reintentar).
   Los capítulos se corrigen solos (orden, duración, primero en 00:00).
 - **Datos:** `~/Graba/<AAAA-MM-DD HHMM - Título>/` y `~/Graba/.graba/` (`config.json`, `modelos/`). La carpeta `~/Graba` no
@@ -93,7 +93,10 @@ para la vista previa. `pruebas/contrato.py` lo revisa.
 - Contenido del usuario (títulos, notas, transcripción) con `esc()` y `data-sin-traducir`.
 - **Seguridad** (ver `SECURITY.md`): `ui/index.html` tiene una CSP sin código en línea (no agregues `onclick=`, `<script>` en
   línea ni recursos de otros dominios). La IA corre solo con texto (`ia.claude_solo_texto`: sin MCP y sin herramientas, o solo
-  `Read` con archivos adjuntos). Las ventanas de Electron van con `sandbox: true` y la de Mac solo navega dentro de `ui/`. En los
+  `Read` con archivos adjuntos copiados como `material-N.ext`), sin la memoria de Claude ni variables `GRABA_*`, y el pedido nunca
+  va como argumento (Antigravity: siempre en `instrucciones.md`). Nunca se reintenta quitando protecciones: `ia._soporta` pregunta
+  `--help` y, si falta una, se falla pidiendo actualizar la IA. El puente (Swift y cada `ipcMain.on`) solo acepta el marco principal
+  de la página propia; las actualizaciones, solo URLs de `esDescargaNuestra` y todo lo variable de un script bash con `comillas()`. Las ventanas de Electron van con `sandbox: true` y la de Mac solo navega dentro de `ui/`. En los
   workflows: actions fijadas por SHA (Dependabot las sube), permisos mínimos, `persist-credentials: false`, nunca
   `pull_request_target` ni `${{ … }}` dentro de `run:`.
 - Antes de cerrar un cambio: `bash pruebas/correr.sh` y mirar la interfaz (`cd ui && python3 -m http.server 8765`, `?idioma=en`,
