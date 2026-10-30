@@ -110,9 +110,19 @@ def transcribir(carpeta):
     hilos = str(max(2, min(8, (os.cpu_count() or 4) - 1)))
     cmd = [binario, "-m", modelo, "-l", ia.C.get("idioma_audio") or "auto", "-t", hilos, "-f", audio, "-oj",
            "-of", os.path.join(carpeta, "transcripcion"), "-np"]
-    if vocabulario():
-        cmd += ["--prompt", ", ".join(vocabulario()[-40:])]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=4 * 3600)
+    # El vocabulario (nombres, términos) ayuda a whisper. Va en un archivo, nunca como argumento (cualquier programa del
+    # computador ve los argumentos): graba-transcribir lo lee con --prompt-archivo. whisper-cli (Windows y Linux) no sabe
+    # leerlo de un archivo; ahí solo lo usa la IA al escribir las notas.
+    archivo_prompt = os.path.join(carpeta, ".vocabulario.txt")
+    if vocabulario() and os.path.basename(binario).lower().startswith("graba-transcribir"):
+        with open(archivo_prompt, "w", encoding="utf-8") as f:
+            f.write(", ".join(vocabulario()[-40:]))
+        cmd += ["--prompt-archivo", archivo_prompt]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=4 * 3600)
+    finally:
+        if os.path.exists(archivo_prompt):
+            os.remove(archivo_prompt)
     if r.returncode != 0 or not os.path.exists(os.path.join(carpeta, "transcripcion.json")):
         raise RuntimeError("La transcripción falló: " + (r.stderr or "")[-300:])
     os.remove(audio)  # ya no hace falta: el video tiene el audio original
