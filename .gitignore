@@ -30,3 +30,7 @@ escritorio/dist/
 __pycache__/
 .terminos-privados
 capturas/
+
+# Pieza: la descripción de la app y las piezas que usa
+!/app.json
+!/piezas.json

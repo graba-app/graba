@@ -322,6 +322,11 @@
     "Falta ffmpeg para recortar.": "ffmpeg is needed to trim.",
     "No pude recortar el video.": "I couldn't trim the video.",
     "No encontré el video.": "I couldn't find the video.",
-    "El recorte no es válido.": "The trim isn't valid."
+    "El recorte no es válido.": "The trim isn't valid.",
+    "No encontré {ia} en este computador. Revisa en Ajustes → Tu IA.": "I couldn't find {ia} on this computer. Check Settings → Your AI.",
+    "{ia} se demoró demasiado en responder. Inténtalo de nuevo.": "{ia} took too long to answer. Please try again.",
+    "{ia} no respondió. {detalle}": "{ia} didn't answer. {detalle}",
+    "No conozco esa IA.": "I don't know that AI.",
+    "Idioma": "Language"
   }
 }

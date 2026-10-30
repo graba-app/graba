@@ -16,30 +16,19 @@ import sys
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import ia  # noqa: E402
+import comun  # noqa: E402
+import ia  # noqa: E402  (pieza «ia»)
 
 PASOS = 3
 MARCADORES = ["## Resumen", "## Notas", "## Guion para YouTube", "## Para publicar", "### Títulos", "### Descripción", "### Capítulos"]
 
 
-def guardar_json(ruta, datos):
-    # Solo la persona puede leerlo (0600): a veces lleva un token (youtube.py conectar) y la salida va a la carpeta temporal.
-    tmp = ruta + ".tmp"
-    with open(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w", encoding="utf-8") as f:
-        json.dump(datos, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, ruta)
+guardar_json = comun.guardar_json  # atómico; un archivo nuevo, solo para la persona (0600)
+leer_json = comun.leer_json
 
 
 def estado(carpeta, estado_, paso=0, texto="", error=""):
     guardar_json(os.path.join(carpeta, "estado.json"), {"estado": estado_, "paso": paso, "total": PASOS, "texto": texto, "error": error})
-
-
-def leer_json(ruta, defecto=None):
-    try:
-        with open(ruta, encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return defecto
 
 
 # ───────────── Tiempos ─────────────
@@ -91,7 +80,7 @@ def segmentos(carpeta):
 def vocabulario():
     """Palabras que la persona corrigió antes (corregir.py): ayudan a transcribir y a escribir bien nombres y términos."""
     try:
-        with open(os.path.join(ia.INTERNO, "vocabulario.txt"), encoding="utf-8") as f:
+        with open(os.path.join(comun.INTERNO, "vocabulario.txt"), encoding="utf-8") as f:
             return [l.strip() for l in f if l.strip()][-60:]
     except OSError:
         return []
@@ -101,14 +90,15 @@ def transcribir(carpeta):
     audio = os.path.join(carpeta, "audio.wav")
     if not os.path.exists(audio):
         return  # grabación sin micrófono: queda como "sin voz"
-    modelo = os.path.join(ia.MODELOS, ia.ARCHIVOS_MODELO.get(ia.C["modelo"], ia.ARCHIVOS_MODELO["turbo"]))
+    c = comun.config()
+    modelo = os.path.join(comun.MODELOS, comun.ARCHIVOS_MODELO.get(c["modelo"], comun.ARCHIVOS_MODELO["turbo"]))
     if not os.path.exists(modelo):
         raise RuntimeError("Falta el modelo de transcripción: descárgalo en Ajustes.")
-    binario = ia.herramienta("graba-transcribir") or ia.herramienta("whisper-cli")
+    binario = comun.herramienta("graba-transcribir") or comun.herramienta("whisper-cli")
     if not binario:
         raise RuntimeError("No encontré el transcriptor.")
     hilos = str(max(2, min(8, (os.cpu_count() or 4) - 1)))
-    cmd = [binario, "-m", modelo, "-l", ia.C.get("idioma_audio") or "auto", "-t", hilos, "-f", audio, "-oj",
+    cmd = [binario, "-m", modelo, "-l", c.get("idioma_audio") or "auto", "-t", hilos, "-f", audio, "-oj",
            "-of", os.path.join(carpeta, "transcripcion"), "-np"]
     # El vocabulario (nombres, términos) ayuda a whisper. Va en un archivo, nunca como argumento (cualquier programa del
     # computador ve los argumentos): graba-transcribir lo lee con --prompt-archivo. whisper-cli (Windows y Linux) no sabe
@@ -205,7 +195,7 @@ def interpretar(respuesta, duracion):
     titulo = (m.group(1).strip().strip("\"«»*") if m else "")[:80]
     faltan = [x for x in MARCADORES if x not in texto]
     if faltan or not titulo:
-        raise RuntimeError(f"La respuesta de {ia.NOMBRE_IA} vino incompleta (falta {', '.join(faltan) or 'el título'}). Prueba «Regenerar».")
+        raise RuntimeError(f"La respuesta de {comun.nombre_ia()} vino incompleta (falta {', '.join(faltan) or 'el título'}). Prueba «Regenerar».")
     cuerpo = texto[texto.index("## Resumen"):]
     cap = re.search(r"### Capítulos\n(.*?)(?=\n### |\Z)", cuerpo, re.S)
     if cap:
@@ -227,7 +217,7 @@ def escribir_grabacion(carpeta, meta, titulo, cuerpo, segs):
         f"hora: {fecha.strftime('%H:%M')}",
         f"duracion_seg: {int(meta.get('duracion_seg', 0))}",
         f"titulo: {json.dumps(titulo, ensure_ascii=False)}",
-        f"ia: {ia.IA}",
+        f"ia: {ia.elegida()}",
         "tags: [graba]",
         "---",
     ]
@@ -256,10 +246,10 @@ def procesar(carpeta, solo_ia=False):
         cuerpo = "## Resumen\nNo se escuchó voz en esta grabación, así que no hay notas ni guion.\n"
         return escribir_grabacion(carpeta, meta, meta.get("titulo") or "Grabación sin voz", cuerpo, segs)
     estado(carpeta, "procesando", 2, "Tu IA está escribiendo las notas y el guion…")
-    r = ia.ejecutar_ia(prompt_para(segs, duracion))
-    if r.returncode != 0 or not (r.stdout or "").strip():
-        raise RuntimeError(f"{ia.NOMBRE_IA} no respondió: " + ((r.stderr or "").strip()[-300:] or "sin detalle") + ". ¿Tiene la sesión iniciada?")
-    titulo, cuerpo = interpretar(r.stdout, duracion)
+    texto, error = ia.preguntar(prompt_para(segs, duracion), timeout=900)
+    if error:
+        raise RuntimeError(comun.error_ia(error) + (" ¿Tiene la sesión iniciada?" if error["codigo"] == "sin_respuesta" else ""))
+    titulo, cuerpo = interpretar(texto, duracion)
     estado(carpeta, "procesando", 3, "Guardando…")
     return escribir_grabacion(carpeta, meta, titulo, cuerpo, segs)
 
