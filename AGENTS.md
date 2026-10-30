@@ -9,7 +9,7 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
 
 **Principios que no se negocian**
 1. **Todo es del usuario.** Videos, transcripciones y textos viven en su computador (`~/Graba`). No hay servidores propios.
-2. **Gratis y abierto** (MIT). Sin cuentas, sin suscripciones, sin telemetría.
+2. **Gratis y abierto** (AGPL-3.0). Sin cuentas, sin suscripciones, sin telemetría.
 3. **Nada personal en el código.** Ejemplos y `ui/demo.json` con datos ficticios (Ana Pérez, Matías Soto…).
 4. **Formato abierto.** Cada grabación es una carpeta con `video.mp4`, `grabacion.md` y `subtitulos.srt` (ver README, "Formato de las
    grabaciones"). No cambies nombres de campos ni marcadores sin compatibilidad y sin actualizar el README.
