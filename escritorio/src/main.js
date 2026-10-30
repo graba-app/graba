@@ -304,17 +304,26 @@ async function fallo(mensaje) {
   mostrar({ aviso: `${t("No pude grabar:")} ${mensaje}` });
 }
 
-ipcMain.on("grabadora-lista", (_e, d) => Estado.esperando.lista?.(d));
-ipcMain.on("grabadora-detenida", (_e, d) => Estado.esperando.detenida?.(d || {}));
-ipcMain.on("grabadora-video", (_e, buf) => { if (Estado.video != null) try { fs.writeSync(Estado.video, buf); } catch {} });
-ipcMain.on("grabadora-pcm", (_e, buf) => {
-  if (!Estado.microfono) return;
+/** El mensaje viene del marco principal de una página propia (graba://app/… o graba://ui/…), nunca de un iframe ni de otra página. */
+function esDeLaApp(e, origen) {
+  return !!e.senderFrame && e.senderFrame === e.sender.mainFrame && String(e.senderFrame.url || "").startsWith(origen);
+}
+/** El mensaje viene de la ventana `w` (y de su página propia). */
+const desde = (w, e, origen = "graba://app/") => !!w && !w.isDestroyed() && e.sender === w.webContents && esDeLaApp(e, origen);
+
+ipcMain.on("grabadora-lista", (e, d) => { if (desde(grabadora, e)) Estado.esperando.lista?.(d); });
+ipcMain.on("grabadora-detenida", (e, d) => { if (desde(grabadora, e)) Estado.esperando.detenida?.(d || {}); });
+ipcMain.on("grabadora-video", (e, buf) => {
+  if (desde(grabadora, e) && buf instanceof Uint8Array && Estado.video != null) try { fs.writeSync(Estado.video, buf); } catch {}
+});
+ipcMain.on("grabadora-pcm", (e, buf) => {
+  if (!desde(grabadora, e) || !(buf instanceof Uint8Array) || !Estado.microfono) return;
   const n = Math.floor(buf.length / 2) * 2;
   Estado.microfono.escribir(buf.subarray(0, n));
 });
-ipcMain.on("grabadora-cortada", () => detener());
-ipcMain.on("dispositivos", (_e, lista) => Estado.esperando.dispositivos?.(lista));
-ipcMain.on("burbuja-sin-camara", () => { cerrar(burbuja); burbuja = null; });
+ipcMain.on("grabadora-cortada", (e) => { if (desde(grabadora, e)) detener(); });
+ipcMain.on("dispositivos", (e, lista) => { if (desde(grabadora, e)) Estado.esperando.dispositivos?.(lista); });
+ipcMain.on("burbuja-sin-camara", (e) => { if (desde(burbuja, e)) { cerrar(burbuja); burbuja = null; } });
 
 function crearGrabadora() {
   grabadora = new BrowserWindow({ show: false, width: 320, height: 240, skipTaskbar: true,
@@ -357,7 +366,8 @@ function ubicarBarra() {
   const a = Estado.pantalla.workArea, { ancho, alto } = tamanoBarra;
   barra.setBounds({ x: Math.round(a.x + a.width / 2 - ancho / 2), y: Math.round(a.y + a.height - alto - 22), width: ancho, height: alto });
 }
-ipcMain.on("barra-tamano", (_e, d) => {
+ipcMain.on("barra-tamano", (e, d) => {
+  if (!desde(barra, e)) return;
   const ancho = Math.min(1200, Math.max(60, Number(d && d.ancho) || 0)), alto = Math.min(120, Math.max(30, Number(d && d.alto) || 0));
   if (ancho === tamanoBarra.ancho && alto === tamanoBarra.alto) return;
   tamanoBarra = { ancho, alto };
@@ -451,7 +461,7 @@ const ACCIONES_BARRA = {
   cerrar() { cancelar(); },
 };
 ipcMain.on("barra", (e, accion, d) => {
-  if (!barra || e.sender !== barra.webContents || !Object.hasOwn(ACCIONES_BARRA, accion)) return;
+  if (!desde(barra, e) || typeof accion !== "string" || !Object.hasOwn(ACCIONES_BARRA, accion)) return;
   if (Estado.fase !== "preparando" && !["terminar", "cerrar", "pausar"].includes(accion)) return;
   ACCIONES_BARRA[accion](d);
 });
@@ -481,7 +491,7 @@ function elegirArea() {
   area.on("closed", () => { area = null; });
 }
 ipcMain.on("area-elegida", (e, r) => {
-  if (!area || e.sender !== area.webContents) return;
+  if (!desde(area, e)) return;
   cerrar(area); area = null;
   const n = (v) => Math.max(0, Number(v) || 0);
   if (r && n(r.ancho) >= 40 && n(r.alto) >= 40) { Estado.area = { x: n(r.x), y: n(r.y), ancho: n(r.ancho), alto: n(r.alto) }; elegirModo("area"); }
@@ -534,12 +544,13 @@ function mostrarTeleprompter(pantalla) {
   teleprompter.on("closed", () => { teleprompter = null; });
 }
 const enTeleprompter = (d) => { if (teleprompter && !teleprompter.isDestroyed()) teleprompter.webContents.send("teleprompter", d); };
-ipcMain.on("teleprompter-ajustes", (_e, d) => {
+ipcMain.on("teleprompter-ajustes", (e, d) => {
+  if (!desde(teleprompter, e)) return;
   const v = Number(d && d.velocidad), l = Number(d && d.letra);
   if (v >= 5 && v <= 120 && l >= 14 && l <= 56) Config.guardar({ teleprompter_velocidad: v, teleprompter_letra: l });
 });
 ipcMain.on("teleprompter-texto", (e, texto) => {
-  if (teleprompter && e.sender === teleprompter.webContents && typeof texto === "string") Config.guardar({ teleprompter_texto: texto.slice(0, 200000) });
+  if (desde(teleprompter, e) && typeof texto === "string") Config.guardar({ teleprompter_texto: texto.slice(0, 200000) });
 });
 
 function ocultarFlotantes() {
@@ -752,8 +763,9 @@ const ACCIONES = {
 };
 
 ipcMain.on("graba", async (e, msg) => {
-  if (!ventana || e.sender !== ventana.webContents) return; // solo la ventana principal habla con el puente
-  const fn = msg && Object.hasOwn(ACCIONES, msg.accion) && ACCIONES[msg.accion];
+  // Solo la ventana principal, su marco principal y la interfaz propia (graba://ui/) hablan con el puente.
+  if (!ventana || ventana.isDestroyed() || e.sender !== ventana.webContents || !esDeLaApp(e, "graba://ui/")) return;
+  const fn = msg && typeof msg.accion === "string" && Object.hasOwn(ACCIONES, msg.accion) && ACCIONES[msg.accion];
   if (!fn) return;
   try { await fn(msg.datos || {}); } catch (err) { console.error("Graba:", msg.accion, err); }
 });
