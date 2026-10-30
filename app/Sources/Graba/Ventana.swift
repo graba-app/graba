@@ -130,6 +130,9 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavig
     // MARK: Desde la interfaz
 
     func userContentController(_ c: WKUserContentController, didReceive mensaje: WKScriptMessage) {
+        // Solo la interfaz local (el marco principal, un archivo de ui/: la navegación de arriba no deja cargar otra cosa) puede
+        // pedirle cosas a la app; una página de internet o un iframe, nunca.
+        guard mensaje.frameInfo.isMainFrame, mensaje.frameInfo.securityOrigin.protocol == "file" else { return }
         guard let m = mensaje.body as? [String: Any], let accion = m["accion"] as? String else { return }
         let d = m["datos"] as? [String: Any] ?? [:]
         let ruta = d["ruta"] as? String ?? ""

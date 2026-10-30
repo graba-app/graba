@@ -53,7 +53,6 @@ C = config()
 IA = C["ia"] if C["ia"] in IAS else "claude"
 NOMBRE_IA = IAS[IA][1]
 COMANDO = next((r for r in map(shutil.which, IAS[IA][0]) if r), IAS[IA][0][0])
-ES_AGY = os.path.basename(COMANDO).lower().split(".")[0] in ("agy", "antigravity")
 
 
 #: Claude Code sin servidores MCP y sin herramientas (o, si hay archivos adjuntos, solo «Read» para leer sus copias en la
@@ -63,49 +62,91 @@ def claude_solo_texto(con_archivos=False):
     return ["--strict-mcp-config", "--tools", "Read" if con_archivos else ""]  # --tools al final: acepta varios valores
 
 
-def _opcion_desconocida(r):
-    """¿El CLI es antiguo y no conoce --tools o --strict-mcp-config? (entonces se reintenta sin ellas)."""
-    err = (r.stderr or "").lower()
-    return r.returncode != 0 and ("unknown option" in err or "unrecognized" in err) and ("--tools" in err or "--strict-mcp-config" in err)
+#: Claude Code carga la memoria de la persona (CLAUDE.md, memoria automática) aunque corra sin herramientas. Esto la apaga.
+SIN_MEMORIA_CLAUDE = {"CLAUDE_CODE_DISABLE_CLAUDE_MDS": "1", "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"}
+#: Antigravity no lee la entrada estándar: el pedido va en instrucciones.md y en -p solo va esta frase fija.
+INSTRUCCION_ARCHIVO = ("Lee el archivo instrucciones.md de esta carpeta (y el material que menciona) y haz exactamente lo que pide. "
+                       "Entrega solo el resultado pedido, sin comentarios. No modifiques ni crees archivos.")
+_ayuda = {}
+
+
+def es_agy(cmd=None):
+    return os.path.basename(cmd or COMANDO).lower().split(".")[0] in ("agy", "antigravity")
+
+
+ES_AGY = es_agy()
+
+
+def _soporta(cmd, opcion):
+    """Si el CLI conoce una opción. Se pregunta `--help` una vez por comando; nunca se reintenta quitando protecciones."""
+    try:
+        e = os.stat(cmd)
+        clave = (cmd, e.st_mtime_ns, e.st_size)  # si el CLI se actualiza, se vuelve a preguntar
+    except OSError:
+        clave = (cmd,)
+    if clave not in _ayuda:
+        try:
+            r = subprocess.run([cmd, "--help"], stdin=subprocess.DEVNULL, capture_output=True, text=True, encoding="utf-8",
+                               errors="replace", timeout=20, env=_entorno())
+            _ayuda[clave] = (r.stdout or "") + (r.stderr or "")
+        except (OSError, subprocess.SubprocessError):
+            _ayuda[clave] = ""
+    return opcion in _ayuda[clave]
+
+
+def _entorno():
+    """La IA no recibe las variables de Graba (rutas, modos de prueba): solo lo necesario para correr."""
+    return {k: v for k, v in os.environ.items() if not k.upper().startswith("GRABA_")}
+
+
+def nombre_copia(k, ruta):
+    """Nombre de la copia de un archivo adjunto en la carpeta de la IA (k desde 0): material-1.pdf, material-2.png…"""
+    return f"material-{k + 1}{os.path.splitext(ruta)[1].lower()}"
+
+
+def _sin_proteccion(cmd, falta):
+    """Un CLI viejo que no conoce una protección no se usa sin ella: se avisa para que la persona lo actualice."""
+    return subprocess.CompletedProcess(cmd, 1, "", f"Actualiza {NOMBRE_IA} para usarla con Graba (no conoce {falta})")
 
 
 def ejecutar_ia(prompt, timeout=900, archivos=()):
     """Le pasa el prompt a la IA del usuario y devuelve un CompletedProcess (stdout = respuesta).
     Corre en una carpeta temporal y en modo solo lectura: la IA ve solo el texto que le damos y, si se indican, copias de
-    los archivos que la persona adjuntó (para que los lea con su propia cuenta)."""
+    los archivos que la persona adjuntó (material-1.pdf…, ver nombre_copia). El pedido nunca va como argumento del proceso
+    (cualquier programa del computador puede ver los argumentos): va por la entrada estándar o en un archivo."""
+    entorno = _entorno()
     with tempfile.TemporaryDirectory(prefix="graba-ia-") as tmp:
-        for a in archivos:
+        for k, a in enumerate(archivos):
             try:
-                shutil.copy2(a, os.path.join(tmp, os.path.basename(a)))
+                shutil.copy2(a, os.path.join(tmp, nombre_copia(k, a)))
             except OSError:
                 pass
         if IA == "codex":
             salida = os.path.join(tmp, "respuesta.txt")
             cmd = [COMANDO, "exec", "--skip-git-repo-check", "-s", "read-only", "-C", tmp, "-o", salida, "-"]
-            r = subprocess.run(cmd, input=prompt, text=True, encoding="utf-8", capture_output=True, timeout=timeout, cwd=tmp)
+            r = subprocess.run(cmd, input=prompt, text=True, encoding="utf-8", capture_output=True, timeout=timeout, cwd=tmp, env=entorno)
             texto = open(salida, encoding="utf-8").read() if os.path.exists(salida) else ""
             return subprocess.CompletedProcess(cmd, r.returncode, texto, r.stderr)
-        if IA == "gemini" and ES_AGY:
-            # Prompts largos en un archivo: la línea de comandos tiene límite.
-            if len(prompt) < 20000:
-                pedido = prompt
-            else:
-                with open(os.path.join(tmp, "instrucciones.md"), "w", encoding="utf-8") as f:
-                    f.write(prompt)
-                pedido = ("Lee el archivo instrucciones.md de esta carpeta y haz exactamente lo que pide. "
-                          "Entrega solo el resultado pedido, sin comentarios. No modifiques ni crees archivos.")
-            cmd = [COMANDO, "--output-format", "text", "--sandbox", "--add-dir", tmp, "-p", pedido]
-            return subprocess.run(cmd, stdin=subprocess.DEVNULL, text=True, encoding="utf-8", capture_output=True, timeout=timeout, cwd=tmp)
+        if IA == "gemini" and es_agy():
+            # Siempre en un archivo (también los pedidos cortos): en -p solo va una frase fija.
+            with open(os.path.join(tmp, "instrucciones.md"), "w", encoding="utf-8") as f:
+                f.write(prompt)
+            cmd = [COMANDO, "--output-format", "text", "--sandbox", "--add-dir", tmp, "-p", INSTRUCCION_ARCHIVO]
+            return subprocess.run(cmd, stdin=subprocess.DEVNULL, text=True, encoding="utf-8", capture_output=True, timeout=timeout,
+                                  cwd=tmp, env=entorno)
         if IA == "gemini":
             cmd = [COMANDO, "-p", "Responde a las instrucciones de arriba. Entrega solo el resultado pedido.", "-o", "text"]
-        else:
-            base = [COMANDO, "-p", "--output-format", "text"]
-            r = subprocess.run(base + claude_solo_texto(bool(archivos)), input=prompt, text=True, encoding="utf-8",
-                               capture_output=True, timeout=timeout, cwd=tmp)
-            if _opcion_desconocida(r):
-                r = subprocess.run(base, input=prompt, text=True, encoding="utf-8", capture_output=True, timeout=timeout, cwd=tmp)
-            return r
-        return subprocess.run(cmd, input=prompt, text=True, encoding="utf-8", capture_output=True, timeout=timeout, cwd=tmp)
+            return subprocess.run(cmd, input=prompt, text=True, encoding="utf-8", capture_output=True, timeout=timeout, cwd=tmp, env=entorno)
+        # Claude Code: sin MCP, sin herramientas (o solo Read) y sin la memoria de la persona. Si no conoce una protección, no corre.
+        cmd = [COMANDO, "-p", "--output-format", "text"]
+        for opcion in ("--strict-mcp-config", "--tools"):
+            if not _soporta(COMANDO, opcion):
+                return _sin_proteccion(cmd, opcion)
+        if _soporta(COMANDO, "--safe-mode"):
+            cmd.append("--safe-mode")
+        cmd += claude_solo_texto(bool(archivos))
+        return subprocess.run(cmd, input=prompt, text=True, encoding="utf-8", capture_output=True, timeout=timeout, cwd=tmp,
+                              env={**entorno, **SIN_MEMORIA_CLAUDE})
 
 
 def herramienta(nombre):
