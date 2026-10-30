@@ -339,6 +339,44 @@ class IASoloTexto(unittest.TestCase):
             self.assertEqual(f.read(), "pedido corto")
 
 
+class Vocabulario(unittest.TestCase):
+    def test_va_en_archivo_y_no_como_argumento(self):
+        # El vocabulario llega a graba-transcribir en un archivo (nunca como argumento) y el archivo no queda en la carpeta.
+        vocab = os.path.join(DATOS, ".graba", "vocabulario.txt")
+        previo = None
+        if os.path.exists(vocab):
+            with open(vocab, encoding="utf-8") as f:
+                previo = f.read()
+        with open(vocab, "w", encoding="utf-8") as f:
+            f.write("Matías Soto\nPresupuestario\n")
+        args, leido = os.path.join(DATOS, "args-t.txt"), os.path.join(DATOS, "vocab-t.txt")
+        ruta = os.path.join(FALSOS, "graba-transcribir")
+        with open(ruta, encoding="utf-8") as f:
+            original = f.read()
+        with open(ruta, "w", encoding="utf-8") as f:
+            f.write("#!/usr/bin/env python3\nimport sys,shutil\na=sys.argv\nopen(" + repr(args) + ",'w').write('\\n'.join(a))\n"
+                    "if '--prompt-archivo' in a: shutil.copy(a[a.index('--prompt-archivo')+1], " + repr(leido) + ")\n"
+                    "open(a[a.index('-of')+1]+'.json','w').write('{}')\n")
+        c = nueva_grabacion()
+        try:
+            procesar.transcribir(c)
+        finally:
+            with open(ruta, "w", encoding="utf-8") as f:
+                f.write(original)
+            if previo is None:
+                os.remove(vocab)
+            else:
+                with open(vocab, "w", encoding="utf-8") as f:
+                    f.write(previo)
+        with open(args, encoding="utf-8") as f:
+            argv = f.read()
+        self.assertNotIn("Matías", argv)
+        self.assertNotIn("--prompt\n", argv + "\n")
+        with open(leido, encoding="utf-8") as f:
+            self.assertEqual(f.read(), "Matías Soto, Presupuestario")
+        self.assertFalse(os.path.exists(os.path.join(c, ".vocabulario.txt")))
+
+
 class JSONPrivado(unittest.TestCase):
     def test_solo_la_persona_lo_lee(self):
         # La salida de youtube.py conectar lleva el token y va a la carpeta temporal: 0600.
