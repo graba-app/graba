@@ -97,9 +97,10 @@ def main():
         archivos = [a for a in (e.get("archivos") or []) if isinstance(a, str) and os.path.isfile(a)]
         if not idea.strip() and not archivos:
             return procesar.guardar_json(salida, {"ok": False, "error": "Cuéntame la idea o agrega un archivo."})
-        extraidos = "\n\n".join(f"--- {os.path.basename(a)} ---\n{t}" for a in archivos if (t := texto_de(a).strip()))
-        r = ia.ejecutar_ia(prompt_para(idea, minutos, e.get("para") or "youtube", [os.path.basename(a) for a in archivos], extraidos),
-                           archivos=archivos)
+        # En la carpeta de la IA las copias se llaman material-1.pdf…: el nombre original va solo como texto, para que se entienda.
+        nombres = [f"{ia.nombre_copia(k, a)} ({os.path.basename(a)})" for k, a in enumerate(archivos)]
+        extraidos = "\n\n".join(f"--- {n} ---\n{t}" for n, a in zip(nombres, archivos) if (t := texto_de(a).strip()))
+        r = ia.ejecutar_ia(prompt_para(idea, minutos, e.get("para") or "youtube", nombres, extraidos), archivos=archivos)
         respuesta = re.sub(r"^```\w*\n|\n```\s*$", "", (r.stdout or "").strip())
         if r.returncode != 0 or "===GUION===" not in respuesta:
             detalle = (r.stderr or "").strip()[-300:] if r.returncode != 0 else "la respuesta no vino en el formato esperado"
