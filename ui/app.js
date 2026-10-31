@@ -37,7 +37,7 @@
   // ───────────── Tema y componentes: piezas «tema» (ui/tema.js + tema.css) y «componentes» (diálogos, avisos, Tu IA, actualizaciones, Acerca de) ─────────────
   const tema = PiezaTema.crear({ guardar: (v) => { E.config.tema = v; host.enviar("config", { tema: v }); } });
   const ui = PiezaComponentes.crear({
-    i18n, host, app: "Graba", repo: "graba-app/graba", get version() { return E.version; },
+    i18n, host, app: "Graba", repo: "graba-app/graba", version: () => E.version,
     pintar: () => render(),
     cerrar: cerrarDialogo,                          // Esc, el velo o ✕ sobre un diálogo de Graba
     retener: () => E.bv === 0,                      // en la pantalla de idioma no se muestra nada más
@@ -645,9 +645,9 @@
     modeloProgreso(r) { E.descarga = { id: r.id, pct: r.pct }; render(); },
     modeloListo(r) { E.descarga = null; if (r.ok) { E.config.modelo = r.id; toast("Descargado"); } else toast(r.error || "No se pudo descargar"); render(); },
     _probar(f) { f(E); render(); },
+    // Para las pruebas (pruebas/interfaz.mjs).
+    _pruebas: { parsearGrabacion, mdHTML, reloj, paraTeleprompter, ui },
   });
-  // Para las pruebas (pruebas/interfaz.mjs): host.responder solo suma funciones, así que esto va aparte.
-  window.Graba._pruebas = { parsearGrabacion, mdHTML, reloj, paraTeleprompter, ui };
 
   // ───────────── Vista previa en el navegador (datos ficticios de demo.json) ─────────────
   // host-ui la llama con (accion, datos, c): c.responder("x", json) hace lo que la app (una copia JSON a window.Graba.x) y

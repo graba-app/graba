@@ -114,6 +114,27 @@ for (const esquema of ["light", "dark"]) {
   for (const [n, r] of Object.entries(c.pares)) if (r < 4.5) falla(`modo ${modo}: ${n} no pasa AA (${r.toFixed(2)})`);
   await p.close();
 }
+// Borrar una grabación: el foco queda en «Cancelar» (un Enter apurado no borra) y un error en un diálogo se ve rojo, también sobre el vidrio.
+for (const vidrio of [false, true]) {
+  const p = await navegador.newPage({ viewport: { width: 390, height: 780 }, colorScheme: "dark" });
+  await p.goto(BASE); await p.waitForSelector(".pz-boton.grabar");
+  if (vidrio) await p.evaluate(() => document.documentElement.classList.add("vidrio"));
+  await p.evaluate(() => { window.Graba._pruebas.ui.confirmar({ titulo: "¿Borrar esta grabación?", texto: "x", si: "Mover a la Papelera", peligro: true }); });
+  await p.waitForSelector("[data-pz-confirmar=no]");
+  await p.waitForTimeout(80);
+  const r = await p.evaluate(() => {
+    const no = document.querySelector("[data-pz-confirmar=no]"), si = document.querySelector("[data-pz-confirmar=si]");
+    const color = (el) => getComputedStyle(el).color, fondo = (el) => getComputedStyle(el).backgroundColor;
+    return { foco: document.activeElement === no, si: [color(si), fondo(si)] };
+  });
+  const lado = vidrio ? "con vidrio" : "sin vidrio";
+  if (!r.foco) falla(`${lado}: al confirmar borrar, el foco debería quedar en «Cancelar»`);
+  if (/, 0\)$/.test(r.si[0]) || r.si[0] === r.si[1]) falla(`${lado}: el texto del botón de borrar no se ve (${r.si})`);
+  await p.keyboard.press("Enter");
+  if (await p.$("[data-pz-confirmar]")) falla(`${lado}: Enter en «Cancelar» no cerró el diálogo`);
+  await p.close();
+}
+console.log("  ✓ Al confirmar borrar, el foco queda en «Cancelar»");
 await navegador.close();
 servidor.close();
 if (errores.length) { console.log(`\n✗ ${errores.length} problemas`); process.exit(1); }

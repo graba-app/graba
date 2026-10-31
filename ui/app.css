@@ -1,4 +1,4 @@
-/* Colores de Graba como pares de la pieza «tema» (ui/tema.css va antes y resuelve claro u oscuro con light-dark()).
+/* Colores de Graba como pares de la pieza «tema» (ui/tema.css va antes y resuelve claro u oscuro).
    Rojo y verde con el mismo tono de antes, un poco más oscuros: pasan AA como texto. */
 :root {
   --fondo-claro: #f6f5f9; --fondo-oscuro: #121116; --panel-claro: #ffffff; --panel-oscuro: #1b1a21; --panel-2-claro: #efedf4; --panel-2-oscuro: #16151b;
@@ -18,9 +18,7 @@ h1, h2, h3 { margin: 0; line-height: 1.25; }
    igual que la barra de grabación y el teleprompter. */
 html.vidrio { --fondo: transparent; --panel: light-dark(rgba(255, 255, 255, .62), rgba(255, 255, 255, .055));
   --panel-2: light-dark(rgba(255, 255, 255, .22), rgba(0, 0, 0, .16)); --linea: light-dark(rgba(20, 16, 40, .09), rgba(255, 255, 255, .085));
-  --campo: light-dark(rgba(255, 255, 255, .55), rgba(0, 0, 0, .22)); --solido: light-dark(rgba(250, 249, 252, .9), rgba(30, 29, 37, .88));
-  /* Lo que va encima de un color (texto del aviso, botón de borrar): un fondo sólido, nunca el transparente. */
-  --solido-texto: light-dark(var(--fondo-claro), var(--fondo-oscuro)); }
+  --campo: light-dark(rgba(255, 255, 255, .55), rgba(0, 0, 0, .22)); --solido: light-dark(rgba(250, 249, 252, .9), rgba(30, 29, 37, .88)); }
 html.vidrio, html.vidrio body { background: transparent; }
 html.vidrio .item[aria-current="true"] { background: var(--acento-suave); box-shadow: none; }
 /* Los diálogos de la pieza «componentes» sobre el vidrio: casi sólidos y difuminados, con el velo más suave. */
@@ -28,7 +26,6 @@ html.vidrio .pz-dialogo { background: var(--solido); -webkit-backdrop-filter: bl
 html.vidrio .pz-capa { background: rgba(10, 8, 20, .3); }
 html.vidrio textarea, html.vidrio input.texto, html.vidrio select, html.vidrio .pz-campo input, html.vidrio .pz-campo textarea { background: var(--campo); }
 html.vidrio .pz-boton:not(.pz-principal):not(.grabar), html.vidrio .pz-chip { background: var(--panel); }
-html.vidrio .pz-toast:not(.pz-error), html.vidrio .pz-boton.pz-principal.pz-peligro, html.vidrio .pz-toast.pz-error { color: var(--solido-texto); }
 html.vidrio .pz-seg button[aria-pressed="true"] { background: var(--solido); }
 html.vidrio video { box-shadow: 0 10px 40px -12px rgba(0, 0, 0, .55); }
 /* En el navegador (vista previa) se simula el escritorio detrás del vidrio. */
@@ -201,5 +198,3 @@ html.vidrio .tarjeta-idioma { background: var(--solido); -webkit-backdrop-filter
 .pz-boton.chico { padding: 3px 9px; font-size: 12px; }
 .recorte .acciones { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .aviso-recorte { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--texto-suave); margin: 0 0 14px; }
-/* Un error dentro de un diálogo: «.pz-dialogo p» lo dejaría gris. */
-.pz-dialogo p.pz-error-texto { color: var(--rojo); }
