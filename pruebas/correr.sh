@@ -7,4 +7,5 @@ echo "Sintaxis"; node --check ui/app.js; node --check ui/i18n.js; python3 -m py_
 echo "Privacidad"; bash herramientas/revisar_privacidad.sh --generico
 echo "Contrato"; python3 pruebas/contrato.py
 echo "Python"; python3 pruebas/test_python.py 2>&1 | tail -3
+echo "Avance"; node pruebas/avance.mjs
 echo "Interfaz"; node pruebas/interfaz.mjs

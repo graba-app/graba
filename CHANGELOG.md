@@ -21,3 +21,7 @@ Lo que cambia para quien usa Graba, en palabras simples. Las versiones anteriore
   *Graba is safer with your AI: it never runs it without its protections (if your Claude is too old, it doesn't run),
   doesn't pass it your Claude memory or the app's internal data, and what it asks is no longer visible to other programs.
   Updates are only downloaded from Graba's official releases on GitHub.*
+- Mientras una grabación se procesa o se sube, Graba ya no vuelve a leer todas tus grabaciones cada segundo: solo actualiza la
+  ventana cuando el avance cambia. Menos trabajo para tu computador, sobre todo con muchas grabaciones.
+  *While a recording is processing or uploading, Graba no longer rereads all your recordings every second: it only updates the
+  window when the progress changes. Less work for your computer, especially with many recordings.*
