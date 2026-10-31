@@ -80,6 +80,11 @@
   "youtube_categoria": {
    "tipo": "texto",
    "interfaz": false
-  }
+  },
+  "tema": [
+   "sistema",
+   "claro",
+   "oscuro"
+  ]
  }
 }

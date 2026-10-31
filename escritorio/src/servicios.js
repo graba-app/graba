@@ -24,7 +24,7 @@ const Config = {
   /** Claves que la interfaz puede cambiar con la acción "config": las de app.json sin "interfaz": false (igual que Config.editables en
    *  Servicios.swift; pruebas/test_python.py revisa que las tres listas digan lo mismo). */
   editables: ["ia", "modelo", "idioma_audio", "idioma_ui", "camara", "microfono", "teleprompter", "teleprompter_texto", "teleprompter_velocidad", "teleprompter_letra",
-    "youtube_privacidad", "youtube_auto", "youtube_client_id", "youtube_client_secret"],
+    "youtube_privacidad", "youtube_auto", "youtube_client_id", "youtube_client_secret", "tema"],
   leer() { return { ...this.porDefecto, ...(leerJSON(CONFIG, {}) || {}) }; },
   guardar(cambios) {
     const d = { ...this.leer(), ...(cambios || {}) };

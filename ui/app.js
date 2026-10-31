@@ -2,29 +2,22 @@
 // La app manda el estado con window.Graba.estado(json); la interfaz pide cosas con host.enviar(accion, datos).
 (() => {
   "use strict";
-  const HOST = window.GRABA_HOST || "web";
+  // ───────────── Puente con la app: pieza «host-ui» (ui/host.js). En el navegador responde simular() (más abajo). ─────────────
+  // host.plataforma es "mac" | "windows" | "linux" | "web" y queda en <html data-host>.
+  const host = PiezaHost.crearHost({ nombre: "graba", global: "Graba", simular: (accion, d, c) => simular(accion, d, c) });
+  const HOST = host.plataforma;
   // Vidrio: fondo translúcido como la barra de grabación (lo pone el sistema: Mac y Windows 11). En el navegador, ?vidrio para verlo.
-  document.documentElement.dataset.host = HOST;
   if (window.GRABA_VIDRIO || new URLSearchParams(location.search).has("vidrio")) document.documentElement.classList.add("vidrio");
   const E = {
     fase: "inactiva", grabaciones: [], config: {}, ias: [], modelos: { lista: [] }, permisos: {}, carpeta: "", version: "", procesando: null,
-    sel: null, pestana: "notas", ajustes: false, bv: null, bvCerrada: false, probando: {}, resultadoIA: {}, descarga: null,
-    borrar: null, idioma: "es", idiomaFoco: null, actualizacion: { hay: false }, act: null, buscando: null, youtube: { conectado: false }, conectandoYT: false,
+    sel: null, pestana: "notas", ajustes: false, bv: null, bvCerrada: false, descarga: null,
+    idioma: "es", idiomaFoco: null, actualizacion: { hay: false }, youtube: { conectado: false }, conectandoYT: false,
   };
   const ENLACES = { sitio: "https://graba-app.github.io/graba/", codigo: "https://github.com/graba-app/graba",
-    comunidad: "https://github.com/graba-app/graba/discussions", guiaIA: "https://graba-app.github.io/graba/ia.html" };
+    comunidad: "https://github.com/graba-app/graba/discussions", aportar: "https://github.com/graba-app/graba/blob/main/CONTRIBUTING.md",
+    guiaIA: "https://graba-app.github.io/graba/ia.html" };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-  // ───────────── Puente con la app ─────────────
-  const host = {
-    enviar(accion, datos = {}) {
-      const msg = { accion, datos };
-      if (window.webkit?.messageHandlers?.graba) return window.webkit.messageHandlers.graba.postMessage(msg);
-      if (window.grabaEscritorio) return window.grabaEscritorio.enviar(msg);
-      return simular(accion, datos);
-    },
-  };
 
   // ───────────── Idiomas: pieza «i18n» (ui/i18n.js; las claves son el texto en español) ─────────────
   // tr y traducirDOM traducen lo ya pintado (nunca [data-sin-traducir], código ni textarea); Tp arma una frase con marcadores en
@@ -40,26 +33,20 @@
     await i18n.cargar(i18n.elegir({ elegido: idiomaElegido, config: E.config.idioma_ui }));
     E.idioma = i18n.idioma;
   }
-  /** Los errores de la IA llegan con su código (pieza «ia»): se traducen enteros, con sus valores. Las mismas frases que ERRORES de bin/ia.py. */
-  const ERRORES_IA = {
-    no_instalada: "No encontré {ia} en este computador. Revisa en Ajustes → Tu IA.",
-    demora: "{ia} se demoró demasiado en responder. Inténtalo de nuevo.",
-    sin_respuesta: "{ia} no respondió. {detalle}",
-    desconocida: "No conozco esa IA.",
-  };
-  const errorIA = (r) => (ERRORES_IA[r.codigo] ? Tp(ERRORES_IA[r.codigo], { ia: "", detalle: "", ...(r.valores || {}) }).trim() : r.texto || "");
 
-  function toast(texto) {
-    if (E.bv === 0) return; // en la pantalla de idioma no se muestra nada más
-    const t = $("#toast");
-    t.textContent = tr(texto);
-    t.classList.add("visible");
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => t.classList.remove("visible"), 1900);
-  }
+  // ───────────── Tema y componentes: piezas «tema» (ui/tema.js + tema.css) y «componentes» (diálogos, avisos, Tu IA, actualizaciones, Acerca de) ─────────────
+  const tema = PiezaTema.crear({ guardar: (v) => { E.config.tema = v; host.enviar("config", { tema: v }); } });
+  const ui = PiezaComponentes.crear({
+    i18n, host, app: "Graba", repo: "graba-app/graba", version: () => E.version,
+    pintar: () => render(),
+    cerrar: cerrarDialogo,                          // Esc, el velo o ✕ sobre un diálogo de Graba
+    retener: () => E.bv === 0,                      // en la pantalla de idioma no se muestra nada más
+    elegirIA: (id) => { E.config.ia = id; },        // la app ya la guardó al probarla bien
+  });
+  /** Avisos: la frase en español (se traduce) o, con { traducido: true }, el texto tal cual (lo que ya viene traducido de la app). */
+  const toast = (texto, o) => ui.aviso(texto, o);
   function copiar(texto, aviso = "Copiado") {
     host.enviar("copiar", { texto });
-    if (HOST === "web") navigator.clipboard?.writeText(texto).catch(() => {});
     toast(aviso);
   }
 
@@ -130,38 +117,40 @@
       return;
     }
     const scroll = $(".principal-area")?.scrollTop || 0;
-    raiz.innerHTML = `<div class="app">${lateral()}<main class="principal-area" data-pagina>${avisoActualizacion()}${principal()}</main></div>${dialogos()}`;
+    raiz.innerHTML = `<div class="app">${lateral()}<main class="principal-area" data-pagina>${avisoActualizacion()}${principal()}</main></div>${dialogos()}${ui.capas()}`;
     traducirDOM(raiz);
     const area = $(".principal-area"); if (area) area.scrollTop = scroll;
+    ui.despuesDePintar();
   }
 
-  /** Versión nueva: aviso discreto arriba (nunca una alerta del sistema) y, al actualizar, el avance por pasos. */
+  /** Versión nueva: aviso discreto arriba (nunca una alerta del sistema) y, al actualizar, el avance por pasos. El estado es el de la
+   *  pieza «componentes» (ui.act: el mismo que la fila de Ajustes); los botones son los suyos (data-pz-act). */
   function avisoActualizacion() {
-    const a = E.act;
-    if (a) {
-      const error = a.paso === "error", pct = a.pct ?? (Number(a.paso) || 0) / 3 * 100;
+    const a = ui.act.estado;
+    if (a && typeof a === "object") {
+      const error = a.paso === "error", pct = a.pct ?? (Number(a.paso) || 0) / (a.total || 3) * 100;
       return `<div class="aviso-act ${error ? "error" : ""}" role="status"><div class="txt"><b>${error ? "No se pudo actualizar" : "Actualizando Graba"}</b>
         <span data-sin-traducir>${esc(a.texto || "")}</span>${error ? "" : `<div class="barra ${a.paso === "1" ? "indef" : ""}"><i style="width:${Math.round(pct)}%"></i></div>`}</div>
-        ${error ? `<button class="boton" data-accion="act-cerrar">Cerrar</button><button class="boton principal" data-accion="actualizar">Reintentar</button>` : ""}</div>`;
+        ${error ? `<button class="pz-boton" data-accion="act-cerrar">Cerrar</button><button class="pz-boton pz-principal" data-pz-act="instalar">Reintentar</button>` : ""}</div>`;
     }
-    if (!E.actualizacion?.hay || E.actOculto) return "";
+    if (!ui.act.disponible || E.actOculto) return "";
     return `<div class="aviso-act" role="status"><div class="txt"><b>Hay una versión nueva de Graba</b>
-      <span data-sin-traducir>${esc((E.actualizacion.detalle || "").split("\n")[0])}</span></div>
-      <button class="boton" data-accion="act-despues">Después</button><button class="boton principal" data-accion="actualizar">Actualizar</button></div>`;
+      <span data-sin-traducir>${esc((ui.act.disponible.notas || "").split("\n")[0])}</span></div>
+      <button class="pz-boton" data-accion="act-despues">Después</button><button class="pz-boton pz-principal" data-pz-act="instalar">Actualizar</button></div>`;
   }
 
   /** El botón Grabar dice siempre lo mismo que la barra de grabación: grabar solo empieza con su botón rojo. */
   function botonGrabar(grande) {
     const g = grande ? " grande" : "";
     if (E.fase === "grabando") {
-      const pausa = `<button class="boton pausa" data-accion="pausar" title="${E.pausada ? "Reanudar la grabación" : "Pausar la grabación"}" aria-label="${E.pausada ? "Reanudar la grabación" : "Pausar la grabación"}">${E.pausada ? "▶" : "❚❚"}</button>`;
-      return `<span class="grupo-grabar"><button class="boton grabar${g}" data-accion="terminar" title="Terminar y guardar"><span class="cuadro"></span><span>Terminar</span><span class="reloj-vivo">${E.pausada ? "En pausa" : reloj(segundosGrabando())}</span></button>${pausa}</span>`;
+      const pausa = `<button class="pz-boton pausa" data-accion="pausar" title="${E.pausada ? "Reanudar la grabación" : "Pausar la grabación"}" aria-label="${E.pausada ? "Reanudar la grabación" : "Pausar la grabación"}">${E.pausada ? "▶" : "❚❚"}</button>`;
+      return `<span class="grupo-grabar"><button class="pz-boton grabar${g}" data-accion="terminar" title="Terminar y guardar"><span class="cuadro"></span><span>Terminar</span><span class="reloj-vivo">${E.pausada ? "En pausa" : reloj(segundosGrabando())}</span></button>${pausa}</span>`;
     }
     if (E.fase === "cuenta" || E.fase === "terminando") {
-      return `<button class="boton grabar${g}" disabled><span class="punto"></span><span>${E.fase === "cuenta" ? "Empezando…" : "Guardando…"}</span></button>`;
+      return `<button class="pz-boton grabar${g}" disabled><span class="punto"></span><span>${E.fase === "cuenta" ? "Empezando…" : "Guardando…"}</span></button>`;
     }
     const nota = E.fase === "preparando" && grande ? `<p class="nota-grabar">La barra de grabación está abierta: toca su botón rojo para empezar.</p>` : "";
-    return `<button class="boton grabar${g}" data-accion="grabar"><span class="punto"></span><span>Grabar</span></button>${nota}`;
+    return `<button class="pz-boton grabar${g}" data-accion="grabar"><span class="punto"></span><span>Grabar</span></button>${nota}`;
   }
   const segundosGrabando = () => (E.pausada ? E.segundos : E.grabandoDesde ? (Date.now() - E.grabandoDesde) / 1000 : 0);
   // El reloj del botón avanza solo, sin volver a pintar toda la ventana.
@@ -188,7 +177,7 @@
           <button class="alternar" data-alternar="camara" aria-pressed="${!!E.config.camara}">📷 <span>Cámara</span></button>
           <button class="alternar" data-alternar="microfono" aria-pressed="${!!E.config.microfono}">🎙️ <span>Micrófono</span></button>
         </div>
-        <button class="boton secundario-ancho" data-accion="guion-nuevo">✨ <span>Preparar un guion</span></button>
+        <button class="pz-boton secundario-ancho" data-accion="guion-nuevo">✨ <span>Preparar un guion</span></button>
       </div>
       <nav class="lista" aria-label="Grabaciones">${E.grabaciones.length ? `<h2>Tus grabaciones</h2>${items}` : ""}</nav>
     </aside>`;
@@ -207,8 +196,8 @@
         <small>${paso ? `Paso ${paso} de ${total}` : "Preparando…"}</small></div>`;
     } else if (e === "error") {
       cuerpo = `<div class="progreso error-caja"><p data-sin-traducir>${esc(t.estado.error || tr("Algo falló al procesar."))}</p>
-        <div class="acciones"><button class="boton principal" data-accion="reintentar">Reintentar</button>
-        <button class="boton" data-accion="ajustes">Revisar ajustes</button></div></div>`;
+        <div class="acciones"><button class="pz-boton pz-principal" data-accion="reintentar">Reintentar</button>
+        <button class="pz-boton" data-accion="ajustes">Revisar ajustes</button></div></div>`;
     } else {
       cuerpo = pestanas(t, p);
     }
@@ -223,7 +212,7 @@
         </div></div>
       <div class="meta" data-sin-traducir>${esc(fechaCorta(m.inicio))}${m.duracion_seg ? " · " + reloj(m.duracion_seg) : ""}</div>
       ${t.video ? `<video id="video" controls preload="metadata" src="${esc(t.video + (t.video.includes("?") ? "&" : "?") + "v=" + (t.version || 0))}"></video>` : ""}
-      ${E.recorte && E.recorte.ruta === t.ruta ? panelRecorte(t) : t.recortada && e === "lista" ? `<div class="aviso-recorte"><span>Esta grabación está recortada. El original quedó guardado.</span><button class="boton" data-accion="deshacer-recorte">Volver al original</button></div>` : ""}
+      ${E.recorte && E.recorte.ruta === t.ruta ? panelRecorte(t) : t.recortada && e === "lista" ? `<div class="aviso-recorte"><span>Esta grabación está recortada. El original quedó guardado.</span><button class="pz-boton" data-accion="deshacer-recorte">Volver al original</button></div>` : ""}
       ${cuerpo}</div>`;
   }
 
@@ -239,14 +228,14 @@
         <input type="range" id="recorte-fin" data-recorte="fin" min="0" max="${dur}" step="0.1" value="${r.fin}" aria-label="Final del recorte" aria-valuetext="${reloj(r.fin)}">
       </div>
       <div class="tiempos-recorte">
-        <span>Inicio: <b id="recorte-t-inicio" data-sin-traducir>${reloj(r.inicio)}</b> <button class="boton chico" data-accion="recorte-marcar-inicio">Marcar donde va el video</button></span>
-        <span>Final: <b id="recorte-t-fin" data-sin-traducir>${reloj(r.fin)}</b> <button class="boton chico" data-accion="recorte-marcar-fin">Marcar donde va el video</button></span>
+        <span>Inicio: <b id="recorte-t-inicio" data-sin-traducir>${reloj(r.inicio)}</b> <button class="pz-boton chico" data-accion="recorte-marcar-inicio">Marcar donde va el video</button></span>
+        <span>Final: <b id="recorte-t-fin" data-sin-traducir>${reloj(r.fin)}</b> <button class="pz-boton chico" data-accion="recorte-marcar-fin">Marcar donde va el video</button></span>
         <span>Duración final: <b id="recorte-t-queda" data-sin-traducir>${reloj(Math.max(0, r.fin - r.inicio))}</b></span>
       </div>
-      ${r.error ? `<p class="error-txt" data-sin-traducir>${esc(r.error)}</p>` : ""}
-      <div class="acciones"><button class="boton" data-accion="recorte-ver">Ver cómo empieza</button>
-        <button class="boton" data-accion="recorte-cancelar" ${r.enviando ? "disabled" : ""}>Cancelar</button>
-        <button class="boton principal" data-accion="recorte-aplicar" ${r.enviando || r.fin - r.inicio < 1 ? "disabled" : ""}>${r.enviando ? "Recortando…" : "Recortar"}</button></div></section>`;
+      ${r.error ? `<p class="pz-error-texto" data-sin-traducir>${esc(r.error)}</p>` : ""}
+      <div class="acciones"><button class="pz-boton" data-accion="recorte-ver">Ver cómo empieza</button>
+        <button class="pz-boton" data-accion="recorte-cancelar" ${r.enviando ? "disabled" : ""}>Cancelar</button>
+        <button class="pz-boton pz-principal" data-accion="recorte-aplicar" ${r.enviando || r.fin - r.inicio < 1 ? "disabled" : ""}>${r.enviando ? "Recortando…" : "Recortar"}</button></div></section>`;
   }
 
   const PESTANAS = [["notas", "Notas"], ["guion", "Guion"], ["youtube", "YouTube"], ["subtitulos", "Subtítulos"], ["transcripcion", "Transcripción"]];
@@ -254,7 +243,7 @@
     const barra = `<div class="pestanas" role="tablist">${PESTANAS.map(([id, n]) =>
       `<button class="pestana" role="tab" data-pestana="${id}" aria-selected="${E.pestana === id}">${n}</button>`).join("")}</div>`;
     const bloque = (titulo, html, texto) => `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>${titulo}</h3>
-      ${texto != null ? `<button class="boton" data-copiar="${esc(texto)}">Copiar</button>` : ""}</div><div class="md" data-sin-traducir>${html}</div></section>`;
+      ${texto != null ? `<button class="pz-boton" data-copiar="${esc(texto)}">Copiar</button>` : ""}</div><div class="md" data-sin-traducir>${html}</div></section>`;
     const s = p.secciones, pub = p.publicar;
     let html = "";
     if (E.pestana === "notas") {
@@ -262,27 +251,27 @@
     } else if (E.pestana === "guion") {
       const guion = s["Guion para YouTube"] || "";
       html = `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Guion para YouTube</h3>
-        <button class="boton" data-teleprompter="${esc(paraTeleprompter(guion))}" title="Para regrabarlo leyendo: solo tú lo ves">Usar en el teleprompter</button>
-        <button class="boton" data-copiar="${esc(guion)}">Copiar</button></div><div class="md" data-sin-traducir>${mdHTML(guion)}</div></section>`;
+        <button class="pz-boton" data-teleprompter="${esc(paraTeleprompter(guion))}" title="Para regrabarlo leyendo: solo tú lo ves">Usar en el teleprompter</button>
+        <button class="pz-boton" data-copiar="${esc(guion)}">Copiar</button></div><div class="md" data-sin-traducir>${mdHTML(guion)}</div></section>`;
     } else if (E.pestana === "youtube") {
       const titulos = (pub["Títulos"] || "").split("\n").map((l) => l.replace(/^\s*(\d+[.)]|[-*•])\s*/, "").trim()).filter(Boolean);
       const capitulos = pub["Capítulos"] || "", descripcion = pub["Descripción"] || "";
       const todo = [descripcion, capitulos].filter(Boolean).join("\n\n");
       html = publicarYouTube(t) + `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Títulos</h3></div>${titulos.map((x) =>
-        `<div class="titulo-opcion"><span data-sin-traducir>${esc(x)}</span><small>${x.length}/100</small><button class="boton" data-copiar="${esc(x)}">Copiar</button></div>`).join("")}</section>`
-        + `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Descripción con capítulos</h3><button class="boton principal" data-copiar="${esc(todo)}">Copiar</button></div>
+        `<div class="titulo-opcion"><span data-sin-traducir>${esc(x)}</span><small>${x.length}/100</small><button class="pz-boton" data-copiar="${esc(x)}">Copiar</button></div>`).join("")}</section>`
+        + `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Descripción con capítulos</h3><button class="pz-boton pz-principal" data-copiar="${esc(todo)}">Copiar</button></div>
           <pre class="bloque" data-sin-traducir>${esc(todo)}</pre></section>`
         + bloque("Etiquetas", `<p>${esc(pub["Etiquetas"] || "")}</p>`, pub["Etiquetas"] || "");
     } else if (E.pestana === "subtitulos") {
       html = `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Subtítulos (.srt)</h3>
-        <button class="boton" data-accion="carpeta">Mostrar el archivo</button></div>
+        <button class="pz-boton" data-accion="carpeta">Mostrar el archivo</button></div>
         <p>El archivo subtitulos.srt está en la carpeta de esta grabación. En YouTube Studio: Subtítulos → Agregar idioma → Subir archivo → "Con sincronización".</p></section>`;
     } else {
       const lineas = (s["Transcripción"] || "").split("\n").filter(Boolean).map((l) => {
         const m = l.match(/^\[((?:\d+:)?\d{1,2}:\d{2})\]\s*(.*)$/);
         return m ? `<p><time data-ir="${aSegundos(m[1])}">${esc(m[1])}</time>${esc(m[2])}</p>` : `<p>${esc(l)}</p>`;
       }).join("");
-      html = `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Transcripción</h3><button class="boton" data-copiar="${esc(s["Transcripción"] || "")}">Copiar</button></div>
+      html = `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Transcripción</h3><button class="pz-boton" data-copiar="${esc(s["Transcripción"] || "")}">Copiar</button></div>
         <div class="transcripcion" data-sin-traducir>${lineas}</div></section>`;
     }
     return barra + html;
@@ -297,18 +286,18 @@
     let cuerpo;
     if (y.estado === "lista") {
       cuerpo = `<p><span>Publicado en YouTube</span> · <span>${(PRIVACIDAD.find(([v]) => v === y.privacidad) || ["", "Privado"])[1]}</span></p>
-        ${y.aviso ? `<p class="error-txt" data-sin-traducir>${esc(y.aviso)}</p>` : ""}
-        <div class="acciones"><button class="boton principal" data-enlace="${esc(y.url)}">Abrir en YouTube</button><button class="boton" data-copiar="${esc(y.url)}">Copiar enlace</button></div>`;
+        ${y.aviso ? `<p class="pz-error-texto" data-sin-traducir>${esc(y.aviso)}</p>` : ""}
+        <div class="acciones"><button class="pz-boton pz-principal" data-pz-enlace="${esc(y.url)}">Abrir en YouTube</button><button class="pz-boton" data-copiar="${esc(y.url)}">Copiar enlace</button></div>`;
     } else if (y.estado === "subiendo") {
       cuerpo = `<p>Subiendo a YouTube…</p><div class="barra ${y.pct ? "" : "indef"}"><i style="width:${y.pct || 0}%"></i></div>`;
     } else if (!E.youtube.conectado && !E.youtube.disponible) {
       cuerpo = `<p>Muy pronto: subir directo a tu canal con un clic. Mientras, copia el título y la descripción de aquí abajo.</p>`;
     } else if (!E.youtube.conectado) {
       cuerpo = `<p>Conecta tu canal una vez y sube cada video con un clic: título, descripción con capítulos, etiquetas y subtítulos.</p>
-        <button class="boton" data-accion="yt-conectar" ${E.conectandoYT ? "disabled" : ""}>${E.conectandoYT ? "Abriendo tu navegador…" : "Conectar YouTube"}</button>`;
+        <button class="pz-boton" data-accion="yt-conectar" ${E.conectandoYT ? "disabled" : ""}>${E.conectandoYT ? "Abriendo tu navegador…" : "Conectar YouTube"}</button>`;
     } else {
-      cuerpo = `${y.estado === "error" ? `<p class="error-txt" data-sin-traducir>${esc(y.error || "")}</p>` : ""}
-        <div class="acciones">${selPrivacidad()}<button class="boton principal" data-accion="yt-subir">${y.estado === "error" ? "Reintentar" : "Subir a YouTube"}</button></div>
+      cuerpo = `${y.estado === "error" ? `<p class="pz-error-texto" data-sin-traducir>${esc(y.error || "")}</p>` : ""}
+        <div class="acciones">${selPrivacidad()}<button class="pz-boton pz-principal" data-accion="yt-subir">${y.estado === "error" ? "Reintentar" : "Subir a YouTube"}</button></div>
         <small class="nota-guion">Se sube con el primer título, la descripción con capítulos, las etiquetas y los subtítulos.</small>`;
     }
     return `<section class="tarjeta"><div class="tarjeta-cabeza"><h3>Publicar en YouTube</h3>${E.youtube.canal ? `<small data-sin-traducir>${esc(E.youtube.canal)}</small>` : ""}</div>${cuerpo}</section>`;
@@ -328,113 +317,94 @@
   }
 
   // ───────────── Ajustes y bienvenida ─────────────
-  function filasIA() {
-    return E.ias.map((ia) => {
-      const enUso = E.config.ia === ia.id, probando = E.probando[ia.id], r = E.resultadoIA[ia.id];
-      const estado = !ia.instalada ? `<small>No está instalada · <a href="#" data-enlace="${ENLACES.guiaIA}#${ia.id}">Cómo instalarla</a></small>`
-        : r && !r.ok ? `<small class="error-txt" data-sin-traducir>${esc(errorIA(r) || tr("No respondió."))}</small>` : `<small>Instalada</small>`;
-      const accion = enUso ? `<span class="ok">✓ En uso</span>` : ia.instalada
-        ? `<button class="boton" data-probar="${ia.id}" ${probando ? "disabled" : ""}>${probando ? "Probando…" : "Usar"}</button>` : "";
-      return `<div class="fila"><div class="txt"><b>${esc(ia.nombre)}</b>${estado}</div>${accion}</div>`;
-    }).join("");
-  }
+  const filasIA = () => ui.filasIA({ ias: E.ias, elegida: E.config.ia, guia: ENLACES.guiaIA });
   function filasModelo() {
     return (E.modelos.lista || []).map((m) => {
       const enUso = E.config.modelo === m.id && m.listo, bajando = E.descarga?.id === m.id;
-      const accion = enUso ? `<span class="ok">✓ En uso</span>` : m.listo ? `<button class="boton" data-modelo-usar="${m.id}">Usar</button>`
+      const accion = enUso ? `<span class="pz-ok">✓ En uso</span>` : m.listo ? `<button class="pz-boton" data-modelo-usar="${m.id}">Usar</button>`
         : bajando ? `<div style="width:120px"><div class="barra"><i style="width:${Math.round(E.descarga.pct * 100)}%"></i></div></div>`
-          : `<button class="boton" data-modelo="${m.id}" ${E.descarga ? "disabled" : ""}>Descargar · ${m.mb} MB</button>`;
+          : `<button class="pz-boton" data-modelo="${m.id}" ${E.descarga ? "disabled" : ""}>Descargar · ${m.mb} MB</button>`;
       const rec = m.id === E.modelos.recomendado ? ` <span class="chip">Recomendado</span>` : "";
-      return `<div class="fila"><div class="txt"><b>${esc(m.nombre)}${rec}</b><small>${esc(m.detalle)}</small></div>${accion}</div>`;
+      return `<div class="pz-fila"><div class="pz-txt"><b>${esc(m.nombre)}${rec}</b><small>${esc(m.detalle)}</small></div>${accion}</div>`;
     }).join("");
   }
   function filasPermisos() {
     return [["pantalla", "Grabar la pantalla", "Para que el video muestre lo que haces."], ["camara", "Cámara", "Para la burbuja con tu cara."],
       ["microfono", "Micrófono", "Para tu voz y la transcripción."]].map(([id, n, d]) =>
-      `<div class="fila"><div class="txt"><b>${n}</b><small>${d}</small></div>${E.permisos[id]
-        ? `<span class="ok">✓ Permitido</span>` : `<button class="boton" data-permiso="${id}">Permitir</button>`}</div>`).join("");
+      `<div class="pz-fila"><div class="pz-txt"><b>${n}</b><small>${d}</small></div>${E.permisos[id]
+        ? `<span class="pz-ok">✓ Permitido</span>` : `<button class="pz-boton" data-permiso="${id}">Permitir</button>`}</div>`).join("");
   }
   const IDIOMAS_AUDIO = [["auto", "Detectar solo"], ["es", "Español"], ["en", "Inglés"], ["pt", "Portugués"], ["fr", "Francés"], ["de", "Alemán"], ["it", "Italiano"]];
 
   const DURACIONES = [1, 2, 3, 5, 8, 10, 15];
   function dialogoGuion() {
     const g = E.guion;
-    const cab = `<h2 id="t-guion">Preparar un guion</h2>`;
-    if (g.paso === "creando") {
-      return `${cab}<p>Tu IA está escribiendo el guion…</p><div class="barra indef"><i></i></div>
-        <div class="pie-dialogo"><button class="boton" data-accion="cerrar-guion">Cerrar</button></div>`;
+        if (g.paso === "creando") {
+      return `<p>Tu IA está escribiendo el guion…</p><div class="barra indef"><i></i></div>
+        <div class="pz-pie"><button class="pz-boton" data-accion="cerrar-guion">Cerrar</button></div>`;
     }
     if (g.paso === "listo") {
       const palabras = (g.texto || "").replace(/\[[^\]]*\]/g, " ").split(/\s+/).filter(Boolean).length;
-      return `${cab}<p data-sin-traducir><b>${esc(g.titulo || "")}</b></p>
+      return `<p data-sin-traducir><b>${esc(g.titulo || "")}</b></p>
         <textarea id="guion-texto" rows="12" data-sin-traducir>${esc(g.texto || "")}</textarea>
         <p class="nota-guion">Unas ${palabras} palabras · cerca de ${Math.max(1, Math.round(palabras / 140))} min. Puedes editarlo aquí.</p>
-        <div class="pie-dialogo"><button class="boton" data-accion="guion-otra-vez">Volver a crear</button>
-          <button class="boton" data-accion="guion-guardar">Guardar en el teleprompter</button>
-          <button class="boton principal" data-accion="guion-grabar"><span class="punto"></span><span>Grabar con este guion</span></button></div>`;
+        <div class="pz-pie"><button class="pz-boton" data-accion="guion-otra-vez">Volver a crear</button>
+          <button class="pz-boton" data-accion="guion-guardar">Guardar en el teleprompter</button>
+          <button class="pz-boton pz-principal" data-accion="guion-grabar"><span class="punto"></span><span>Grabar con este guion</span></button></div>`;
     }
-    return `${cab}<p>Tu IA escribe lo que vas a decir, con el largo justo. Después lo lees en el teleprompter mientras grabas.</p>
-      <label class="campo"><span>¿De qué se trata?</span>
+    return `<p>Tu IA escribe lo que vas a decir, con el largo justo. Después lo lees en el teleprompter mientras grabas.</p>
+      <label class="pz-campo"><span>¿De qué se trata?</span>
         <textarea id="guion-idea" rows="4" placeholder="${esc(tr("Ej.: presento Graba a mi equipo: qué hace, cómo se usa y por qué es privada."))}" data-sin-traducir>${esc(g.idea || "")}</textarea></label>
       <div class="fila-campos">
-        <label class="campo"><span>Duración</span><select id="guion-min">${DURACIONES.map((m) => `<option value="${m}" ${Number(g.minutos) === m ? "selected" : ""}>${m} min</option>`).join("")}</select></label>
-        <label class="campo"><span>Para</span><select id="guion-para">${[["youtube", "YouTube"], ["presentacion", "Una presentación"], ["tutorial", "Un tutorial"]].map(([v, n]) =>
+        <label class="pz-campo"><span>Duración</span><select id="guion-min">${DURACIONES.map((m) => `<option value="${m}" ${Number(g.minutos) === m ? "selected" : ""}>${m} min</option>`).join("")}</select></label>
+        <label class="pz-campo"><span>Para</span><select id="guion-para">${[["youtube", "YouTube"], ["presentacion", "Una presentación"], ["tutorial", "Un tutorial"]].map(([v, n]) =>
           `<option value="${v}" ${g.para === v ? "selected" : ""}>${n}</option>`).join("")}</select></label>
       </div>
-      <div class="campo"><span>Archivos (opcional)</span>
+      <div class="pz-campo"><span>Archivos (opcional)</span>
         <div class="archivos">${(g.archivos || []).map((a, i) => `<span class="chip-archivo"><span data-sin-traducir>${esc(a.nombre)}</span><button data-quitar-archivo="${i}" aria-label="Quitar" title="Quitar">✕</button></span>`).join("")}
-          <button class="boton" data-accion="guion-archivos">＋ Agregar archivos</button></div>
+          <button class="pz-boton" data-accion="guion-archivos">＋ Agregar archivos</button></div>
         <small>PDF, PowerPoint, Word, texto o imágenes. Keynote: expórtalo a PDF primero.</small></div>
-      ${g.error ? `<p class="error-txt" data-sin-traducir>${esc(g.error)}</p>` : ""}
-      <div class="pie-dialogo"><button class="boton" data-accion="cerrar-guion">Cancelar</button>
-        <button class="boton principal" data-accion="guion-crear">Crear guion</button></div>`;
+      ${g.error ? `<p class="pz-error-texto" data-sin-traducir>${esc(g.error)}</p>` : ""}
+      <div class="pz-pie"><button class="pz-boton" data-accion="cerrar-guion">Cancelar</button>
+        <button class="pz-boton pz-principal" data-accion="guion-crear">Crear guion</button></div>`;
   }
 
   function dialogos() {
-    if (E.guion) return `<div class="capa"><div class="dialogo" role="dialog" aria-modal="true" aria-labelledby="t-guion">${dialogoGuion()}</div></div>`;
+    if (E.guion) return ui.dialogo({ id: "t-guion", titulo: "Preparar un guion", cuerpo: dialogoGuion() });
     if (E.corregir) {
       const c = E.corregir;
-      return `<div class="capa"><div class="dialogo" role="dialog" aria-modal="true" aria-labelledby="t-corregir">
-        <h2 id="t-corregir">Corregir con tu IA</h2>
-        <p>Dile qué está mal, en tus palabras. Corrige el título, las notas, el guion, la descripción y, si una palabra quedó mal transcrita, también los subtítulos. Graba la recuerda para las próximas veces.</p>
+      return ui.dialogo({ id: "t-corregir", titulo: "Corregir con tu IA", cerrable: !c.enviando, sinEsc: !!c.enviando, cuerpo: `<p>Dile qué está mal, en tus palabras. Corrige el título, las notas, el guion, la descripción y, si una palabra quedó mal transcrita, también los subtítulos. Graba la recuerda para las próximas veces.</p>
         <textarea id="corregir-texto" rows="4" placeholder="${esc(tr("Ej.: dice Grava y es Graba · el título tiene que hablar de presupuestos · el gancho más corto"))}" ${c.enviando ? "disabled" : ""} data-sin-traducir>${esc(c.texto || "")}</textarea>
-        ${c.error ? `<p class="error-txt" data-sin-traducir>${esc(c.error)}</p>` : ""}
-        <div class="pie-dialogo"><button class="boton" data-accion="cerrar">Cancelar</button>
-          <button class="boton principal" data-accion="enviar-correccion" ${c.enviando ? "disabled" : ""}>${c.enviando ? "Tu IA está corrigiendo…" : "Corregir"}</button></div></div></div>`;
-    }
-    if (E.borrar) {
-      return `<div class="capa"><div class="dialogo" role="dialog" aria-modal="true" aria-labelledby="t-borrar">
-        <h2 id="t-borrar">¿Borrar esta grabación?</h2><p>Se va a la Papelera con el video, las notas y los subtítulos. Puedes recuperarla desde ahí.</p>
-        <div class="pie-dialogo"><button class="boton" data-accion="cerrar">Cancelar</button><button class="boton peligro" data-accion="confirmar-borrar">Mover a la Papelera</button></div></div></div>`;
+        ${c.error ? `<p class="pz-error-texto" data-sin-traducir>${esc(c.error)}</p>` : ""}
+        <div class="pz-pie"><button class="pz-boton" data-accion="cerrar">Cancelar</button>
+          <button class="pz-boton pz-principal" data-accion="enviar-correccion" ${c.enviando ? "disabled" : ""}>${c.enviando ? "Tu IA está corrigiendo…" : "Corregir"}</button></div>` });
     }
     if (E.bv !== null) return bienvenida();
     if (!E.ajustes) return "";
     const sel = (clave, opciones) => `<select data-config="${clave}">${opciones.map(([v, n]) => `<option value="${v}" ${E.config[clave] === v ? "selected" : ""}>${n}</option>`).join("")}</select>`;
-    return `<div class="capa"><div class="dialogo" role="dialog" aria-modal="true" aria-labelledby="t-ajustes">
-      <h2 id="t-ajustes">Ajustes</h2><p>Todo se procesa en tu computador. La IA usa tu propia cuenta.</p>
+    return ui.dialogo({ id: "t-ajustes", titulo: "Ajustes", cuerpo: `<p>Todo se procesa en tu computador. La IA usa tu propia cuenta.</p>
       <div class="seccion"><h3>Tu IA</h3>${filasIA()}</div>
       <div class="seccion"><h3>Transcripción</h3>${filasModelo()}
-        <div class="fila"><div class="txt"><b>Idioma en que hablas</b><small>Si siempre hablas en el mismo, elegirlo mejora la transcripción.</small></div>${sel("idioma_audio", IDIOMAS_AUDIO)}</div></div>
+        <div class="pz-fila"><div class="pz-txt"><b>Idioma en que hablas</b><small>Si siempre hablas en el mismo, elegirlo mejora la transcripción.</small></div>${sel("idioma_audio", IDIOMAS_AUDIO)}</div></div>
       <div class="seccion"><h3>Permisos</h3>${filasPermisos()}</div>
       <div class="seccion"><h3>YouTube</h3>
-        ${E.youtube.conectado ? `<div class="fila"><div class="txt"><b>Conectado</b><small data-sin-traducir>${esc(E.youtube.canal || "")}</small></div><button class="boton" data-accion="yt-desconectar">Desconectar</button></div>
-          <div class="fila"><div class="txt"><b>Privacidad al subir</b><small>Puedes cambiarla después en YouTube Studio.</small></div>${selPrivacidad()}</div>
-          <div class="fila"><div class="txt"><b>Subir sola al terminar</b><small>Cada grabación nueva se sube apenas tu IA termina de escribir.</small></div>
+        ${E.youtube.conectado ? `<div class="pz-fila"><div class="pz-txt"><b>Conectado</b><small data-sin-traducir>${esc(E.youtube.canal || "")}</small></div><button class="pz-boton" data-accion="yt-desconectar">Desconectar</button></div>
+          <div class="pz-fila"><div class="pz-txt"><b>Privacidad al subir</b><small>Puedes cambiarla después en YouTube Studio.</small></div>${selPrivacidad()}</div>
+          <div class="pz-fila"><div class="pz-txt"><b>Subir sola al terminar</b><small>Cada grabación nueva se sube apenas tu IA termina de escribir.</small></div>
             <input type="checkbox" class="interruptor" data-config-bool="youtube_auto" ${E.config.youtube_auto ? "checked" : ""} aria-label="Subir sola al terminar"></div>`
-          : `<div class="fila"><div class="txt"><b>Tu canal</b><small>${E.youtube.disponible ? "Sube directo desde tu computador, con tu permiso. Lo puedes quitar cuando quieras." : "Muy pronto: subir directo a tu canal con un clic."}</small></div>
-            ${E.youtube.disponible ? `<button class="boton" data-accion="yt-conectar" ${E.conectandoYT ? "disabled" : ""}>${E.conectandoYT ? "Abriendo tu navegador…" : "Conectar YouTube"}</button>` : ""}</div>`}
+          : `<div class="pz-fila"><div class="pz-txt"><b>Tu canal</b><small>${E.youtube.disponible ? "Sube directo desde tu computador, con tu permiso. Lo puedes quitar cuando quieras." : "Muy pronto: subir directo a tu canal con un clic."}</small></div>
+            ${E.youtube.disponible ? `<button class="pz-boton" data-accion="yt-conectar" ${E.conectandoYT ? "disabled" : ""}>${E.conectandoYT ? "Abriendo tu navegador…" : "Conectar YouTube"}</button>` : ""}</div>`}
         <details class="avanzado"><summary>Usar mi propio proyecto de Google (avanzado)</summary>
           <p>Si subes muchos videos al día, crea un cliente OAuth de escritorio con la YouTube Data API v3 y pega sus datos aquí.</p>
           <input class="texto" data-config-texto="youtube_client_id" placeholder="ID de cliente" value="${esc(E.config.youtube_client_id || "")}" data-sin-traducir>
           <input class="texto" data-config-texto="youtube_client_secret" placeholder="Secreto del cliente" value="${esc(E.config.youtube_client_secret || "")}" data-sin-traducir></details></div>
       <div class="seccion"><h3>General</h3>
-        <div class="fila"><div class="txt"><b>Idioma de la app</b></div>${sel("idioma_ui", [["es", "Español"], ["en", "English"]])}</div>
-        <div class="fila"><div class="txt"><b>Carpeta de grabaciones</b><small data-sin-traducir>${esc(E.carpeta)}</small></div><button class="boton" data-accion="carpeta-base">Abrir</button></div></div>
-      <div class="seccion"><h3>Acerca de Graba</h3><p style="margin:0 0 8px;color:var(--suave)">Graba <span data-sin-traducir>${esc(E.version)}</span> · Gratis y de código abierto.</p>
-        <div class="fila"><div class="txt"><b>Actualizaciones</b><small>${E.buscando === "buscando" ? "Buscando…" : E.buscando === "alDia" ? "Estás en la última versión." : E.buscando === "sinConexion" ? "No pude revisar: ¿hay internet?" : E.actualizacion?.hay ? "Hay una versión nueva." : "Graba revisa sola cada 6 horas."}</small></div>
-          ${E.actualizacion?.hay ? `<button class="boton principal" data-accion="actualizar">Actualizar</button>` : `<button class="boton" data-accion="buscar-act" ${E.buscando === "buscando" ? "disabled" : ""}>Buscar actualizaciones</button>`}</div>
-        <div class="enlaces"><a href="#" data-enlace="${ENLACES.sitio}">Sitio web</a><a href="#" data-enlace="${ENLACES.codigo}">Código</a><a href="#" data-enlace="${ENLACES.comunidad}">Comunidad</a></div></div>
-      <div class="pie-dialogo"><button class="boton principal" data-accion="cerrar">Listo</button></div></div></div>`;
+        <div class="pz-fila"><div class="pz-txt"><b>Idioma de la app</b></div>${sel("idioma_ui", [["es", "Español"], ["en", "English"]])}</div>
+        <div class="pz-fila"><div class="pz-txt"><b>Apariencia</b></div>${tema.selectorHTML()}</div>
+        <div class="pz-fila"><div class="pz-txt"><b>Carpeta de grabaciones</b><small data-sin-traducir>${esc(E.carpeta)}</small></div><button class="pz-boton" data-accion="carpeta-base">Abrir</button></div></div>
+      <div class="seccion"><h3>Actualizaciones</h3>${ui.filaActualizacion()}</div>
+      <div class="seccion"><h3>Acerca de Graba</h3>${ui.acercaDe({ version: E.version, enlaces: ENLACES })}</div>`,
+      pie: `<button class="pz-boton pz-principal" data-accion="cerrar">Listo</button>` });
   }
 
   /** Paso 0 de la bienvenida: el idioma, antes que cualquier otra cosa. Cada opción va escrita en su propio idioma y no se traduce. */
@@ -468,21 +438,29 @@
       [`Permisos`, `macOS pide permiso para grabar la pantalla, la cámara y el micrófono. Puedes cambiarlos cuando quieras.`, filasPermisos(), true],
     ];
     const [titulo, texto, filas, puede] = pasos[paso];
-    return `<div class="capa"><div class="dialogo" role="dialog" aria-modal="true" aria-labelledby="t-bv">${marcas}
-      <h2 id="t-bv" tabindex="-1">${titulo}</h2><p>${texto}</p><div class="seccion">${filas}</div>
-      <div class="pie-dialogo"><button class="boton" data-bv="${paso - 1}">Atrás</button>
-        <button class="boton" data-accion="bv-despues">Lo hago después</button>
-        ${paso < 4 ? `<button class="boton principal" data-bv="${paso + 1}" ${puede ? "" : "disabled"}>Siguiente</button>`
-          : `<button class="boton principal" data-accion="bv-fin">Empezar</button>`}</div></div></div>`;
+    // La bienvenida no se cierra con Esc ni con el velo: tiene «Lo hago después».
+    return ui.dialogo({ id: "t-bv", titulo, cerrable: false, sinEsc: true, cuerpo: `${marcas}<p>${texto}</p><div class="seccion">${filas}</div>`, pie: `<button class="pz-boton" data-bv="${paso - 1}">Atrás</button>
+        <button class="pz-boton" data-accion="bv-despues">Lo hago después</button>
+        ${paso < 4 ? `<button class="pz-boton pz-principal" data-bv="${paso + 1}" ${puede ? "" : "disabled"}>Siguiente</button>`
+          : `<button class="pz-boton pz-principal" data-accion="bv-fin">Empezar</button>`}` });
   }
 
   // ───────────── Eventos ─────────────
+  /** Cierra el diálogo de Graba que está abierto (Esc, el velo, ✕ o «Cancelar»). Mientras la IA corrige, ese no se cierra. */
+  function cerrarDialogo() {
+    if (E.guion) E.guion = null;
+    else if (E.corregir) { if (!E.corregir.enviando) E.corregir = null; }
+    else E.ajustes = false;
+    render();
+  }
   document.addEventListener("click", (ev) => {
-    const el = ev.target.closest("[data-accion],[data-sel],[data-pestana],[data-copiar],[data-teleprompter],[data-quitar-archivo],[data-alternar],[data-probar],[data-modelo],[data-modelo-usar],[data-permiso],[data-bv],[data-enlace],[data-ir],[data-idioma-ui]");
+    // Primero lo de las piezas: apariencia, diálogos, Tu IA, actualizaciones, enlaces y comentarios.
+    if (tema.manejarClic(ev)) return render();
+    if (ui.manejarClic(ev)) return;
+    const el = ev.target.closest("[data-accion],[data-sel],[data-pestana],[data-copiar],[data-teleprompter],[data-quitar-archivo],[data-alternar],[data-modelo],[data-modelo-usar],[data-permiso],[data-bv],[data-ir],[data-idioma-ui]");
     if (!el) return;
     const d = el.dataset;
     if (d.idiomaUi) return elegirIdioma(d.idiomaUi === "en" ? "en" : "es");
-    if (d.enlace) { ev.preventDefault(); return host.enviar("abrirEnlace", { url: d.enlace }); }
     if (d.ir) { const v = $("#video"); if (v) { v.currentTime = Number(d.ir); v.play?.(); } return; }
     if (d.sel) { E.sel = d.sel; return render(); }
     if (d.pestana) { E.pestana = d.pestana; return render(); }
@@ -490,7 +468,6 @@
     if (d.quitarArchivo != null) { leerCamposGuion(); E.guion.archivos.splice(Number(d.quitarArchivo), 1); return render(); }
     if (d.teleprompter != null) { host.enviar("teleprompter", { texto: d.teleprompter }); return toast("Listo: lo verás en el teleprompter al grabar"); }
     if (d.alternar) { E.config[d.alternar] = !E.config[d.alternar]; host.enviar("config", { [d.alternar]: E.config[d.alternar] }); return render(); }
-    if (d.probar) { E.probando[d.probar] = true; delete E.resultadoIA[d.probar]; host.enviar("probarIA", { id: d.probar }); return render(); }
     if (d.modelo) { E.descarga = { id: d.modelo, pct: 0 }; host.enviar("descargarModelo", { id: d.modelo }); return render(); }
     if (d.modeloUsar) { E.config.modelo = d.modeloUsar; host.enviar("config", { modelo: d.modeloUsar }); return render(); }
     if (d.permiso) return host.enviar("permiso", { tipo: d.permiso });
@@ -521,14 +498,12 @@
         return render();
       case "deshacer-recorte": if (t) { host.enviar("deshacerRecorte", { ruta: t.ruta }); toast("Volviendo al original…"); } return;
       case "ajustes": E.ajustes = true; return render();
-      case "cerrar": E.ajustes = false; E.borrar = null; if (!E.corregir?.enviando) E.corregir = null; return render();
+      case "cerrar": return cerrarDialogo();
       case "yt-conectar": E.conectandoYT = true; host.enviar("youtubeConectar"); return render();
       case "yt-desconectar": host.enviar("youtubeDesconectar"); return;
       case "yt-subir": if (t) { t.youtube = { estado: "subiendo", pct: 0 }; host.enviar("youtubeSubir", { ruta: t.ruta }); } return render();
-      case "actualizar": E.act = { paso: "1", texto: tr("Descargando la versión nueva…") }; E.ajustes = false; host.enviar("actualizar"); return render();
-      case "act-cerrar": E.act = null; return render();
+      case "act-cerrar": ui.act.estado = null; return render();
       case "act-despues": E.actOculto = true; return render();
-      case "buscar-act": E.buscando = "buscando"; host.enviar("buscarActualizacion"); return render();
       case "guion-nuevo": E.guion = { paso: "pedir", idea: "", minutos: 3, para: "youtube", archivos: [] }; render(); return $("#guion-idea")?.focus();
       case "cerrar-guion": E.guion = null; return render();
       case "guion-archivos": leerCamposGuion(); return host.enviar("elegirArchivos");
@@ -555,11 +530,19 @@
       case "carpeta-base": return host.enviar("abrirCarpeta", {});
       case "regenerar": if (t) { host.enviar("procesar", { ruta: t.ruta, soloIA: true }); toast("Volviendo a escribir…"); } return;
       case "reintentar": if (t) host.enviar("procesar", { ruta: t.ruta, soloIA: !t.audio }); return;
-      case "borrar": E.borrar = t?.ruta || null; return render();
-      case "confirmar-borrar": host.enviar("borrar", { ruta: E.borrar }); E.borrar = null; E.sel = null; return render();
+      case "borrar": return borrar(t);
       case "bv-despues": case "bv-fin": E.bv = null; E.bvCerrada = true; return render();
     }
   });
+  async function borrar(t) {
+    if (!t) return;
+    const si = await ui.confirmar({ titulo: "¿Borrar esta grabación?", texto: "Se va a la Papelera con el video, las notas y los subtítulos. Puedes recuperarla desde ahí.",
+      si: "Mover a la Papelera", peligro: true });
+    if (!si) return;
+    host.enviar("borrar", { ruta: t.ruta });
+    if (E.sel === t.ruta) E.sel = null;
+    render();
+  }
   /** Mueve un tirador sin repintar todo (así el video no se recarga) y muestra ese cuadro. */
   function moverRecorte(cual, valor) {
     const r = E.recorte;
@@ -593,6 +576,7 @@
     render();
   });
   document.addEventListener("keydown", (ev) => {
+    if (ui.manejarTecla(ev)) return;   // Esc y Tab en los diálogos (pieza «componentes»)
     // Pantalla de idioma: las flechas pasan de una opción a la otra (Tab y Enter funcionan solos).
     const opcion = ev.target.closest?.("[data-idioma-ui]");
     if (opcion && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(ev.key)) {
@@ -601,13 +585,12 @@
       E.idiomaFoco = otra?.dataset.idiomaUi; otra?.focus();
       return;
     }
-    if (ev.key === "Escape" && E.recorte && !E.recorte.enviando && !E.ajustes && !E.borrar && !E.corregir && !E.guion) { E.recorte = null; return render(); }
-    if (ev.key === "Escape" && (E.ajustes || E.borrar || E.guion || (E.corregir && !E.corregir.enviando))) { E.ajustes = false; E.borrar = null; E.corregir = null; E.guion = null; render(); }
+    if (ev.key === "Escape" && E.recorte && !E.recorte.enviando && !document.querySelector('[aria-modal="true"]')) { E.recorte = null; return render(); }
     if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey) && E.corregir && !E.corregir.enviando) $("[data-accion=enviar-correccion]")?.click();
   });
 
   // ───────────── Lo que manda la app ─────────────
-  window.Graba = {
+  host.responder({
     async estado(e) {
       const antes = JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.pausada, E.ias, E.modelos, E.actualizacion, E.youtube]);
       Object.assign(E, { fase: e.fase, grabandoDesde: e.grabandoDesde || 0, pausada: !!e.pausada, segundos: e.segundos || 0, grabaciones: e.grabaciones || [], config: e.config || {}, ias: e.ias || [], modelos: e.modelos || { lista: [] },
@@ -624,14 +607,17 @@
       // Con la bienvenida pendiente, el idioma va primero (si ya lo eligió, se parte en el saludo).
       if (falta && E.bv === null && !E.bvCerrada) E.bv = E.config.idioma_ui ? 1 : 0;
       await cargarIdioma();
-      if (e.aviso) toast(e.aviso);
+      tema.aplicar(tema.elegir({ config: E.config.tema }));
+      ui.actualizacionDisponible(E.actualizacion.hay ? { ...E.actualizacion, notas: E.actualizacion.notas ?? E.actualizacion.detalle } : null);
+      if (e.aviso) toast(e.aviso, { traducido: true });
       // No se repinta si nada cambió (así el video no se reinicia cada segundo).
       if (JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.pausada, E.ias, E.modelos, E.actualizacion, E.youtube]) !== antes || e.seleccionar || !$("#app").innerHTML) render();
     },
     youtubeConectado(r) { E.conectandoYT = false; toast(r.ok ? "YouTube conectado" : (r.error || "No se pudo conectar")); render(); },
     youtubeSubido(r) { toast(r.ok ? "Subido a YouTube" : (r.error || "No se pudo subir")); render(); },
-    actualizacionRevisada(r) { E.buscando = r.hay ? null : r.sinConexion ? "sinConexion" : "alDia"; if (r.hay) { E.actualizacion = r; E.actOculto = false; } render(); },
-    actualizacionProgreso(d) { E.act = d; render(); },
+    // Actualizaciones: las lleva la pieza «componentes» (ui.act); Graba usa `detalle` como sus notas.
+    actualizacionRevisada(r) { if (r.hay) { E.actualizacion = r; E.actOculto = false; } ui.actualizacionRevisada({ ...r, notas: r.notas ?? r.detalle }); },
+    actualizacionProgreso(a) { ui.actualizacionProgreso(a); },
     archivosElegidos(lista) {
       if (!E.guion) return;
       leerCamposGuion();
@@ -655,51 +641,66 @@
       else E.corregir = { ...(E.corregir || {}), enviando: false, error: r.error || "No se pudo corregir." };
       render();
     },
-    iaProbada(r) { delete E.probando[r.id]; E.resultadoIA[r.id] = r; if (r.ok) { E.config.ia = r.id; toast("Lista para usar"); } render(); },
+    iaProbada(r) { ui.iaProbada(r); },
     modeloProgreso(r) { E.descarga = { id: r.id, pct: r.pct }; render(); },
     modeloListo(r) { E.descarga = null; if (r.ok) { E.config.modelo = r.id; toast("Descargado"); } else toast(r.error || "No se pudo descargar"); render(); },
     _probar(f) { f(E); render(); },
-    _pruebas: { parsearGrabacion, mdHTML, reloj, paraTeleprompter },
-  };
+    // Para las pruebas (pruebas/interfaz.mjs).
+    _pruebas: { parsearGrabacion, mdHTML, reloj, paraTeleprompter, ui },
+  });
 
   // ───────────── Vista previa en el navegador (datos ficticios de demo.json) ─────────────
+  // host-ui la llama con (accion, datos, c): c.responder("x", json) hace lo que la app (una copia JSON a window.Graba.x) y
+  // c.luego(ms, f) espera. Enlaces y copiar son los comunes de la pieza.
   let DEMO = null;
-  function simular(accion, d) {
+  const COMUNES = PiezaHost.simulacionesComunes();
+  function simular(accion, d, c) {
     if (!DEMO) return;
-    const enviar = () => window.Graba.estado(DEMO);
-    if (accion === "listo") return enviar();
-    if (accion === "grabar") return toast("En la app, aquí empieza la grabación");
-    if (accion === "terminar") return toast("En la app, aquí termina la grabación");
-    if (accion === "pausar") { DEMO.pausada = !DEMO.pausada; if (!DEMO.pausada) DEMO.grabandoDesde = Date.now() - (DEMO.segundos || 0) * 1000; return enviar(); }
-    if (accion === "config") { Object.assign(DEMO.config, d); return enviar(); }
-    if (accion === "borrar") { DEMO.grabaciones = DEMO.grabaciones.filter((t) => t.ruta !== d.ruta); return enviar(); }
-    if (accion === "probarIA") return setTimeout(() => { DEMO.config.ia = d.id; window.Graba.iaProbada({ id: d.id, ok: true, texto: "listo" }); enviar(); }, 500);
-    if (accion === "descargarModelo") {
-      let p = 0; const iv = setInterval(() => { p += 0.25; window.Graba.modeloProgreso({ id: d.id, pct: Math.min(p, 1) });
-        if (p >= 1) { clearInterval(iv); DEMO.modelos.lista.find((m) => m.id === d.id).listo = true; DEMO.config.modelo = d.id; window.Graba.modeloListo({ id: d.id, ok: true }); enviar(); } }, 300);
+    const enviar = () => c.responder("estado", DEMO);
+    const grabacion = () => DEMO.grabaciones.find((x) => x.ruta === d.ruta);
+    switch (accion) {
+      case "listo": return enviar();
+      case "abrirEnlace": case "copiar": return COMUNES[accion](d, c);
+      case "grabar": return toast("En la app, aquí empieza la grabación");
+      case "terminar": return toast("En la app, aquí termina la grabación");
+      case "pausar": DEMO.pausada = !DEMO.pausada; if (!DEMO.pausada) DEMO.grabandoDesde = Date.now() - (DEMO.segundos || 0) * 1000; return enviar();
+      case "config": Object.assign(DEMO.config, d); return enviar();
+      case "borrar": DEMO.grabaciones = DEMO.grabaciones.filter((t) => t.ruta !== d.ruta); return enviar();
+      case "probarIA": return c.luego(500, () => { DEMO.config.ia = d.ia; c.responder("iaProbada", { ia: d.ia, ok: true }); enviar(); });
+      case "descargarModelo": {
+        let p = 0;
+        const paso = () => { p += 0.25; c.responder("modeloProgreso", { id: d.id, pct: Math.min(p, 1) });
+          if (p < 1) return c.luego(300, paso);
+          DEMO.modelos.lista.find((m) => m.id === d.id).listo = true; DEMO.config.modelo = d.id; c.responder("modeloListo", { id: d.id, ok: true }); enviar(); };
+        return c.luego(300, paso);
+      }
+      case "permiso": DEMO.permisos[d.tipo] = true; return enviar();
+      case "youtubeConectar": return c.luego(600, () => { DEMO.youtube = { conectado: true, canal: "Canal de Ana" }; c.responder("youtubeConectado", { ok: true }); enviar(); });
+      case "youtubeDesconectar": DEMO.youtube = { conectado: false }; return enviar();
+      case "youtubeSubir": return c.luego(900, () => { const g = grabacion(); if (g) g.youtube = { estado: "lista", url: "https://youtu.be/demo", privacidad: "private" }; c.responder("youtubeSubido", { ok: true }); enviar(); });
+      case "buscarActualizacion": return c.luego(500, () => c.responder("actualizacionRevisada", { hay: false }));
+      case "actualizar": {
+        const textos = ["", "Descargando la versión nueva…", "Preparando la versión nueva…", "Instalando: Graba se cerrará y volverá a abrirse sola"];
+        for (let n = 1; n <= 3; n++) c.luego(700 * n, () => c.responder("actualizacionProgreso", { paso: String(n), texto: textos[n], total: 3, pct: 0 }));
+        return;
+      }
+      case "elegirArchivos": return c.responder("archivosElegidos", [{ ruta: "/demo/presentacion.pdf", nombre: "presentacion.pdf" }]);
+      case "crearGuion": return c.luego(800, () => c.responder("guionCreado", { ok: true, titulo: "Presupuesto en 3 minutos",
+        guion: "¿Se te va la plata y no sabes en qué? En tres minutos lo arreglamos.\n\n[muestra la diapositiva 1]\n\nHola, soy Ana. Hoy armamos un presupuesto simple." }));
+      case "grabarConGuion": return toast("En la app, aquí se abre la barra para grabar");
+      case "corregir": return c.luego(700, () => c.responder("corregido", { ok: true, carpeta: d.ruta, reemplazos: 1 }));
+      case "recortar": return c.luego(700, () => {
+        const g = grabacion();
+        if (g) { g.recortada = true; g._dur = g._dur || g.meta.duracion_seg; g.meta = { ...g.meta, duracion_seg: Math.round(d.fin - d.inicio) }; }
+        c.responder("recortado", { ok: true }); enviar();
+      });
+      case "deshacerRecorte": return c.luego(500, () => {
+        const g = grabacion();
+        if (g) { g.recortada = false; g.meta = { ...g.meta, duracion_seg: g._dur || g.meta.duracion_seg }; }
+        c.responder("recortado", { ok: true, deshacer: true }); enviar();
+      });
+      case "teleprompter": DEMO.config.teleprompter = true; DEMO.config.teleprompter_texto = d.texto; return;
     }
-    if (accion === "permiso") { DEMO.permisos[d.tipo] = true; return enviar(); }
-    if (accion === "youtubeConectar") return setTimeout(() => { DEMO.youtube = { conectado: true, canal: "Canal de Ana" }; window.Graba.youtubeConectado({ ok: true }); enviar(); }, 600);
-    if (accion === "youtubeDesconectar") { DEMO.youtube = { conectado: false }; return enviar(); }
-    if (accion === "youtubeSubir") return setTimeout(() => { const g = DEMO.grabaciones.find((x) => x.ruta === d.ruta); if (g) g.youtube = { estado: "lista", url: "https://youtu.be/demo", privacidad: "private" }; window.Graba.youtubeSubido({ ok: true }); enviar(); }, 900);
-    if (accion === "buscarActualizacion") return setTimeout(() => window.Graba.actualizacionRevisada({ hay: false }), 500);
-    if (accion === "actualizar") { let n = 1; const iv = setInterval(() => { window.Graba.actualizacionProgreso({ paso: String(n), texto: ["", "Descargando la versión nueva…", "Preparando la versión nueva…", "Instalando: Graba se cerrará y volverá a abrirse sola"][n], pct: n * 33 }); if (++n > 3) clearInterval(iv); }, 700); return; }
-    if (accion === "elegirArchivos") return window.Graba.archivosElegidos([{ ruta: "/demo/presentacion.pdf", nombre: "presentacion.pdf" }]);
-    if (accion === "crearGuion") return setTimeout(() => window.Graba.guionCreado({ ok: true, titulo: "Presupuesto en 3 minutos",
-      guion: "¿Se te va la plata y no sabes en qué? En tres minutos lo arreglamos.\n\n[muestra la diapositiva 1]\n\nHola, soy Ana. Hoy armamos un presupuesto simple." }), 800);
-    if (accion === "grabarConGuion") return toast("En la app, aquí se abre la barra para grabar");
-    if (accion === "corregir") return setTimeout(() => window.Graba.corregido({ ok: true, carpeta: d.ruta, reemplazos: 1 }), 700);
-    if (accion === "recortar") return setTimeout(() => {
-      const g = DEMO.grabaciones.find((x) => x.ruta === d.ruta);
-      if (g) { g.recortada = true; g._dur = g._dur || g.meta.duracion_seg; g.meta = { ...g.meta, duracion_seg: Math.round(d.fin - d.inicio) }; }
-      window.Graba.recortado({ ok: true }); enviar();
-    }, 700);
-    if (accion === "deshacerRecorte") return setTimeout(() => {
-      const g = DEMO.grabaciones.find((x) => x.ruta === d.ruta);
-      if (g) { g.recortada = false; g.meta = { ...g.meta, duracion_seg: g._dur || g.meta.duracion_seg }; }
-      window.Graba.recortado({ ok: true, deshacer: true }); enviar();
-    }, 500);
-    if (accion === "teleprompter") { DEMO.config.teleprompter = true; DEMO.config.teleprompter_texto = d.texto; return; }
   }
 
   const LOGO = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#17151c"/><rect x="12" y="15" width="40" height="28" rx="5" fill="none" stroke="#b9b0ff" stroke-width="4"/><circle cx="21" cy="44" r="10" fill="#6d5dfc" stroke="#17151c" stroke-width="3"/><circle cx="44" cy="22" r="3.2" fill="#ff5d5d"/></svg>`;

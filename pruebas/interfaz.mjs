@@ -27,9 +27,13 @@ const esDato = (t) => demo.includes(t) || /^(Graba|Claude|ChatGPT \(Codex\)|Gemi
 
 const VISTAS = ["E=>{E.sel=E.grabaciones[1].ruta}", ...["notas", "guion", "youtube", "subtitulos", "transcripcion"].map((t) => `E=>{E.pestana='${t}'}`),
   "E=>{E.sel=E.grabaciones[0].ruta}", "E=>{E.sel=E.grabaciones[2].ruta}", "E=>{E.pestana='youtube';E.youtube={conectado:true,disponible:true,canal:'Canal de Ana'}}", "E=>{E.grabaciones[1].youtube={estado:'subiendo',pct:40}}", "E=>{E.grabaciones[1].youtube={estado:'lista',url:'https://youtu.be/x',privacidad:'unlisted',aviso:'x'}}", "E=>{E.grabaciones[1].youtube={estado:'error',error:'x'}}", "E=>{E.youtube={conectado:false,disponible:false};E.grabaciones[1].youtube={}}", "E=>{E.youtube={conectado:true,disponible:true,canal:'x'};E.ajustes=true}", "E=>{E.ajustes=false;E.youtube={conectado:false,disponible:true}}", "E=>{E.pestana='notas'}",
-  "E=>{E.sel=E.grabaciones[1].ruta;E.corregir={ruta:E.sel,texto:''}}", "E=>{E.corregir={ruta:E.sel,texto:'x',enviando:true}}", "E=>{E.corregir=null;E.guion={paso:'pedir',idea:'',minutos:3,para:'youtube',archivos:[{ruta:'/x/a.pdf',nombre:'presentacion.pdf'}],error:'x'}}", "E=>{E.guion.paso='creando'}", "E=>{E.guion={paso:'listo',titulo:'Presupuesto',texto:'Hola, soy Ana.'}}", "E=>{E.guion=null;E.ajustes=true}", "E=>{E.ajustes=false;E.borrar='x'}",
-  "E=>{E.borrar=null;E.actualizacion={hay:true,detalle:'Versión 0.2.0'}}", "E=>{E.act={paso:'2',texto:'Preparando la versión nueva…',pct:40}}", "E=>{E.act={paso:'error',texto:'x'}}", "E=>{E.act=null;E.buscando='alDia';E.ajustes=true}",
-  "E=>{E.ajustes=false;E.buscando=null;E.sel=E.grabaciones[1].ruta;E.recorte={ruta:E.sel,inicio:12.5,fin:131,duracion:140,enviando:false,error:'x'}}",
+  "E=>{E.sel=E.grabaciones[1].ruta;E.corregir={ruta:E.sel,texto:''}}", "E=>{E.corregir={ruta:E.sel,texto:'x',enviando:true}}", "E=>{E.corregir=null;E.guion={paso:'pedir',idea:'',minutos:3,para:'youtube',archivos:[{ruta:'/x/a.pdf',nombre:'presentacion.pdf'}],error:'x'}}", "E=>{E.guion.paso='creando'}", "E=>{E.guion={paso:'listo',titulo:'Presupuesto',texto:'Hola, soy Ana.'}}", "E=>{E.guion=null;E.ajustes=true}",
+  // Borrar pregunta antes (confirmar de la pieza «componentes»); la vista siguiente dice que no.
+  "E=>{E.ajustes=false;window.Graba._pruebas.ui.confirmar({titulo:'¿Borrar esta grabación?',texto:'Se va a la Papelera con el video, las notas y los subtítulos. Puedes recuperarla desde ahí.',si:'Mover a la Papelera',peligro:true})}",
+  "E=>{document.querySelector('[data-pz-confirmar=no]')?.click();window.Graba.actualizacionRevisada({hay:true,detalle:'Versión 0.2.0'})}", "E=>{window.Graba.actualizacionProgreso({paso:'2',texto:'Preparando la versión nueva…',total:3,pct:40})}", "E=>{window.Graba.actualizacionProgreso({paso:'error',texto:'x'})}", "E=>{window.Graba._pruebas.ui.act.estado=null;window.Graba.actualizacionRevisada({hay:false});E.ajustes=true}",
+  "E=>{E.ajustes=true;window.Graba.iaProbada({ia:'claude',ok:false,codigo:'sin_respuesta',plantilla:'{ia} no respondió. {detalle}',valores:{ia:'Claude',detalle:''}})}",
+  "E=>{window.Graba._pruebas.ui.abrirComentarios({tipo:'idea'})}", "E=>{document.querySelector('[data-pz-cerrar]')?.click()}",
+  "E=>{E.ajustes=false;E.sel=E.grabaciones[1].ruta;E.recorte={ruta:E.sel,inicio:12.5,fin:131,duracion:140,enviando:false,error:'x'}}",
   "E=>{E.recorte.enviando=true;E.recorte.error=''}", "E=>{E.recorte=null;E.grabaciones[1].recortada=true}",
   "E=>{E.grabaciones[1].recortada=false;E.fase='grabando';E.grabandoDesde=Date.now()-65000}", "E=>{E.pausada=true;E.segundos=65}",
   "E=>{E.fase='inactiva';E.pausada=false;E.grabaciones=[]}"];
@@ -94,15 +98,43 @@ console.log("  ✓ El idioma va primero");
 // Contraste del botón Grabar en modo claro y oscuro.
 for (const esquema of ["light", "dark"]) {
   const p = await navegador.newPage({ colorScheme: esquema });
-  await p.goto(BASE); await p.waitForSelector(".boton.grabar");
+  await p.goto(BASE); await p.waitForSelector(".pz-boton.grabar");
   const c = await p.evaluate(() => {
     const lum = (s) => { const [r, g, b] = s.match(/[\d.]+/g).slice(0, 3).map((x) => { x = x / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
-    const cs = getComputedStyle(document.querySelector(".boton.grabar")); const a = lum(cs.color), b = lum(cs.backgroundColor);
-    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    const razon = (x, y) => { const a = lum(x), b = lum(y); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); };
+    const cs = getComputedStyle(document.querySelector(".pz-boton.grabar"));
+    // Rojo y verde de la pieza «tema» como texto, sobre el fondo y el panel (AA: 4,5).
+    const color = (v) => { const d = document.createElement("i"); d.style.color = `var(${v})`; document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; };
+    const pares = {};
+    for (const t of ["--rojo", "--verde", "--texto-suave"]) for (const f of ["--fondo", "--panel"]) pares[`${t} sobre ${f}`] = razon(color(t), color(f));
+    return { grabar: razon(cs.color, cs.backgroundColor), pares };
   });
-  if (c < 4.5) falla(`modo ${esquema}: el botón Grabar casi no se lee (contraste ${c.toFixed(2)})`); else console.log(`  ✓ Contraste en modo ${esquema === "light" ? "claro" : "oscuro"} (${c.toFixed(1)})`);
+  const modo = esquema === "light" ? "claro" : "oscuro";
+  if (c.grabar < 4.5) falla(`modo ${modo}: el botón Grabar casi no se lee (contraste ${c.grabar.toFixed(2)})`); else console.log(`  ✓ Contraste del botón Grabar en modo ${modo} (${c.grabar.toFixed(1)})`);
+  for (const [n, r] of Object.entries(c.pares)) if (r < 4.5) falla(`modo ${modo}: ${n} no pasa AA (${r.toFixed(2)})`);
   await p.close();
 }
+// Borrar una grabación: el foco queda en «Cancelar» (un Enter apurado no borra) y un error en un diálogo se ve rojo, también sobre el vidrio.
+for (const vidrio of [false, true]) {
+  const p = await navegador.newPage({ viewport: { width: 390, height: 780 }, colorScheme: "dark" });
+  await p.goto(BASE); await p.waitForSelector(".pz-boton.grabar");
+  if (vidrio) await p.evaluate(() => document.documentElement.classList.add("vidrio"));
+  await p.evaluate(() => { window.Graba._pruebas.ui.confirmar({ titulo: "¿Borrar esta grabación?", texto: "x", si: "Mover a la Papelera", peligro: true }); });
+  await p.waitForSelector("[data-pz-confirmar=no]");
+  await p.waitForTimeout(80);
+  const r = await p.evaluate(() => {
+    const no = document.querySelector("[data-pz-confirmar=no]"), si = document.querySelector("[data-pz-confirmar=si]");
+    const color = (el) => getComputedStyle(el).color, fondo = (el) => getComputedStyle(el).backgroundColor;
+    return { foco: document.activeElement === no, si: [color(si), fondo(si)] };
+  });
+  const lado = vidrio ? "con vidrio" : "sin vidrio";
+  if (!r.foco) falla(`${lado}: al confirmar borrar, el foco debería quedar en «Cancelar»`);
+  if (/, 0\)$/.test(r.si[0]) || r.si[0] === r.si[1]) falla(`${lado}: el texto del botón de borrar no se ve (${r.si})`);
+  await p.keyboard.press("Enter");
+  if (await p.$("[data-pz-confirmar]")) falla(`${lado}: Enter en «Cancelar» no cerró el diálogo`);
+  await p.close();
+}
+console.log("  ✓ Al confirmar borrar, el foco queda en «Cancelar»");
 await navegador.close();
 servidor.close();
 if (errores.length) { console.log(`\n✗ ${errores.length} problemas`); process.exit(1); }
