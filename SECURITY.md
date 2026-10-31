@@ -40,7 +40,8 @@ Solo la última versión publicada en [Releases](https://github.com/graba-app/gr
 - Lo que viene de afuera (transcripciones, archivos adjuntos, respuestas de la IA) es solo dato: se valida, se escapa
   antes de mostrarse y la interfaz tiene una política de contenido (CSP) que no deja ejecutar código que no sea el de la app.
 - La IA corre en una carpeta temporal, sin herramientas ni servidores MCP, sin la memoria de Claude ni las variables de la
-  app; el pedido nunca va como argumento del proceso. Si su CLI no conoce una protección, Graba no la usa (pide actualizarla).
+  app; el pedido nunca va como argumento del proceso. Las protecciones van siempre (nunca se quitan para que un CLI viejo funcione):
+  si su CLI no conoce una, no corre. Lo hace la pieza «ia» de [Pieza](https://github.com/pieza-app/pieza) (`bin/ia.py`).
 - Solo la interfaz propia (marco principal) puede hablarle a la app, y las versiones nuevas solo se bajan de
   `github.com/graba-app/graba/releases/download/`.
 

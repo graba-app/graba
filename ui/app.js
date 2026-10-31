@@ -9,7 +9,7 @@
   const E = {
     fase: "inactiva", grabaciones: [], config: {}, ias: [], modelos: { lista: [] }, permisos: {}, carpeta: "", version: "", procesando: null,
     sel: null, pestana: "notas", ajustes: false, bv: null, bvCerrada: false, probando: {}, resultadoIA: {}, descarga: null,
-    borrar: null, idioma: "es", idiomaFoco: null, textos: {}, actualizacion: { hay: false }, act: null, buscando: null, youtube: { conectado: false }, conectandoYT: false,
+    borrar: null, idioma: "es", idiomaFoco: null, actualizacion: { hay: false }, act: null, buscando: null, youtube: { conectado: false }, conectandoYT: false,
   };
   const ENLACES = { sitio: "https://graba-app.github.io/graba/", codigo: "https://github.com/graba-app/graba",
     comunidad: "https://github.com/graba-app/graba/discussions", guiaIA: "https://graba-app.github.io/graba/ia.html" };
@@ -26,48 +26,28 @@
     },
   };
 
-  // ───────────── Idiomas (claves = texto en español) ─────────────
-  function tr(t) {
-    if (E.idioma === "es" || !t) return t;
-    const limpio = String(t).replace(/\s+/g, " ").trim();
-    if (!limpio) return t;
-    if (E.textos[limpio]) return t.replace(limpio, E.textos[limpio]);
-    const numeros = limpio.match(/\d+/g);
-    if (numeros) {
-      const plantilla = E.textos[limpio.replace(/\d+/g, "{n}")];
-      if (plantilla) { let i = 0; return t.replace(limpio, plantilla.replace(/\{n\}/g, () => numeros[i++] ?? "")); }
-    }
-    if (window._faltantes && /\p{L}{2}/u.test(limpio)) window._faltantes.add(limpio);
-    return t;
-  }
-  function traducirDOM(raiz) {
-    if (E.idioma === "es") return;
-    const w = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT);
-    const nodos = []; let n; while ((n = w.nextNode())) nodos.push(n);
-    for (const t of nodos) {
-      const el = t.parentElement;
-      if (!el || el.closest("[data-sin-traducir], script, style") || !/\p{L}/u.test(t.nodeValue)) continue;
-      const v = tr(t.nodeValue); if (v !== t.nodeValue) t.nodeValue = v;
-    }
-    for (const el of raiz.querySelectorAll("[title],[aria-label],[placeholder]")) {
-      if (el.closest("[data-sin-traducir]")) continue;
-      for (const a of ["title", "aria-label", "placeholder"]) { const v = el.getAttribute(a); if (v) el.setAttribute(a, tr(v)); }
-    }
-  }
+  // ───────────── Idiomas: pieza «i18n» (ui/i18n.js; las claves son el texto en español) ─────────────
+  // tr y traducirDOM traducen lo ya pintado (nunca [data-sin-traducir], código ni textarea); Tp arma una frase con marcadores en
+  // texto plano. E.idioma es solo un espejo de i18n.idioma para el resto de la interfaz (fechas, pantalla de idioma).
+  const i18n = PiezaI18n.crear();
+  const { tr, Tp, traducirDOM } = i18n;
   /** Idioma del sistema: el que se sugiere en la pantalla de idioma y el que se usa mientras la persona no elige. */
-  const idiomaSistema = () => ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en");
-  async function cargarIdioma() {
-    // Lo que eligió la persona manda; ?idioma=en es solo para la vista previa cuando aún no hay nada elegido.
-    const pedido = new URLSearchParams(location.search).get("idioma");
-    const codigo = E.config.idioma_ui || pedido || idiomaSistema();
-    if (codigo === E.idioma && (codigo === "es" || Object.keys(E.textos).length)) return;
-    E.idioma = codigo;
-    E.textos = {};
-    if (codigo !== "es") {
-      try { E.textos = (await (await fetch(`idiomas/${codigo}.json`)).json()).textos || {}; } catch { E.idioma = "es"; }
-    }
-    document.documentElement.lang = E.idioma;
+  const idiomaSistema = () => i18n.idiomaDelSistema();
+  let idiomaElegido = null;
+  async function cargarIdioma(elegido) {
+    // Lo recién elegido > ?idioma= (vista previa y pruebas) > lo guardado > el del sistema.
+    if (elegido) idiomaElegido = elegido;
+    await i18n.cargar(i18n.elegir({ elegido: idiomaElegido, config: E.config.idioma_ui }));
+    E.idioma = i18n.idioma;
   }
+  /** Los errores de la IA llegan con su código (pieza «ia»): se traducen enteros, con sus valores. Las mismas frases que ERRORES de bin/ia.py. */
+  const ERRORES_IA = {
+    no_instalada: "No encontré {ia} en este computador. Revisa en Ajustes → Tu IA.",
+    demora: "{ia} se demoró demasiado en responder. Inténtalo de nuevo.",
+    sin_respuesta: "{ia} no respondió. {detalle}",
+    desconocida: "No conozco esa IA.",
+  };
+  const errorIA = (r) => (ERRORES_IA[r.codigo] ? Tp(ERRORES_IA[r.codigo], { ia: "", detalle: "", ...(r.valores || {}) }).trim() : r.texto || "");
 
   function toast(texto) {
     if (E.bv === 0) return; // en la pantalla de idioma no se muestra nada más
@@ -352,7 +332,7 @@
     return E.ias.map((ia) => {
       const enUso = E.config.ia === ia.id, probando = E.probando[ia.id], r = E.resultadoIA[ia.id];
       const estado = !ia.instalada ? `<small>No está instalada · <a href="#" data-enlace="${ENLACES.guiaIA}#${ia.id}">Cómo instalarla</a></small>`
-        : r && !r.ok ? `<small class="error-txt" data-sin-traducir>${esc(r.texto || tr("No respondió."))}</small>` : `<small>Instalada</small>`;
+        : r && !r.ok ? `<small class="error-txt" data-sin-traducir>${esc(errorIA(r) || tr("No respondió."))}</small>` : `<small>Instalada</small>`;
       const accion = enUso ? `<span class="ok">✓ En uso</span>` : ia.instalada
         ? `<button class="boton" data-probar="${ia.id}" ${probando ? "disabled" : ""}>${probando ? "Probando…" : "Usar"}</button>` : "";
       return `<div class="fila"><div class="txt"><b>${esc(ia.nombre)}</b>${estado}</div>${accion}</div>`;
@@ -470,7 +450,7 @@
   async function elegirIdioma(codigo) {
     E.config.idioma_ui = codigo;
     host.enviar("config", { idioma_ui: codigo }); // el mismo camino que Ajustes
-    await cargarIdioma();
+    await cargarIdioma(codigo);
     E.bv = 1;
     render();
     $("#t-bv")?.focus();
@@ -609,7 +589,7 @@
     if (!clave) return;
     E.config[clave] = ev.target.value;
     host.enviar("config", { [clave]: ev.target.value });
-    if (clave === "idioma_ui") await cargarIdioma();
+    if (clave === "idioma_ui") await cargarIdioma(ev.target.value);
     render();
   });
   document.addEventListener("keydown", (ev) => {

@@ -26,7 +26,7 @@ import webbrowser
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import ia  # noqa: E402
+import comun  # noqa: E402
 import procesar  # noqa: E402
 
 # Cliente OAuth de escritorio del proyecto Graba (bin/youtube_cliente.json; vacío hasta que se cree en Google Cloud).
@@ -44,7 +44,7 @@ PRIVACIDADES = ("private", "unlisted", "public")
 
 
 def cliente():
-    c = ia.config()
+    c = comun.config()
     return (c.get("youtube_client_id") or CLIENTE["id"]).strip(), (c.get("youtube_client_secret") or CLIENTE["secreto"]).strip()
 
 
@@ -177,7 +177,7 @@ def subir(carpeta, salida):
     try:
         if not os.path.exists(video):
             raise RuntimeError("No encontré el video de esta grabación.")
-        c = ia.config()
+        c = comun.config()
         privacidad = c.get("youtube_privacidad") if c.get("youtube_privacidad") in PRIVACIDADES else "private"
         idioma = (c.get("idioma_audio") or "es") if (c.get("idioma_audio") or "auto") != "auto" else "es"
         titulo, descripcion, etiquetas = metadatos(carpeta)

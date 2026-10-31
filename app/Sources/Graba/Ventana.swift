@@ -168,7 +168,8 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavig
             Procesador.encolar(ruta, soloIA: d["soloIA"] as? Bool ?? false) { Ventana.shared.enviarEstado() }
             enviarEstado()
         case "config":
-            Config.guardar(d)
+            // Solo claves conocidas (las de app.json que la interfaz puede cambiar): la interfaz no escribe cualquier cosa.
+            Config.guardar(d.filter { Config.editables.contains($0.key) })
             enviarEstado()
             // El aviso de versión nueva se escribió en el idioma de antes: se vuelve a revisar para que salga en el elegido.
             if d["idioma_ui"] != nil, Actualizaciones.disponible["hay"] as? Bool == true {
@@ -176,9 +177,12 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavig
             }
         case "probarIA":
             let id = d["id"] as? String ?? ""
-            IA.probar(id) { ok, texto in
+            IA.probar(id) { r in
+                let ok = r["ok"] as? Bool == true
                 if ok { Config.guardar(["ia": id]) }
-                Ventana.shared.llamar("iaProbada", ["id": id, "ok": ok, "texto": texto])
+                // codigo + valores: la interfaz traduce el error (ver ERRORES de bin/ia.py); texto: el error ya en español.
+                Ventana.shared.llamar("iaProbada", ["id": id, "ok": ok, "texto": r["error"] as? String ?? "", "codigo": r["codigo"] as? String ?? "",
+                                                    "valores": r["valores"] as? [String: Any] ?? [:]])
                 Ventana.shared.enviarEstado()
             }
         case "descargarModelo":

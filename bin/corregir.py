@@ -16,7 +16,9 @@ import sys
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import ia  # noqa: E402
+import comun  # noqa: E402
+import ia  # noqa: E402  (pieza «ia»)
+import nucleo  # noqa: E402  (pieza «nucleo»)
 import procesar  # noqa: E402
 
 
@@ -73,16 +75,14 @@ def campo(cabecera, nombre):
 
 
 def agregar_vocabulario(palabras):
-    ruta = os.path.join(ia.INTERNO, "vocabulario.txt")
+    ruta = os.path.join(comun.INTERNO, "vocabulario.txt")
     actuales = []
     if os.path.exists(ruta):
         actuales = [l.strip() for l in open(ruta, encoding="utf-8") if l.strip()]
     vistos = {p.lower() for p in actuales}
     nuevas = [p for p in palabras if p and p.lower() not in vistos and len(p) <= 60]
     if nuevas:
-        os.makedirs(ia.INTERNO, exist_ok=True)
-        with open(ruta, "w", encoding="utf-8") as f:
-            f.write("\n".join((actuales + nuevas)[-200:]) + "\n")
+        nucleo.escribir_atomico(ruta, "\n".join((actuales + nuevas)[-200:]) + "\n")
     return nuevas
 
 
@@ -101,11 +101,13 @@ def main():
     except OSError as e:
         return responder(salida, {"ok": False, "carpeta": carpeta, "error": str(e)})
     fm, contenido, transcripcion = partes(texto)
-    r = ia.ejecutar_ia(prompt_para(instruccion, contenido))
-    respuesta = (r.stdout or "").strip()
-    if r.returncode != 0 or "===GRABACION===" not in respuesta:
-        detalle = (r.stderr or "").strip()[-300:] if r.returncode != 0 else "la respuesta no vino en el formato esperado"
-        return responder(salida, {"ok": False, "carpeta": carpeta, "error": f"{ia.NOMBRE_IA} no pudo corregir: {detalle}. Prueba de nuevo."})
+    texto_ia, error = ia.preguntar(prompt_para(instruccion, contenido), timeout=900)
+    respuesta = (texto_ia or "").strip()
+    if error:
+        return responder(salida, {"ok": False, "carpeta": carpeta, "error": comun.error_ia(error), "codigo": error["codigo"]})
+    if "===GRABACION===" not in respuesta:
+        return responder(salida, {"ok": False, "carpeta": carpeta,
+                                  "error": f"{comun.nombre_ia()} no pudo corregir: la respuesta no vino en el formato esperado. Prueba de nuevo."})
     cabecera, nuevo = respuesta.split("===GRABACION===", 1)
     nuevo = re.sub(r"^```\w*\n|\n```\s*$", "", nuevo.strip()).strip()
     faltan = [m for m in procesar.MARCADORES if m not in nuevo]

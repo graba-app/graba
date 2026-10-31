@@ -676,7 +676,8 @@ const ACCIONES = {
     const id = String(d.id || "");
     const r = await IA.probar(id);
     if (r.ok) Config.guardar({ ia: id });
-    llamar("iaProbada", { id, ok: r.ok, texto: r.texto });
+    // codigo + valores: la interfaz traduce el error (ver ERRORES de bin/ia.py); texto: el error ya en español.
+    llamar("iaProbada", { id, ok: !!r.ok, texto: r.error || "", codigo: r.codigo || "", valores: r.valores || {} });
     enviarEstado();
   },
   async descargarModelo(d) {

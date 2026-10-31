@@ -54,6 +54,10 @@
         ]
       },
       {
+        "from": "../app.json",
+        "to": "graba/app.json"
+      },
+      {
         "from": "vendor/${os}/herramientas",
         "to": "herramientas"
       },
