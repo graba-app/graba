@@ -2,9 +2,9 @@
  "formato": 1,
  "piezas": {
   "nucleo": {
-   "version": "0.3.0",
+   "version": "0.6.0",
    "archivos": {
-    "bin/nucleo.py": "a64f7adb150adc94e117abf47ac3613df0a27c120a4916985a94ce87fe36e0d7"
+    "bin/nucleo.py": "3254be100d75d3a066b9a3ae0a7bbf9badcdef822d809756981a9345055f13a0"
    },
    "ficha": {
     "requiere": [],
@@ -13,9 +13,9 @@
    }
   },
   "ia": {
-   "version": "0.2.0",
+   "version": "0.4.0",
    "archivos": {
-    "bin/ia.py": "6ed8a27742787601dc1458af4cdd75154528dc87c22a22b2d96a03ba18b27f7d"
+    "bin/ia.py": "4da328270059d3e6f354b30a0f84d75a442b76b252f72a417fb2d09d84486f8e"
    },
    "ficha": {
     "requiere": [
@@ -26,9 +26,9 @@
    }
   },
   "i18n": {
-   "version": "0.1.1",
+   "version": "0.2.0",
    "archivos": {
-    "ui/i18n.js": "be15cee259394d061241ae880c58fe8eb070ff53a0eb87543ae1dd9c5b00e910"
+    "ui/i18n.js": "9cdae929afea783542af322018e47730e400cbee90777717d7c1ecd422d89180"
    },
    "ficha": {
     "requiere": [],

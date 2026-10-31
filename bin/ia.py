@@ -39,14 +39,24 @@ SIN_MEMORIA_CLAUDE = {"CLAUDE_CODE_DISABLE_CLAUDE_MDS": "1", "CLAUDE_CODE_DISABL
 PROHIBIDO = ["Bash", "Edit", "Write", "MultiEdit", "NotebookEdit", "WebFetch", "WebSearch", "Task"]
 #: Texto de cada error (la clave de traducción es el texto en español; {ia} y {detalle} se reemplazan en la interfaz).
 ERRORES = {
-    "no_instalada": "No encontré {ia} en este computador. Revisa en Ajustes → Tu IA.",
+    "no_instalada": "No encontré {ia} en este computador.",
     "demora": "{ia} se demoró demasiado en responder. Inténtalo de nuevo.",
     "sin_respuesta": "{ia} no respondió. {detalle}",
+    "sin_respuesta_corta": "{ia} no respondió.",
     "desconocida": "No conozco esa IA.",
+    "actualizar": "Actualiza {ia} para usarla con {app}: tu versión no conoce las protecciones que necesitamos.",
 }
+
+
+
+
+class VersionVieja(Exception):
+    """El CLI no conoce una protección obligatoria: nunca se corre sin ella; se le pide a la persona actualizarlo."""
+
+
 INSTRUCCION_ARCHIVO = ("Lee el archivo instrucciones.md de esta carpeta (y el material que menciona) y haz exactamente lo que pide. "
                        "Entrega solo el resultado pedido, sin comentarios. No modifiques ni crees archivos.")
-_ayuda = {}
+_ayuda = {}  # (ruta, mtime, tamaño) → texto de --help: si el CLI se actualiza, se vuelve a preguntar
 
 
 def _preparar_path():
@@ -99,20 +109,32 @@ def puede_leer(ia=None):
 
 
 def _soporta(cmd, opcion):
-    """Si el CLI conoce una opción. Se pregunta una vez por comando; nunca se reintenta quitando protecciones."""
-    if cmd not in _ayuda:
+    """Si el CLI conoce una opción. Se pregunta una vez por versión del comando (ruta, fecha y tamaño), sin las variables de la
+    app; nunca se reintenta quitando protecciones."""
+    try:
+        st = os.stat(cmd)
+        clave = (cmd, st.st_mtime_ns, st.st_size)
+    except OSError:
+        clave = (cmd, 0, 0)
+    if clave not in _ayuda:
         try:
-            r = subprocess.run([cmd, "--help"], stdin=subprocess.DEVNULL, capture_output=True, text=True, encoding="utf-8", timeout=20)
-            _ayuda[cmd] = (r.stdout or "") + (r.stderr or "")
+            r = subprocess.run([cmd, "--help"], stdin=subprocess.DEVNULL, capture_output=True, text=True, encoding="utf-8",
+                               errors="replace", timeout=20, env=_entorno())
+            _ayuda[clave] = (r.stdout or "") + (r.stderr or "")
         except (OSError, subprocess.SubprocessError):
-            _ayuda[cmd] = ""
-    return re.search(r"(?<![\w-])" + re.escape(opcion) + r"(?![\w-])", _ayuda[cmd]) is not None
+            _ayuda[clave] = ""
+    return re.search(r"(?<![\w-])" + re.escape(opcion) + r"(?![\w-])", _ayuda[clave]) is not None
+
+
+def _conoce_ayuda(cmd):
+    """True si se pudo leer su --help (sin eso no se puede saber qué conoce: corre con todas las protecciones y que el CLI decida)."""
+    return any(v for k, v in _ayuda.items() if k[0] == cmd)
 
 
 def _entorno():
     """La IA no recibe las variables de la app (rutas, credenciales, modos de prueba): solo lo necesario para correr."""
-    p = nucleo.prefijo()
-    return {k: v for k, v in os.environ.items() if not k.startswith(p)}
+    p = nucleo.prefijo().upper()
+    return {k: v for k, v in os.environ.items() if not k.upper().startswith(p)}  # en Windows las variables no distinguen mayúsculas
 
 
 def _sin_secretos(no_leer):
@@ -182,13 +204,21 @@ def ejecutar(prompt, *, ia=None, timeout=600, archivos=(), leer=None, no_leer=()
 
         # Claude Code: sin servidores MCP de la persona y sin su memoria. Sin material ni carpeta: ninguna herramienta. Con material o
         # carpeta: solo leer, y nunca lo que escribe, ejecuta o sale a internet, ni los secretos.
+        # Las protecciones obligatorias: si el CLI dice que no las conoce, no se corre (se pide actualizarlo).
+        for obligatoria in ("--strict-mcp-config", "--disallowedTools"):
+            if not _soporta(cmd0, obligatoria) and _conoce_ayuda(cmd0):
+                raise VersionVieja(obligatoria)
         cmd = [cmd0, "-p", "--output-format", "text", "--strict-mcp-config"]
         if leer or copias:
             for d in [leer] if leer else []:
                 cmd += ["--add-dir", d]
             cmd += ["--allowedTools", "Read,Glob,Grep", "--disallowedTools", ",".join(PROHIBIDO + _sin_secretos(no_leer))]
+            if _soporta(cmd0, "--tools"):
+                cmd += ["--tools", "Read,Glob,Grep"]  # además, las demás herramientas ni siquiera se cargan
         else:
             cmd += ["--disallowedTools", "*"]
+            if _soporta(cmd0, "--tools"):
+                cmd += ["--tools", ""]
         if modelo:
             cmd += ["--model", modelo]
         if _soporta(cmd0, "--safe-mode"):
@@ -200,18 +230,22 @@ def ejecutar(prompt, *, ia=None, timeout=600, archivos=(), leer=None, no_leer=()
 
 
 def preguntar(prompt, **opciones):
-    """Devuelve (texto, error). error es None o {"codigo", "valores"} para que la interfaz lo traduzca (ver ERRORES y frase())."""
+    """Devuelve (texto, error). error es None o {"codigo", "plantilla", "valores"}: la interfaz hace Tp(plantilla, valores) (la
+    plantilla es la frase en español, clave de traducción) y no necesita copiar ERRORES; frase(error) la da en español."""
     ia = opciones.get("ia") or elegida()
-    valores = {"ia": nombre(ia), "detalle": ""}
+    valores = {"ia": nombre(ia), "detalle": "", "app": nucleo.app()["nombre"]}
+    error = lambda codigo: {"codigo": codigo, "plantilla": ERRORES[codigo], "valores": valores}  # noqa: E731
     try:
         r = ejecutar(prompt, **opciones)
     except FileNotFoundError:
-        return "", {"codigo": "no_instalada", "valores": valores}
+        return "", error("no_instalada")
     except subprocess.TimeoutExpired:
-        return "", {"codigo": "demora", "valores": valores}
+        return "", error("demora")
+    except VersionVieja:
+        return "", error("actualizar")
     if r.returncode != 0 or not (r.stdout or "").strip():
         valores["detalle"] = ((r.stderr or "").strip().splitlines()[-1:] or [""])[0][:300]
-        return "", {"codigo": "sin_respuesta", "valores": valores}
+        return "", error("sin_respuesta" if valores["detalle"] else "sin_respuesta_corta")
     return r.stdout, None
 
 
@@ -227,10 +261,12 @@ def frase(error):
 
 def probar(ia):
     if ia not in IAS:
-        return {"ia": ia, "ok": False, "codigo": "desconocida", "error": ERRORES["desconocida"]}
+        return {"ia": ia, "ok": False, "codigo": "desconocida", "plantilla": ERRORES["desconocida"], "valores": {},
+                "error": ERRORES["desconocida"]}
     _, error = preguntar("Responde solo con la palabra: listo", ia=ia, timeout=120)
     if error:
-        return {"ia": ia, "ok": False, "codigo": error["codigo"], "valores": error["valores"], "error": frase(error)}
+        return {"ia": ia, "ok": False, "codigo": error["codigo"], "plantilla": error["plantilla"], "valores": error["valores"],
+                "error": frase(error)}
     return {"ia": ia, "ok": True}
 
 

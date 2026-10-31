@@ -78,7 +78,7 @@ RESPUESTA = textwrap.dedent("""\
 
 
 #: Lo que contesta una IA falsa a --help: conoce las protecciones (un CLI al día).
-AYUDA = '[ "$1" = "--help" ] && { echo "--strict-mcp-config --tools --safe-mode --setting-sources"; exit 0; }\n'
+AYUDA = '[ "$1" = "--help" ] && { echo "--strict-mcp-config --disallowedTools --tools --safe-mode --setting-sources"; exit 0; }\n'
 
 
 def ia_falsa(respuesta, codigo=0):
@@ -293,17 +293,14 @@ class IASoloTexto(unittest.TestCase):
         for x in ("Bash", "Edit", "Write", "WebFetch", "WebSearch"):
             self.assertIn(x, prohibido)
 
-    def test_cli_antiguo_igual_lleva_las_protecciones(self):
-        # Nunca se quitan protecciones para que un CLI viejo funcione: aunque su --help no las nombre, van igual (un CLI que no
-        # las conoce se niega a correr y Graba muestra el error).
+    def test_cli_antiguo_pide_actualizar_y_no_corre(self):
+        # Nunca se quitan protecciones para que un CLI viejo funcione: si su --help no las nombra, no se corre y se pide
+        # actualizarlo (pieza «ia» 0.3.0+).
         args = os.path.join(DATOS, "args-viejo.txt")
         cli_falso(f'printf "%s\\n" "$@" > "{args}"\ncat > /dev/null\necho listo\n', ayuda='[ "$1" = "--help" ] && { echo "nada"; exit 0; }\n')
-        procesar.ia.preguntar("hola", timeout=30)
-        with open(args, encoding="utf-8") as f:
-            a = f.read().split("\n")
-        self.assertIn("--strict-mcp-config", a)
-        self.assertEqual(a[a.index("--disallowedTools") + 1], "*")
-        self.assertNotIn("--safe-mode", a)  # opcional: solo si el CLI la conoce
+        texto, error = procesar.ia.preguntar("hola", timeout=30)
+        self.assertEqual(error["codigo"], "actualizar")
+        self.assertFalse(os.path.exists(args))
 
     def test_error_con_codigo(self):
         cli_falso('cat > /dev/null\necho "sin sesión" >&2\nexit 1\n')

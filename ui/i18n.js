@@ -89,9 +89,25 @@
     if (!nombres.length) return null;
     return { re: new RegExp(fuente + clave.slice(ultimo).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "u"), nombres };
   }
-  /** Pone los valores en una plantilla en una sola pasada: un valor que trae «{otro}» nunca se vuelve a reemplazar. */
+  /** Pone los valores en una plantilla en una sola pasada: un valor que trae «{otro}» nunca se vuelve a reemplazar.
+   *  `valores` puede ser un objeto ({n: 2}) o una lista ([2, 8]): con lista se llenan en orden, así «Paso {n} de {n}» da
+   *  «Paso 2 de 8» (un nombre repetido no repite el primer valor). */
   function poner(plantilla, valores, transformar) {
+    if (Array.isArray(valores)) {
+      let i = 0;
+      return plantilla.replace(MARCADOR, (todo) => (i < valores.length ? transformar(valores[i++]) : todo));
+    }
     return plantilla.replace(MARCADOR, (todo, k) => (Object.prototype.hasOwnProperty.call(valores, k) ? transformar(valores[k]) : todo));
+  }
+  /** Igual, con una lista de valores por nombre (lo que se leyó de una frase ya armada): cada {nombre} toma el siguiente. */
+  function ponerEnOrden(plantilla, listas) {
+    const usados = {};
+    return plantilla.replace(MARCADOR, (todo, k) => {
+      const l = listas[k];
+      if (!l || !l.length) return todo;
+      const i = usados[k] = (usados[k] ?? -1) + 1;
+      return l[Math.min(i, l.length - 1)];
+    });
   }
 
   function crear(opciones = {}) {
@@ -110,7 +126,7 @@
       if (v != null) return v;
       for (const { re, nombres, otro } of patrones) {
         const m = k.match(re);
-        if (m) { const valores = {}; nombres.forEach((n, i) => { if (!(n in valores)) valores[n] = m[i + 1]; }); return poner(otro, valores, String); }
+        if (m) { const listas = {}; nombres.forEach((n, i) => { (listas[n] = listas[n] || []).push(m[i + 1]); }); return ponerEnOrden(otro, listas); }
       }
       // Fechas y textos cortos («18 de octubre · 10:45»): palabra por palabra si todas son conocidas.
       const P = actual.palabras, palabras = k.match(/\p{L}+/gu) || [];
