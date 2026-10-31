@@ -44,7 +44,7 @@ enum Actualizaciones {
     /// Revisa si hay versión nueva: (hay, detalle). Si no pudo consultar, detalle = sinConexion.
     static func revisar(_ fin: @escaping @MainActor (Bool, String) -> Void) {
         let terminar: @MainActor (Bool, String) -> Void = { hay, detalle in
-            disponible = ["hay": hay, "detalle": hay ? detalle : ""]
+            disponible = ["hay": hay, "detalle": hay ? detalle : "", "desarrollo": checkout != nil]
             BarraMenu.shared.actualizar()
             fin(hay, detalle)
         }

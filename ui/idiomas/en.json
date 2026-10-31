@@ -368,6 +368,7 @@
     "No puedo transcribir un archivo en una carpeta con saltos de línea en el nombre.": "I can't transcribe a file in a folder whose name has line breaks.",
     "Detector de voz": "Voice detector",
     "Más rápido y pequeño; para equipos con poca memoria.": "Faster and smaller; for computers with little memory.",
-    "Salta los silencios: menos inventos y más rápido.": "Skips silences: fewer made-up lines and faster."
+    "Salta los silencios: menos inventos y más rápido.": "Skips silences: fewer made-up lines and faster.",
+    "La transcripción falló: {detalle}": "Transcription failed: {detalle}"
   }
 }

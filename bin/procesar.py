@@ -12,6 +12,7 @@ import json
 import os
 import re
 import sys
+import wave
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -64,10 +65,8 @@ def segmentos(carpeta):
 
 
 def guardar_transcripcion(carpeta, segs):
-    datos = {"transcription": [{"offsets": {"from": round(s["desde"] * 1000), "to": round(s["hasta"] * 1000)}, "text": s["texto"]}
-                               for s in segs]}
-    nucleo.escribir_atomico(os.path.join(carpeta, "transcripcion.json"), json.dumps(datos, ensure_ascii=False, indent=2),
-                            nucleo.DOCUMENTO)
+    nucleo.escribir_atomico(os.path.join(carpeta, "transcripcion.json"),
+                            json.dumps(transcribir_.whisper_de(segs), ensure_ascii=False, indent=2), nucleo.DOCUMENTO)
 
 
 def vocabulario():
@@ -84,12 +83,18 @@ def transcribir(carpeta):
     if not os.path.exists(audio):
         return  # grabación sin micrófono: queda como "sin voz"
     c = comun.config()
+    # Con la energía de la voz, lo que whisper inventa en silencio («Gracias», «Thank you») se va y lo que se dijo de verdad queda.
+    # Después ya no está audio.wav: transcripcion.json queda limpio y `segmentos` solo quita créditos y bucles.
+    try:
+        energia = transcribir_.energia(audio) or None
+    except (OSError, EOFError, wave.Error):
+        energia = None
     try:
         # El vocabulario nunca va como argumento: la pieza lo pasa en un archivo privado que se borra al terminar.
         segs = transcribir_.transcribir(audio, idioma=c.get("idioma_audio") or "auto", modelo=transcribir_.modelo_elegido(c["modelo"]),
-                                        vocabulario=", ".join(vocabulario()[-40:]))
+                                        vocabulario=", ".join(vocabulario()[-40:]), energia_=energia)
     except transcribir_.ErrorTranscribir as e:
-        raise RuntimeError(f"{str(e).rstrip('.')}: {e.detalle}" if e.detalle else str(e)) from None
+        raise RuntimeError(e.frase) from None  # «La transcripción falló: <detalle>» ya armada (la interfaz la traduce entera)
     guardar_transcripcion(carpeta, segs)
     os.remove(audio)  # ya no hace falta: el video tiene el audio original
 
