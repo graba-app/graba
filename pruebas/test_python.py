@@ -19,7 +19,9 @@ DATOS = tempfile.mkdtemp(prefix="graba-pruebas-")
 FALSOS = os.path.join(DATOS, "bin-falso")
 os.makedirs(os.path.join(DATOS, ".graba", "modelos"))
 os.makedirs(FALSOS)
-open(os.path.join(DATOS, ".graba", "modelos", "ggml-large-v3-turbo-q5_0.bin"), "w").close()
+# Un modelo «descargado»: la pieza «transcribir» lo reconoce por su tamaño exacto (archivo disperso: no ocupa disco).
+with open(os.path.join(DATOS, ".graba", "modelos", "ggml-large-v3-turbo-q5_0.bin"), "wb") as f:
+    f.truncate(574_041_195)
 with open(os.path.join(DATOS, ".graba", "config.json"), "w") as f:
     json.dump({"ia": "claude", "modelo": "turbo"}, f)
 os.environ["GRABA_DATOS"] = os.path.join(DATOS, ".graba")  # pieza «nucleo»: la carpeta interna; las grabaciones, la de arriba
@@ -87,6 +89,11 @@ def ia_falsa(respuesta, codigo=0):
         f.write(f"#!/bin/bash\n{AYUDA}cat > /dev/null\ncat <<'RESPUESTA'\n{respuesta}\nRESPUESTA\nexit {codigo}\n")
     os.chmod(ruta, 0o755)
     procesar.ia._ayuda.clear()  # la pieza «ia» recuerda el --help de cada CLI durante el proceso
+
+
+def leer_archivo(ruta):
+    with open(ruta, encoding="utf-8") as f:
+        return f.read()
 
 
 def nueva_grabacion():
@@ -404,41 +411,67 @@ class Piezas(unittest.TestCase):
 
 
 class Vocabulario(unittest.TestCase):
-    def test_va_en_archivo_y_no_como_argumento(self):
-        # El vocabulario llega a graba-transcribir en un archivo (nunca como argumento) y el archivo no queda en la carpeta.
+    """El vocabulario nunca va como argumento (cualquier programa ve los argumentos): va en un archivo 0600 que se borra."""
+
+    def correr(self, nombre, falso):
+        """Corre procesar.transcribir con un transcriptor falso `nombre` y devuelve (argv, archivos que recibió: {ruta: (modo, texto)})."""
         vocab = os.path.join(DATOS, ".graba", "vocabulario.txt")
-        previo = None
-        if os.path.exists(vocab):
-            with open(vocab, encoding="utf-8") as f:
-                previo = f.read()
+        previo = leer_archivo(vocab) if os.path.exists(vocab) else None
         with open(vocab, "w", encoding="utf-8") as f:
             f.write("Matías Soto\nPresupuestario\n")
-        args, leido = os.path.join(DATOS, "args-t.txt"), os.path.join(DATOS, "vocab-t.txt")
-        ruta = os.path.join(FALSOS, "graba-transcribir")
-        with open(ruta, encoding="utf-8") as f:
-            original = f.read()
+        registro = os.path.join(DATOS, f"registro-{nombre}.json")
+        ruta = os.path.join(FALSOS, nombre)
+        original = leer_archivo(ruta) if os.path.exists(ruta) else None
         with open(ruta, "w", encoding="utf-8") as f:
-            f.write("#!/usr/bin/env python3\nimport sys,shutil\na=sys.argv\nopen(" + repr(args) + ",'w').write('\\n'.join(a))\n"
-                    "if '--prompt-archivo' in a: shutil.copy(a[a.index('--prompt-archivo')+1], " + repr(leido) + ")\n"
-                    "open(a[a.index('-of')+1]+'.json','w').write('{}')\n")
+            f.write("#!/usr/bin/env python3\nimport json,os,stat,sys\na=sys.argv\nvistos={}\n"
+                    "def ver(r):\n    vistos[r]=(stat.S_IMODE(os.stat(r).st_mode), open(r,encoding='utf-8').read())\n"
+                    + falso +
+                    "open(of+'.json','w').write('{\"transcription\": []}')\n"
+                    "json.dump({'argv': a, 'vistos': vistos}, open(" + repr(registro) + ",'w'))\n")
+        os.chmod(ruta, 0o755)
         c = nueva_grabacion()
         try:
             procesar.transcribir(c)
         finally:
-            with open(ruta, "w", encoding="utf-8") as f:
-                f.write(original)
+            if original is None:
+                os.remove(ruta)
+            else:
+                with open(ruta, "w", encoding="utf-8") as f:
+                    f.write(original)
             if previo is None:
                 os.remove(vocab)
             else:
                 with open(vocab, "w", encoding="utf-8") as f:
                     f.write(previo)
-        with open(args, encoding="utf-8") as f:
-            argv = f.read()
-        self.assertNotIn("Matías", argv)
-        self.assertNotIn("--prompt\n", argv + "\n")
-        with open(leido, encoding="utf-8") as f:
-            self.assertEqual(f.read(), "Matías Soto, Presupuestario")
-        self.assertFalse(os.path.exists(os.path.join(c, ".vocabulario.txt")))
+        self.assertFalse(any(n.startswith(".") for n in os.listdir(c)))  # nada del vocabulario queda en la grabación
+        with open(registro, encoding="utf-8") as f:
+            r = json.load(f)
+        for archivo in r["vistos"]:
+            self.assertFalse(os.path.exists(archivo), archivo)  # se borra al terminar
+            self.assertFalse(archivo.startswith(DATOS), archivo)  # fuera de las carpetas de la persona
+            if os.name != "nt":
+                self.assertEqual(r["vistos"][archivo][0], 0o600)
+        self.assertNotIn("Matías", "\n".join(r["argv"]))
+        self.assertNotIn("--prompt", r["argv"])
+        return r["argv"], r["vistos"]
+
+    def test_graba_transcribir_con_prompt_archivo(self):
+        argv, vistos = self.correr("graba-transcribir", "ver(a[a.index('--prompt-archivo')+1])\nof=a[a.index('-of')+1]\n")
+        self.assertEqual([t for _, t in vistos.values()], ["Matías Soto, Presupuestario"])
+
+    def test_whisper_cli_con_archivo_de_argumentos(self):
+        # Sin graba-transcribir (Windows y Linux): whisper-cli @archivo, una opción por línea. Antes no recibía el vocabulario.
+        oculto = os.path.join(FALSOS, "graba-transcribir")
+        os.rename(oculto, oculto + ".x")
+        try:
+            argv, vistos = self.correr("whisper-cli", "ver(a[1][1:])\nl=open(a[1][1:],encoding='utf-8').read().splitlines()\n"
+                                                      "of=l[l.index('-of')+1]\n")
+        finally:
+            os.rename(oculto + ".x", oculto)
+        self.assertEqual(len(argv), 2)
+        self.assertTrue(argv[1].startswith("@"))
+        lineas = list(vistos.values())[0][1].splitlines()
+        self.assertEqual(lineas[-2:], ["--prompt", "Matías Soto, Presupuestario"])
 
 
 class JSONPrivado(unittest.TestCase):
@@ -478,9 +511,64 @@ class YouTube(unittest.TestCase):
 
 class Alucinaciones(unittest.TestCase):
     def test_frases_de_silencio(self):
+        # Las quita la pieza «transcribir» (también al releer un transcripcion.json de antes, con --solo-ia).
+        es = procesar.transcribir_.es_alucinacion
         for t in [" Thank you.", "Gracias.", "¡Suscríbete!", "Subtítulos realizados por la comunidad de Amara.org"]:
-            self.assertTrue(procesar.es_alucinacion(t), t)
-        self.assertFalse(procesar.es_alucinacion("Gracias por venir a esta demo de planillas"))
+            self.assertTrue(es(t), t)
+        self.assertFalse(es("Gracias por venir a esta demo de planillas"))
+
+
+class TiemposEnSegundos(unittest.TestCase):
+    """La pieza «transcribir» da segundos; los archivos de la grabación quedan igual que antes (principio 4)."""
+    #: Un transcripcion.json como el de whisper (milisegundos), con tiempos que no son redondos.
+    WHISPER = {"transcription": [
+        {"offsets": {"from": 0, "to": 1234}, "text": " Hola, soy Ana."},
+        {"offsets": {"from": 1234, "to": 61999}, "text": " [Música]"},
+        {"offsets": {"from": 62001, "to": 3725457}, "text": " Una hora después."},
+        {"offsets": {"from": 3725457, "to": 3725999}, "text": " Thank you."}]}
+    #: Lo que escribía Graba antes de la pieza para esa misma entrada (sacado del código de antes).
+    SRT = "1\n00:00:00,000 --> 00:00:01,234\nHola, soy Ana.\n\n2\n00:01:02,001 --> 01:02:05,457\nUna hora después.\n"
+
+    def carpeta(self):
+        c = tempfile.mkdtemp(dir=DATOS)
+        with open(os.path.join(c, "transcripcion.json"), "w", encoding="utf-8") as f:
+            json.dump(self.WHISPER, f)
+        return c
+
+    def test_segmentos_en_segundos(self):
+        segs = procesar.segmentos(self.carpeta())
+        self.assertEqual(segs, [{"desde": 0.0, "hasta": 1.234, "texto": "Hola, soy Ana."},
+                                {"desde": 62.001, "hasta": 3725.457, "texto": "Una hora después."}])
+
+    def test_srt_igual_que_antes(self):
+        c = self.carpeta()
+        procesar.escribir_srt(c, procesar.segmentos(c))
+        with open(os.path.join(c, "subtitulos.srt"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), self.SRT)
+
+    def test_transcripcion_json_en_milisegundos(self):
+        # Ida y vuelta: segundos → transcripcion.json (ms, formato de whisper) → los mismos segundos.
+        c = self.carpeta()
+        segs = procesar.segmentos(c)
+        procesar.guardar_transcripcion(c, segs)
+        with open(os.path.join(c, "transcripcion.json"), encoding="utf-8") as f:
+            datos = json.load(f)
+        self.assertEqual([s["offsets"] for s in datos["transcription"]], [{"from": 0, "to": 1234}, {"from": 62001, "to": 3725457}])
+        self.assertEqual(procesar.segmentos(c), segs)
+
+    def test_de_punta_a_punta(self):
+        # Transcribir → transcripcion.json en ms, subtítulos y [mm:ss] de grabacion.md, y recortar corre todo igual que antes.
+        ia_falsa(RESPUESTA)
+        c = nueva_grabacion()
+        sys.argv = ["procesar.py", c, os.path.join(DATOS, "seg.json")]
+        procesar.main()
+        final = json.loads(leer_archivo(os.path.join(DATOS, "seg.json")))["carpeta"]
+        t = json.loads(leer_archivo(os.path.join(final, "transcripcion.json")))["transcription"]
+        self.assertEqual([s["offsets"] for s in t], [{"from": 0, "to": 4000}, {"from": 65000, "to": 70000}, {"from": 130000, "to": 136000}])
+        srt = leer_archivo(os.path.join(final, "subtitulos.srt"))
+        self.assertIn("2\n00:01:05,000 --> 00:01:10,000\nPrimero seleccionamos las columnas.\n", srt)
+        md = leer_archivo(os.path.join(final, "grabacion.md"))
+        self.assertIn("[01:05] Primero seleccionamos las columnas.\n[02:10] Y al final guardamos. Listo.", md)
 
 
 class Ejemplos(unittest.TestCase):

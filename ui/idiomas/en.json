@@ -361,6 +361,13 @@
     "Se abrió GitHub: revisa y publica": "GitHub is open: review and post",
     "Detuviste a {ia}.": "You stopped {ia}.",
     "Revisar de nuevo": "Check again",
-    "Hay cambios nuevos en el código de {app}": "There are new changes in {app}'s code"
+    "Hay cambios nuevos en el código de {app}": "There are new changes in {app}'s code",
+    "Falta el modelo de transcripción: descárgalo en Ajustes.": "The transcription model is missing: download it in Settings.",
+    "No encontré el transcriptor.": "I couldn't find the transcriber.",
+    "La transcripción falló.": "Transcription failed.",
+    "No puedo transcribir un archivo en una carpeta con saltos de línea en el nombre.": "I can't transcribe a file in a folder whose name has line breaks.",
+    "Detector de voz": "Voice detector",
+    "Más rápido y pequeño; para equipos con poca memoria.": "Faster and smaller; for computers with little memory.",
+    "Salta los silencios: menos inventos y más rápido.": "Skips silences: fewer made-up lines and faster."
   }
 }

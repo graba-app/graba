@@ -15,6 +15,10 @@ Lo que cambia para quien usa Graba, en palabras simples. Las versiones anteriore
   no la borra. En Ajustes, cada IA tiene una sola acción clara y una que no está instalada se puede revisar de nuevo. · *Safer
   deleting: when you confirm deleting a recording, «Cancel» is the selected button, so a hasty Enter won't delete it. In Settings,
   each AI has a single clear action, and one that isn't installed can be checked again.*
+- **Transcripción más fiel:** en Windows y Linux, las palabras que corregiste antes (nombres, marcas) ahora también ayudan a
+  transcribir, como en Mac, y whisper se repite menos y anota menos ruidos. Tus subtítulos y archivos quedan con el mismo formato.
+  · *More faithful transcripts: on Windows and Linux, the words you corrected before (names, brands) now also help transcription,
+  as on Mac, and whisper repeats itself less and writes down fewer noises. Your subtitles and files keep the same format.*
 - **Por dentro, piezas de Pieza:** tu IA, la configuración y los idiomas ahora usan las piezas compartidas de la familia
   (`nucleo`, `ia`, `i18n`). Al probar tu IA en la bienvenida o en Ajustes, ahora va con las mismas protecciones que al escribir
   tus notas (sin herramientas ni tu memoria, en una carpeta temporal), y si falla te dice por qué en tu idioma. · *Under the hood,

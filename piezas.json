@@ -73,6 +73,40 @@
     "permisos": {},
     "red": []
    }
+  },
+  "transcribir": {
+   "version": "0.1.0",
+   "archivos": {
+    "bin/transcribir.py": "e7295b58850ed437e62c7aa6c233d14efec5620a990a5b9b040a7a4742bbfb29"
+   },
+   "ficha": {
+    "requiere": [
+     "nucleo"
+    ],
+    "permisos": {
+     "mac": [
+      {
+       "clave": "NSMicrophoneUsageDescription",
+       "por": "solo si la app graba la voz que transcribe (la pieza solo lee archivos de audio)"
+      }
+     ]
+    },
+    "red": [
+     "huggingface.co"
+    ]
+   },
+   "acciones": {
+    "modelosVoz": {
+     "script": "transcribir.py",
+     "args": [
+      "modelos"
+     ],
+     "entrada": null,
+     "datos": {},
+     "responde": "modelosVoz",
+     "limite": 30
+    }
+   }
   }
  }
 }
