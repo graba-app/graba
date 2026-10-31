@@ -11,6 +11,7 @@ const { Config, Idioma, Permisos, IA, Modelos, Procesador, YouTube } = require("
 const { Actualizaciones, SIN_CONEXION } = require("./actualizaciones");
 const { Grabaciones, prepararVideo, recortarVideo, deshacerRecorteVideo } = require("./grabaciones");
 const { EscritorWav } = require("./wav");
+const { firmaAvance } = require("./avance");
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 if (ES_WIN) app.setAppUserModelId("app.graba.escritorio");
@@ -29,7 +30,7 @@ const reloj = (s) => (s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor((
   : `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`);
 
 // ───────────────────────── Ventana principal (equivale a Ventana.swift) ─────────────────────────
-let ventana = null, lista = false, pendiente = {}, refresco = null, bandeja = null;
+let ventana = null, lista = false, pendiente = {}, refresco = null, bandeja = null, ultimaFirma = "";
 let grabadora = null, burbuja = null, teleprompter = null;
 
 function mostrar({ seleccionar, aviso } = {}) {
@@ -78,11 +79,18 @@ function crearVentana() {
   ventana.webContents.on("will-navigate", (e, url) => { if (!url.startsWith("graba://ui/")) { e.preventDefault(); if (/^https:\/\//.test(url)) shell.openExternal(url); } });
 }
 
-/** Mientras se procesa una grabación, la interfaz se actualiza sola cada segundo (avance por pasos). */
+/** Mientras se procesa una grabación, la interfaz se actualiza sola cada segundo (avance por pasos), pero solo si el avance cambió
+ *  (firmaAvance lee estado.json y youtube.json de las carpetas activas; releer y mandar todas las grabaciones cada segundo sobra). */
 function iniciarRefresco() {
   if (refresco) return;
   refresco = setInterval(() => {
-    if (ventana && !ventana.isDestroyed() && ventana.isVisible() && (Procesador.enCurso || preparando.size || YouTube.subiendo.size)) enviarEstado();
+    // Sin nada en curso se olvida la firma: lo próximo que empiece se manda en el primer segundo aunque su avance se parezca al de antes.
+    if (!(Procesador.enCurso || preparando.size || YouTube.subiendo.size)) { ultimaFirma = ""; return; }
+    if (!ventana || ventana.isDestroyed() || !ventana.isVisible()) return;
+    const firma = firmaAvance([Procesador.enCurso, ...preparando, ...YouTube.subiendo]);
+    if (firma === ultimaFirma) return;
+    ultimaFirma = firma;
+    enviarEstado();
   }, 1000);
 }
 

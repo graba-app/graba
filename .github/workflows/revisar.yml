@@ -33,6 +33,8 @@ jobs:
         run: python3 pruebas/contrato.py
       - name: Pruebas de Python
         run: python3 pruebas/test_python.py
+      - name: Avance (la ventana se refresca solo si cambia)
+        run: node pruebas/avance.mjs
       - name: Pruebas de la interfaz
         run: |
           npm i --no-save --ignore-scripts --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
