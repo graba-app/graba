@@ -73,7 +73,7 @@ La primera vez, Graba te ayuda a elegir tu IA ([cómo instalarla](https://graba-
     video.mp4            # pantalla + burbuja de la cámara + micrófono (H.264 / AAC)
     grabacion.md         # todo el texto (abajo)
     subtitulos.srt       # subtítulos con tiempos
-    transcripcion.json   # salida de whisper ({"transcription": [{"offsets": {"from": ms, "to": ms}, "text": "…"}]})
+    transcripcion.json   # lo que dijo whisper, sin marcas ni frases inventadas ({"transcription": [{"offsets": {"from": ms, "to": ms}, "text": "…"}]})
     meta.json            # {"inicio": "2026-10-20T10:15:00", "duracion_seg": 312, "recortes": [{"inicio": 12.5, "fin": 300}]}
     estado.json          # {"estado": "procesando" | "lista" | "error", "paso", "total", "texto", "error"}
     youtube.json         # si se subió: {"estado": "subiendo" | "lista" | "error", "pct", "id", "url", "privacidad"}

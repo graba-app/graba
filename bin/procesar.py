@@ -11,13 +11,14 @@ Formato de grabacion.md: ver "Formato de las grabaciones" en el README.
 import json
 import os
 import re
-import subprocess
 import sys
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import comun  # noqa: E402
 import ia  # noqa: E402  (pieza «ia»)
+import nucleo  # noqa: E402  (pieza «nucleo»)
+import transcribir as transcribir_  # noqa: E402  (pieza «transcribir»)
 
 PASOS = 3
 MARCADORES = ["## Resumen", "## Notas", "## Guion para YouTube", "## Para publicar", "### Títulos", "### Descripción", "### Capítulos"]
@@ -48,33 +49,25 @@ def a_segundos(texto):
 
 
 def tiempo_srt(ms):
-    ms = max(0, int(ms))
+    ms = max(0, int(round(ms)))
     return f"{ms // 3600000:02d}:{ms % 3600000 // 60000:02d}:{ms % 60000 // 1000:02d},{ms % 1000:03d}"
 
 
-# ───────────── Transcripción ─────────────
-# Frases que whisper inventa cuando hay silencio o ruido (créditos de subtítulos de los videos con que se entrenó).
-ALUCINACIONES = {
-    "thank you", "thanks for watching", "thank you for watching", "thank you very much", "bye", "you",
-    "gracias", "muchas gracias", "gracias por ver", "gracias por ver el video", "suscríbete", "suscríbete al canal",
-    "subtítulos realizados por la comunidad de amara.org", "subtítulos por la comunidad de amara.org", "amara.org",
-    "obrigado", "merci", "danke",
-}
-
-
-def es_alucinacion(texto):
-    t = re.sub(r"[^\w\s.]", "", texto.lower()).strip(" .")
-    return t in ALUCINACIONES or "amara.org" in t
-
-
+# ───────────── Transcripción (pieza «transcribir») ─────────────
+# Los segmentos van en segundos ({desde, hasta, texto}), como los da la pieza. En el disco, transcripcion.json sigue con el formato
+# de whisper de siempre (offsets en milisegundos; ver «Formato de las grabaciones» en el README): lo leen recortar.py, corregir.py y
+# los scripts de la persona.
 def segmentos(carpeta):
+    """Los segmentos de transcripcion.json, limpios (sin marcas como [música], sin inventos de whisper ni bucles), en segundos."""
     datos = leer_json(os.path.join(carpeta, "transcripcion.json"), {}) or {}
-    lista = []
-    for s in datos.get("transcription", []):
-        texto = (s.get("text") or "").strip()
-        if texto and not re.fullmatch(r"\[.*\]|\(.*\)", texto) and not es_alucinacion(texto):  # [música], (ruido), "Thank you."…
-            lista.append({"desde": s["offsets"]["from"], "hasta": s["offsets"]["to"], "texto": texto})
-    return lista
+    return transcribir_.limpiar(transcribir_.segmentos_de(datos))
+
+
+def guardar_transcripcion(carpeta, segs):
+    datos = {"transcription": [{"offsets": {"from": round(s["desde"] * 1000), "to": round(s["hasta"] * 1000)}, "text": s["texto"]}
+                               for s in segs]}
+    nucleo.escribir_atomico(os.path.join(carpeta, "transcripcion.json"), json.dumps(datos, ensure_ascii=False, indent=2),
+                            nucleo.DOCUMENTO)
 
 
 def vocabulario():
@@ -91,42 +84,25 @@ def transcribir(carpeta):
     if not os.path.exists(audio):
         return  # grabación sin micrófono: queda como "sin voz"
     c = comun.config()
-    modelo = os.path.join(comun.MODELOS, comun.ARCHIVOS_MODELO.get(c["modelo"], comun.ARCHIVOS_MODELO["turbo"]))
-    if not os.path.exists(modelo):
-        raise RuntimeError("Falta el modelo de transcripción: descárgalo en Ajustes.")
-    binario = comun.herramienta("graba-transcribir") or comun.herramienta("whisper-cli")
-    if not binario:
-        raise RuntimeError("No encontré el transcriptor.")
-    hilos = str(max(2, min(8, (os.cpu_count() or 4) - 1)))
-    cmd = [binario, "-m", modelo, "-l", c.get("idioma_audio") or "auto", "-t", hilos, "-f", audio, "-oj",
-           "-of", os.path.join(carpeta, "transcripcion"), "-np"]
-    # El vocabulario (nombres, términos) ayuda a whisper. Va en un archivo, nunca como argumento (cualquier programa del
-    # computador ve los argumentos): graba-transcribir lo lee con --prompt-archivo. whisper-cli (Windows y Linux) no sabe
-    # leerlo de un archivo; ahí solo lo usa la IA al escribir las notas.
-    archivo_prompt = os.path.join(carpeta, ".vocabulario.txt")
-    if vocabulario() and os.path.basename(binario).lower().startswith("graba-transcribir"):
-        with open(archivo_prompt, "w", encoding="utf-8") as f:
-            f.write(", ".join(vocabulario()[-40:]))
-        cmd += ["--prompt-archivo", archivo_prompt]
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=4 * 3600)
-    finally:
-        if os.path.exists(archivo_prompt):
-            os.remove(archivo_prompt)
-    if r.returncode != 0 or not os.path.exists(os.path.join(carpeta, "transcripcion.json")):
-        raise RuntimeError("La transcripción falló: " + (r.stderr or "")[-300:])
+        # El vocabulario nunca va como argumento: la pieza lo pasa en un archivo privado que se borra al terminar.
+        segs = transcribir_.transcribir(audio, idioma=c.get("idioma_audio") or "auto", modelo=transcribir_.modelo_elegido(c["modelo"]),
+                                        vocabulario=", ".join(vocabulario()[-40:]))
+    except transcribir_.ErrorTranscribir as e:
+        raise RuntimeError(f"{str(e).rstrip('.')}: {e.detalle}" if e.detalle else str(e)) from None
+    guardar_transcripcion(carpeta, segs)
     os.remove(audio)  # ya no hace falta: el video tiene el audio original
 
 
 def escribir_srt(carpeta, segs):
-    bloques = [f"{i}\n{tiempo_srt(s['desde'])} --> {tiempo_srt(s['hasta'])}\n{s['texto']}\n" for i, s in enumerate(segs, 1)]
+    bloques = [f"{i}\n{tiempo_srt(s['desde'] * 1000)} --> {tiempo_srt(s['hasta'] * 1000)}\n{s['texto']}\n" for i, s in enumerate(segs, 1)]
     with open(os.path.join(carpeta, "subtitulos.srt"), "w", encoding="utf-8") as f:
         f.write("\n".join(bloques))
 
 
 # ───────────── IA ─────────────
 def prompt_para(segs, duracion):
-    lineas = "\n".join(f"[{reloj(s['desde'] / 1000)}] {s['texto']}" for s in segs)
+    lineas = "\n".join(f"[{reloj(s['desde'])}] {s['texto']}" for s in segs)
     return f"""Eres editor de contenido para YouTube. Abajo está la transcripción (con marcas de tiempo) de un video grabado
 con la pantalla y la cámara: alguien muestra y explica algo. Dura {reloj(duracion)}.
 
@@ -210,7 +186,7 @@ def nombre_carpeta(fecha, titulo):
 
 def escribir_grabacion(carpeta, meta, titulo, cuerpo, segs):
     fecha = datetime.fromisoformat(meta["inicio"]) if meta.get("inicio") else datetime.now()
-    transcripcion = "\n".join(f"[{reloj(s['desde'] / 1000)}] {s['texto']}" for s in segs) or "(sin voz)"
+    transcripcion = "\n".join(f"[{reloj(s['desde'])}] {s['texto']}" for s in segs) or "(sin voz)"
     fm = [
         "---",
         f"fecha: {fecha.strftime('%Y-%m-%d')}",
