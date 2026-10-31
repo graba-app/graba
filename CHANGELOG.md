@@ -5,6 +5,12 @@ Lo que cambia para quien usa Graba, en palabras simples. Las versiones anteriore
 *What changes for people using Graba, in plain words. Earlier versions are listed in Releases.*
 
 ## Sin publicar · Unreleased
+- **Tus «gracias» quedan:** si al final de un video dices «Gracias» o «Thank you», ahora queda en la transcripción y los
+  subtítulos; solo se quita cuando whisper lo inventa en un silencio. · *Your «thank you» stays: if you say «Gracias» or «Thank
+  you» at the end of a video, it now stays in the transcript and subtitles; it's only removed when whisper makes it up in silence.*
+- **Actualizaciones más claras:** el aviso dice «Hay una versión nueva» cuando hay una versión, y «Hay cambios nuevos en el código»
+  solo si instalaste Graba desde su código. · *Clearer updates: the notice says «There's a new version» when there is one, and
+  «There are new changes in the code» only if you installed Graba from its source.*
 - **Apariencia y comentarios:** en Ajustes ahora puedes elegir claro, oscuro o como el sistema, y mandarnos un comentario o contar
   un error (se abre GitHub con tu mensaje listo; lo publicas tú). Los diálogos se usan entero con el teclado (Tab no se escapa, Esc
   cierra y el foco vuelve a donde estabas), los avisos ya no se pisan entre ellos y el rojo y el verde se leen mejor. · *Appearance

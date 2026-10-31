@@ -19,13 +19,15 @@ DATOS = tempfile.mkdtemp(prefix="graba-pruebas-")
 FALSOS = os.path.join(DATOS, "bin-falso")
 os.makedirs(os.path.join(DATOS, ".graba", "modelos"))
 os.makedirs(FALSOS)
-# Un modelo «descargado»: la pieza «transcribir» lo reconoce por su tamaño exacto (archivo disperso: no ocupa disco).
-with open(os.path.join(DATOS, ".graba", "modelos", "ggml-large-v3-turbo-q5_0.bin"), "wb") as f:
-    f.truncate(574_041_195)
+# Un modelo «descargado» para las pruebas (pieza «transcribir»: GRABA_MODELO_PRUEBA, de cualquier tamaño).
+MODELO_PRUEBA = os.path.join(DATOS, "modelo-prueba.bin")
+with open(MODELO_PRUEBA, "wb") as f:
+    f.write(b"modelo falso")
 with open(os.path.join(DATOS, ".graba", "config.json"), "w") as f:
     json.dump({"ia": "claude", "modelo": "turbo"}, f)
 os.environ["GRABA_DATOS"] = os.path.join(DATOS, ".graba")  # pieza «nucleo»: la carpeta interna; las grabaciones, la de arriba
 os.environ["GRABA_HERRAMIENTAS"] = FALSOS
+os.environ["GRABA_MODELO_PRUEBA"] = MODELO_PRUEBA
 os.environ["PATH"] = FALSOS + os.pathsep + os.environ.get("PATH", "")
 sys.path.insert(0, os.path.join(RAIZ, "bin"))
 
@@ -525,7 +527,7 @@ class TiemposEnSegundos(unittest.TestCase):
         {"offsets": {"from": 0, "to": 1234}, "text": " Hola, soy Ana."},
         {"offsets": {"from": 1234, "to": 61999}, "text": " [Música]"},
         {"offsets": {"from": 62001, "to": 3725457}, "text": " Una hora después."},
-        {"offsets": {"from": 3725457, "to": 3725999}, "text": " Thank you."}]}
+        {"offsets": {"from": 3725457, "to": 3725999}, "text": " Subtítulos realizados por la comunidad de Amara.org"}]}
     #: Lo que escribía Graba antes de la pieza para esa misma entrada (sacado del código de antes).
     SRT = "1\n00:00:00,000 --> 00:00:01,234\nHola, soy Ana.\n\n2\n00:01:02,001 --> 01:02:05,457\nUna hora después.\n"
 
@@ -539,6 +541,36 @@ class TiemposEnSegundos(unittest.TestCase):
         segs = procesar.segmentos(self.carpeta())
         self.assertEqual(segs, [{"desde": 0.0, "hasta": 1.234, "texto": "Hola, soy Ana."},
                                 {"desde": 62.001, "hasta": 3725.457, "texto": "Una hora después."}])
+
+    def test_gracias_dicho_queda(self):
+        # Pieza «transcribir» 0.2: sin la energía (audio.wav ya no está), un «Thank you.» junto a lo que se dijo queda.
+        c = self.carpeta()
+        datos = json.loads(json.dumps(self.WHISPER))
+        datos["transcription"].append({"offsets": {"from": 3726000, "to": 3727000}, "text": " Thank you."})
+        with open(os.path.join(c, "transcripcion.json"), "w", encoding="utf-8") as f:
+            json.dump(datos, f)
+        self.assertEqual([s["texto"] for s in procesar.segmentos(c)], ["Hola, soy Ana.", "Una hora después.", "Thank you."])
+
+    def test_gracias_en_silencio_se_va(self):
+        # Con audio.wav, procesar.transcribir le pasa la energía a la pieza: un «Gracias.» que cae en silencio es un invento.
+        import wave
+        c = tempfile.mkdtemp(dir=DATOS)
+        with wave.open(os.path.join(c, "audio.wav"), "wb") as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000)
+            w.writeframes(b"\x00\x40\x00\xc0" * 8000 * 4 + b"\x00\x00" * 16000 * 4)  # 4 s de «voz» y 4 s de silencio
+        falso = os.path.join(FALSOS, "graba-transcribir")
+        antes = leer_archivo(falso)
+        datos = {"transcription": [{"offsets": {"from": 0, "to": 3500}, "text": " Hola, soy Ana."},
+                                   {"offsets": {"from": 5000, "to": 6000}, "text": " Gracias."}]}
+        with open(falso, "w") as f:
+            f.write("#!/usr/bin/env python3\nimport sys\na=sys.argv\nopen(a[a.index('-of')+1]+'.json','w').write("
+                    + repr(json.dumps(datos)) + ")\n")
+        try:
+            procesar.transcribir(c)
+        finally:
+            with open(falso, "w") as f:
+                f.write(antes)
+        self.assertEqual([s["texto"] for s in procesar.segmentos(c)], ["Hola, soy Ana."])
 
     def test_srt_igual_que_antes(self):
         c = self.carpeta()

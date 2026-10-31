@@ -608,15 +608,16 @@
       if (falta && E.bv === null && !E.bvCerrada) E.bv = E.config.idioma_ui ? 1 : 0;
       await cargarIdioma();
       tema.aplicar(tema.elegir({ config: E.config.tema }));
-      ui.actualizacionDisponible(E.actualizacion.hay ? { ...E.actualizacion, notas: E.actualizacion.notas ?? E.actualizacion.detalle } : null);
+      ui.actualizacionDisponible(E.actualizacion.hay ? E.actualizacion : null);
       if (e.aviso) toast(e.aviso, { traducido: true });
       // No se repinta si nada cambió (así el video no se reinicia cada segundo).
       if (JSON.stringify([E.grabaciones, E.config, E.permisos, E.fase, E.pausada, E.ias, E.modelos, E.actualizacion, E.youtube]) !== antes || e.seleccionar || !$("#app").innerHTML) render();
     },
     youtubeConectado(r) { E.conectandoYT = false; toast(r.ok ? "YouTube conectado" : (r.error || "No se pudo conectar")); render(); },
     youtubeSubido(r) { toast(r.ok ? "Subido a YouTube" : (r.error || "No se pudo subir")); render(); },
-    // Actualizaciones: las lleva la pieza «componentes» (ui.act); Graba usa `detalle` como sus notas.
-    actualizacionRevisada(r) { if (r.hay) { E.actualizacion = r; E.actOculto = false; } ui.actualizacionRevisada({ ...r, notas: r.notas ?? r.detalle }); },
+    // Actualizaciones: las lleva la pieza «componentes» (ui.act): `detalle` son las notas y `desarrollo: true` (Mac, checkout de git)
+    // dice que son los commits nuevos y no una versión.
+    actualizacionRevisada(r) { if (r.hay) { E.actualizacion = r; E.actOculto = false; } ui.actualizacionRevisada(r); },
     actualizacionProgreso(a) { ui.actualizacionProgreso(a); },
     archivosElegidos(lista) {
       if (!E.guion) return;

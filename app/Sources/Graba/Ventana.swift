@@ -274,7 +274,8 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavig
             enviarEstado()
         case "buscarActualizacion":
             Actualizaciones.revisar { hay, detalle in
-                Ventana.shared.llamar("actualizacionRevisada", ["hay": hay, "detalle": detalle, "sinConexion": detalle == Actualizaciones.sinConexion])
+                Ventana.shared.llamar("actualizacionRevisada", ["hay": hay, "detalle": detalle, "sinConexion": detalle == Actualizaciones.sinConexion,
+                                                               "desarrollo": Actualizaciones.checkout != nil])
                 Ventana.shared.enviarEstado()
             }
         case "actualizar":
