@@ -9,7 +9,7 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
 
 **Principios que no se negocian**
 1. **Todo es del usuario.** Videos, transcripciones y textos viven en su computador (`~/Graba`). No hay servidores propios.
-2. **Gratis y abierto** (MIT). Sin cuentas, sin suscripciones, sin telemetría.
+2. **Gratis y abierto** (AGPL-3.0). Sin cuentas, sin suscripciones, sin telemetría.
 3. **Nada personal en el código.** Ejemplos y `ui/demo.json` con datos ficticios (Ana Pérez, Matías Soto…).
 4. **Formato abierto.** Cada grabación es una carpeta con `video.mp4`, `grabacion.md` y `subtitulos.srt` (ver README, "Formato de las
    grabaciones"). No cambies nombres de campos ni marcadores sin compatibilidad y sin actualizar el README.
@@ -21,8 +21,8 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
 |---|---|
 | `app/Sources/Graba/` | App de Mac (Swift, SwiftPM, macOS 15). `GrabaApp.swift`: arranque, flujo de grabación (`Estado`), grabaciones en disco (`Grabaciones`) y barra de menú. `Grabadora.swift`: ScreenCaptureKit + AVAssetWriter (pantalla + micrófono en AAC; pausa corriendo los tiempos; sonido del Mac aparte en `sistema.m4a` y mezclado al final), extracción del audio a WAV 16 kHz y `mezclarSonido`. `Atajos.swift`: ⌃⌥⌘R / ⌃⌥⌘P globales con `RegisterEventHotKey` (sin permiso de Accesibilidad). `Recorte.swift`: recortar sin recomprimir (`AVAssetExportPresetPassthrough`) y deshacer. `Flotantes.swift`: burbuja de la cámara (sale en el video) y controles (no salen). `Ventana.swift`: WKWebView + puente. `Servicios.swift`: rutas, configuración, idioma, permisos, IA, modelos y `Procesador`. |
 | `app/Sources/Transcribir/` | Binario `graba-transcribir`: whisper.cpp (xcframework oficial, Metal) con las mismas opciones que `whisper-cli`. |
-| `bin/` | Python **solo biblioteca estándar**: `ia.py` (configuración y `ejecutar_ia`), `procesar.py` (transcribir → subtítulos → IA → `grabacion.md` → renombrar la carpeta), `recortar.py` (corre los tiempos de transcripción, subtítulos, capítulos y duración al recortar; copia y deshacer en `.original/`). |
-| `ui/` | Interfaz web única (`app.js`, `app.css`), `demo.json` (datos ficticios para la vista previa) e `idiomas/en.json`. |
+| `bin/` | Python **solo biblioteca estándar**: `nucleo.py` (pieza «nucleo»: `app.json`, carpeta de datos, config validada, escritura atómica), `ia.py` (pieza «ia»: la IA de la persona; `preguntar`, `frase`, `probar`), `comun.py` (lo propio de Graba sobre las piezas: `INTERNO`, `MODELOS`, `config()` con sus valores por defecto, `guardar_json`, `herramienta`, `nombre_ia`, `nombre_copia`), `procesar.py` (transcribir → subtítulos → IA → `grabacion.md` → renombrar la carpeta), `recortar.py` (corre los tiempos de transcripción, subtítulos, capítulos y duración al recortar; copia y deshacer en `.original/`). |
+| `ui/` | Interfaz web única (`app.js`, `i18n.js` (pieza «i18n»: `tr`, `Tp`, `traducirDOM`, paquetes de idioma validados), `app.css`), `demo.json` (datos ficticios para la vista previa) e `idiomas/en.json`. |
 | `herramientas/` | `empaquetar.sh` (arma `dist/Graba.app` + zip + `.sha256`) y `revisar_privacidad.sh`. |
 | `build.sh` | Empaqueta e instala en `~/Applications/Graba.app` (se niega si hay una grabación o un procesamiento en curso). |
 | `instalar.sh` | Instalador de un comando (`curl … \| bash`): última Release, verifica SHA-256, instala. |
@@ -31,6 +31,7 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
 | `instalar.ps1` | Instalador de un comando para Windows (`irm … \| iex`). |
 | `docs/` | Página pública (GitHub Pages). |
 | `CHANGELOG.md` | Lo que cambia para quien usa la app, en palabras simples (ver «Lo que rodea a un cambio»). |
+| `app.json`, `piezas.json` | **Pieza** (ver «Piezas» abajo): `app.json` describe la app para las piezas (id, nombre, datos, plataformas, claves de config); `piezas.json` lo escribe `pieza.py` (versión y huella de cada archivo copiado). |
 | `.github/workflows/` | `revisar.yml` (en cada cambio y PR) y `publicar.yml` (al subir la versión en `app/Info.plist`). |
 
 ## Cómo funciona
@@ -57,10 +58,15 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
   que va dejando el avance en `estado.json` (`procesando`, `paso`/`total`, `texto`) y al final `estado: lista` o `error`.
   Mientras tanto la ventana revisa cada segundo la firma del avance (`estado.json` y `youtube.json` de las carpetas activas:
   `firmaAvance` en `Ventana.swift` y `escritorio/src/avance.js`) y solo manda el estado completo cuando cambia.
-- **IA:** `ia.ejecutar_ia(prompt)` en una carpeta temporal y modo solo lectura. La respuesta debe tener los marcadores de
+- **IA:** `ia.preguntar(prompt)` (pieza «ia») en una carpeta temporal y modo solo lectura (pedido por la entrada estándar o en un archivo);
+  devuelve `(texto, error)` y el error (`{codigo, valores}`) se muestra con `comun.error_ia` / `ia.frase`. Probar una IA (bienvenida y
+  Ajustes) es `ia.py probar <entrada {"ia"}> <salida>` desde los dos hosts (`IA.probar` → `Procesador.conEntrada`); la interfaz traduce
+  el error por su `codigo` (`ERRORES_IA` en `ui/app.js`, las mismas frases que `ERRORES` de `bin/ia.py`). La respuesta debe tener los marcadores de
   `procesar.MARCADORES` (siempre en español); si faltan, no se escribe nada y queda `error` con la transcripción guardada (botón Reintentar).
   Los capítulos se corrigen solos (orden, duración, primero en 00:00).
-- **Datos:** `~/Graba/<AAAA-MM-DD HHMM - Título>/` y `~/Graba/.graba/` (`config.json`, `modelos/`). La carpeta `~/Graba` no
+- **Datos:** `~/Graba/<AAAA-MM-DD HHMM - Título>/` y `~/Graba/.graba/` (`config.json`, `modelos/`, `vocabulario.txt`; `app.json` →
+  `"datos": "visible"`, así `nucleo.carpeta_datos()` es esa carpeta, 0700). La config la escriben las apps; los scripts solo la leen
+  validada por `app.json` (`comun.config()`). En las pruebas, `GRABA_DATOS` apunta a otra carpeta interna (las grabaciones, la de arriba). La carpeta `~/Graba` no
   distingue mayúsculas de `~/graba`: el checkout de desarrollo va en `~/Developer/graba`.
 
 ## Windows y Linux (`escritorio/`)
@@ -94,14 +100,39 @@ para la vista previa. `pruebas/contrato.py` lo revisa.
   `ui/idiomas/en.json` en el mismo cambio; frases completas, nunca pedazos pegados.
 - Contenido del usuario (títulos, notas, transcripción) con `esc()` y `data-sin-traducir`.
 - **Seguridad** (ver `SECURITY.md`): `ui/index.html` tiene una CSP sin código en línea (no agregues `onclick=`, `<script>` en
-  línea ni recursos de otros dominios). La IA corre solo con texto (`ia.claude_solo_texto`: sin MCP y sin herramientas, o solo
-  `Read` con archivos adjuntos). Las ventanas de Electron van con `sandbox: true` y la de Mac solo navega dentro de `ui/`. En los
+  línea ni recursos de otros dominios). La IA corre solo con texto (pieza «ia»: Claude con `--strict-mcp-config` y
+  `--disallowedTools "*"`, o solo leer las copias de los archivos adjuntos `material-N.ext`; `--safe-mode` y `--setting-sources user` si
+  el CLI las conoce), sin la memoria de Claude ni variables `GRABA_*`, y el pedido nunca va como argumento (Antigravity: siempre en
+  `instrucciones.md`). Nunca se quitan protecciones para que un CLI viejo funcione: si no conoce una, no corre. La acción `config`
+  solo acepta las claves de `app.json` que la interfaz puede cambiar (`Config.editables` en Swift y en Electron, revisadas por
+  `pruebas/test_python.py`). El puente (Swift y cada `ipcMain.on`) solo acepta el marco principal
+  de la página propia; las actualizaciones, solo URLs de `esDescargaNuestra` y todo lo variable de un script bash con `comillas()`. Las ventanas de Electron van con `sandbox: true` y la de Mac solo navega dentro de `ui/`. En los
   workflows: actions fijadas por SHA (Dependabot las sube), permisos mínimos, `persist-credentials: false`, nunca
   `pull_request_target` ni `${{ … }}` dentro de `run:`.
+- Archivos de piezas (`bin/nucleo.py`, `bin/ia.py`, `ui/i18n.js`): no se editan aquí; ver «Piezas».
 - Antes de cerrar un cambio: `bash pruebas/correr.sh` y mirar la interfaz (`cd ui && python3 -m http.server 8765`, `?idioma=en`,
   `?bienvenida`, `window.Graba._probar(E => …)`). Swift solo compila en un Mac (o en el job `mac` de GitHub).
 - Privacidad: `bash herramientas/revisar_privacidad.sh` antes de cada commit (usa `.terminos-privados`, local y nunca versionado).
 - Commits con autor `@users.noreply.github.com`. El repo es público: cada commit se ve al tiro.
+
+## Piezas (de [Pieza](https://github.com/pieza-app/pieza))
+Graba usa piezas de Pieza, la base de la familia de apps: código probado que se copia a la app (modelo «copiar y adueñarse»).
+
+| Pieza | Archivos | Qué usa Graba |
+|---|---|---|
+| `nucleo` | `bin/nucleo.py` | `app.json`, carpeta de datos (`~/Graba/.graba`, o `GRABA_DATOS`), config validada por `app.json`, `escribir_atomico`/`escribir_json`, `responder`, `recursos()` (`GRABA_RECURSOS`). `comun.py` lo envuelve con lo propio de Graba. |
+| `ia` | `bin/ia.py` | La IA de la persona (`preguntar`, `frase`, `nombre`, `elegida`, `probar`). Lo propio de Graba (prompts, `MARCADORES`, mensajes) sigue en `procesar.py`, `corregir.py`, `guion.py` y `comun.py`. |
+| `i18n` | `ui/i18n.js` | `tr`, `Tp`, `traducirDOM`, `idiomaDelSistema`, `elegir` (lo recién elegido > `?idioma=` > `idioma_ui` > el del sistema). `ui/idiomas/en.json` lleva `codigo`. |
+
+- **No edites a mano los archivos de una pieza.** Se actualizan con «Pieza al día» (`.github/workflows/pieza-al-dia.yml`, una vez por
+  semana abre un PR o un issue) o con `python3 <pieza>/herramientas/pieza.py actualizar .`. Si hay que cambiar algo, el cambio va
+  primero a Pieza (`pieza.py diferencias . <pieza>` lo muestra) y vuelve desde allá; `pieza.py estado .` dice si algo quedó distinto.
+- `app.json` va dentro de las apps (`herramientas/empaquetar.sh` → `Contents/Resources/graba/app.json` y `extraResources` de
+  `escritorio/package.json`): `bin/nucleo.py` lo busca junto a `bin/`. Las claves de config que la interfaz puede cambiar son las de
+  `app.json` sin `"interfaz": false`; las marcadas así (modo, cámara, micrófono elegido, sonido, canal de YouTube) solo las escribe la app.
+- `.gitignore` es una lista blanca: `app.json` y `piezas.json` están en ella.
+- No adoptadas todavía: `bienvenida` (Graba tiene su propia bienvenida con pasos de transcriptor y permisos, y las apps nativas
+  dependen de `faltaIdioma`) y `actualizaciones` (en Mac pide un target propio de SwiftPM; las dos se están mejorando en Pieza).
 
 ## Publicar una versión
 Sube `CFBundleShortVersionString` en `app/Info.plist` y `version` en `escritorio/package.json` y haz push a main: `publicar.yml`
@@ -124,6 +155,7 @@ revisa cada fila ("no aplica" se decide, no se supone):
 | quita algo | bórralo de la página, el README y las guías: nada que prometa lo que ya no hace |
 | cambia el formato de datos o el puente | la documentación del formato, `ejemplos/` si existe y esta guía |
 | cambia carpetas, reglas o pruebas | esta guía (`AGENTS.md`) y `CONTRIBUTING.md` |
+| actualiza o agrega una pieza | `piezas.json` (lo escribe `pieza.py`), la tabla «Piezas» de esta guía y `app.json` si pide config |
 | resuelve un issue | ciérralo con «Resuelto en …» dando crédito y abre issues para lo que quedó pendiente |
 | lo nota quien usa Graba | `CHANGELOG.md`: una línea en «Sin publicar», en lenguaje de persona («Ahora puedes…»), en español e inglés |
 

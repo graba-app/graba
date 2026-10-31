@@ -17,23 +17,20 @@ import sys
 import wave
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import nucleo  # noqa: E402  (pieza «nucleo»)
 from procesar import a_segundos, capitulos_validos, leer_json, reloj, tiempo_srt  # noqa: E402
 
 TEXTOS = ["grabacion.md", "subtitulos.srt", "transcripcion.json", "meta.json", "audio.wav"]
 
 
-def guardar_json(ruta, datos):
-    tmp = ruta + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(datos, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, ruta)
-
-
 def escribir(ruta, texto):
-    tmp = ruta + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        f.write(texto)
-    os.replace(tmp, ruta)
+    """De una vez y sin temporales huérfanos (nucleo). Un archivo de la grabación es de la persona: conserva sus permisos y, si es
+    nuevo, queda como cualquier archivo suyo (DOCUMENTO)."""
+    nucleo.escribir_atomico(ruta, texto, None if os.path.exists(ruta) else nucleo.DOCUMENTO)
+
+
+def guardar_json(ruta, datos):
+    escribir(ruta, json.dumps(datos, ensure_ascii=False, indent=2))
 
 
 def preparar(carpeta):
@@ -217,7 +214,7 @@ def main():
             sys.exit(__doc__)
     except (OSError, ValueError) as e:
         r = {"ok": False, "error": f"No pude recortar: {e}"}
-    guardar_json(a[-1], r)
+    nucleo.responder(a[-1], r)
     print(json.dumps(r, ensure_ascii=False))
 
 

@@ -82,7 +82,9 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavig
         refresco = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             Task { @MainActor in
                 let v = Ventana.shared
-                guard v.ventana?.isVisible == true, Procesador.enCurso != nil || !YouTube.subiendo.isEmpty else { return }
+                // Sin nada en curso se olvida la firma: lo próximo que empiece se manda en el primer segundo.
+                guard Procesador.enCurso != nil || !YouTube.subiendo.isEmpty else { v.ultimaFirma = ""; return }
+                guard v.ventana?.isVisible == true else { return }
                 let firma = Ventana.firmaAvance([Procesador.enCurso].compactMap { $0 } + YouTube.subiendo.sorted())
                 guard firma != v.ultimaFirma else { return }
                 v.ultimaFirma = firma
@@ -147,6 +149,9 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavig
     // MARK: Desde la interfaz
 
     func userContentController(_ c: WKUserContentController, didReceive mensaje: WKScriptMessage) {
+        // Solo la interfaz local (el marco principal, un archivo de ui/: la navegación de arriba no deja cargar otra cosa) puede
+        // pedirle cosas a la app; una página de internet o un iframe, nunca.
+        guard mensaje.frameInfo.isMainFrame, mensaje.frameInfo.securityOrigin.protocol == "file" else { return }
         guard let m = mensaje.body as? [String: Any], let accion = m["accion"] as? String else { return }
         let d = m["datos"] as? [String: Any] ?? [:]
         let ruta = d["ruta"] as? String ?? ""
@@ -182,7 +187,8 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavig
             Procesador.encolar(ruta, soloIA: d["soloIA"] as? Bool ?? false) { Ventana.shared.enviarEstado() }
             enviarEstado()
         case "config":
-            Config.guardar(d)
+            // Solo claves conocidas (las de app.json que la interfaz puede cambiar): la interfaz no escribe cualquier cosa.
+            Config.guardar(d.filter { Config.editables.contains($0.key) })
             enviarEstado()
             // El aviso de versión nueva se escribió en el idioma de antes: se vuelve a revisar para que salga en el elegido.
             if d["idioma_ui"] != nil, Actualizaciones.disponible["hay"] as? Bool == true {
@@ -190,9 +196,12 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavig
             }
         case "probarIA":
             let id = d["id"] as? String ?? ""
-            IA.probar(id) { ok, texto in
+            IA.probar(id) { r in
+                let ok = r["ok"] as? Bool == true
                 if ok { Config.guardar(["ia": id]) }
-                Ventana.shared.llamar("iaProbada", ["id": id, "ok": ok, "texto": texto])
+                // codigo + valores: la interfaz traduce el error (ver ERRORES de bin/ia.py); texto: el error ya en español.
+                Ventana.shared.llamar("iaProbada", ["id": id, "ok": ok, "texto": r["error"] as? String ?? "", "codigo": r["codigo"] as? String ?? "",
+                                                    "valores": r["valores"] as? [String: Any] ?? [:]])
                 Ventana.shared.enviarEstado()
             }
         case "descargarModelo":

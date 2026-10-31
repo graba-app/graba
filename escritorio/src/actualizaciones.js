@@ -1,7 +1,7 @@
 // Versiones nuevas de Graba, dentro de la app (nunca una alerta del sistema): se revisa al abrir y cada 6 horas. Equivale a Actualizaciones.swift.
 // Windows: el instalador del Release (Graba-Windows.exe, en silencio: cierra Graba y la vuelve a abrir).
 // Linux: el AppImage se reemplaza a sí mismo; la instalación de instalar.sh (~/.local/share/Graba) se cambia completa con el tar.gz.
-// Todo verificado con su .sha256. Las grabaciones viven en ~/Graba, fuera de la app: actualizar no borra nada.
+// Todo verificado con su .sha256 y solo desde github.com/graba-app/graba/releases/download/. Las grabaciones viven en ~/Graba, fuera de la app: actualizar no borra nada.
 const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
@@ -25,6 +25,17 @@ function instalacion() {
   return null; // copia descomprimida a mano en otro lugar: mejor no tocarla
 }
 
+/** Texto entre comillas simples para bash (igual que comillas() en Actualizaciones.swift). */
+const comillas = (x) => "'" + String(x).replace(/'/g, "'\\''") + "'";
+
+/** Solo se descarga desde los Releases de este repo en github.com (GitHub redirige luego a su almacenamiento, por https). */
+function esDescargaNuestra(u) {
+  try {
+    const x = new URL(u);
+    return x.protocol === "https:" && x.host === "github.com" && x.pathname.startsWith(`/${REPO}/releases/download/`) && !x.search && !x.username;
+  } catch { return false; }
+}
+
 /** "0.10.0" > "0.9.3" */
 function esMayor(a, b) {
   const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number);
@@ -33,6 +44,7 @@ function esMayor(a, b) {
 }
 
 async function descargar(url, destino, progreso = () => {}) {
+  if (!esDescargaNuestra(url)) throw new Error("origen");
   const r = await net.fetch(url);
   if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
   const total = Number(r.headers.get("content-length")) || 0;
@@ -69,7 +81,7 @@ const Actualizaciones = {
     const tag = String(o.tag_name || "").replace(/^v/, "");
     const assets = Array.isArray(o.assets) ? o.assets : [];
     const url = (n) => assets.find((a) => a.name === n)?.browser_download_url;
-    if (!inst || !tag || !esMayor(tag, this.version) || !url(inst.archivo) || !url(inst.archivo + ".sha256")) return this._fin(false, "");
+    if (!inst || !tag || !esMayor(tag, this.version) || !esDescargaNuestra(url(inst.archivo)) || !esDescargaNuestra(url(inst.archivo + ".sha256"))) return this._fin(false, "");
     this._urls = { archivo: url(inst.archivo), huella: url(inst.archivo + ".sha256") };
     const notas = String(o.body || "").split("\n").slice(0, 4).join("\n");
     return this._fin(true, `${t("Versión")} ${tag}\n${notas}`);
@@ -94,10 +106,12 @@ const Actualizaciones = {
       huella = await descargar(this._urls.archivo, archivo, (p) => {
         if (Date.now() - ultimo > 500) { ultimo = Date.now(); avisar({ paso: "1", texto: t("Descargando la versión nueva…"), total: 3, pct: Math.round(p * 100) }); }
       });
+      if (!esDescargaNuestra(this._urls.huella)) throw new Error("origen");
       const r = await net.fetch(this._urls.huella);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       esperada = (await r.text()).trim().split(/\s+/)[0].toLowerCase();
     } catch { return avisar({ paso: "error", texto: tErrBajar }); }
-    if (!esperada || huella !== esperada) { fs.rmSync(tmp, { recursive: true, force: true }); return avisar({ paso: "error", texto: tErrBajar }); }
+    if (!/^[0-9a-f]{64}$/.test(esperada || "") || huella !== esperada) { fs.rmSync(tmp, { recursive: true, force: true }); return avisar({ paso: "error", texto: tErrBajar }); }
     avisar({ paso: "2", texto: t("Preparando la versión nueva…"), total: 3 });
     const fin = () => { avisar({ paso: "3", texto: t("Instalando: Graba se cerrará y volverá a abrirse sola"), total: 3 }); };
     try {
@@ -122,11 +136,13 @@ const Actualizaciones = {
         // Un script espera a que Graba se cierre, cambia la carpeta (deja la anterior si algo falla) y la vuelve a abrir.
         const d = inst.destino, guion = path.join(tmp, "actualizar.sh");
         const lanzador = path.join(HOME, ".local", "bin", "graba");
+        // Todo lo variable va con comillas(): ninguna ruta se interpreta como código.
+        const q = comillas, ant = d + ".anterior";
         fs.writeFileSync(guion, `#!/bin/bash
-while kill -0 ${process.pid} 2>/dev/null; do sleep 0.5; done
-rm -rf "${d}.anterior"; mv "${d}" "${d}.anterior" && mv "${nueva}" "${d}" && rm -rf "${d}.anterior" || { rm -rf "${d}"; mv "${d}.anterior" "${d}"; }
-rm -rf "${tmp}"
-if [ -x "${lanzador}" ]; then exec "${lanzador}"; else exec "${d}/graba"; fi
+while kill -0 ${Number(process.pid)} 2>/dev/null; do sleep 0.5; done
+rm -rf ${q(ant)}; mv ${q(d)} ${q(ant)} && mv ${q(nueva)} ${q(d)} && rm -rf ${q(ant)} || { rm -rf ${q(d)}; mv ${q(ant)} ${q(d)}; }
+rm -rf ${q(tmp)}
+if [ -x ${q(lanzador)} ]; then exec ${q(lanzador)}; else exec ${q(path.join(d, "graba"))}; fi
 `);
         spawn("/bin/bash", [guion], { detached: true, stdio: "ignore" }).unref();
         fin();
@@ -139,4 +155,4 @@ if [ -x "${lanzador}" ]; then exec "${lanzador}"; else exec "${d}/graba"; fi
   },
 };
 
-module.exports = { Actualizaciones, SIN_CONEXION };
+module.exports = { Actualizaciones, SIN_CONEXION, esDescargaNuestra, comillas };

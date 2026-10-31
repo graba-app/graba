@@ -36,7 +36,7 @@ Graba se **actualiza sola**: revisa al abrirse y cada 6 horas, y te avisa dentro
 ### Open source y sin fines de lucro
 
 Graba no es una empresa: no hay versión de pago, anuncios, inversionistas ni datos que vender. Es gratis para siempre, el código es
-abierto (MIT) y la hacemos entre todos. ¿Quieres sumarte? Mira [CONTRIBUTING.md](CONTRIBUTING.md).
+abierto (AGPL-3.0) y la hacemos entre todos. ¿Quieres sumarte? Mira [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Instalar
 
@@ -138,7 +138,10 @@ está en [ffmpeg.org](https://ffmpeg.org/download.html)). Cada descarga se verif
 
 ## Licencia / License
 
-[MIT](LICENSE). **English:** Graba is a free, open-source, non-profit Loom-like screen recorder for Mac, Windows and Linux. Your own AI CLI prepares
+[AGPL-3.0](LICENSE). Desde la versión que viene después de la 0.1.0, Graba es AGPL-3.0; las versiones publicadas hasta la 0.1.0 siguen bajo MIT.
+*Starting with the release after 0.1.0, Graba is AGPL-3.0; versions published up to 0.1.0 remain under MIT.*
+
+**English:** Graba is a free, open-source, non-profit Loom-like screen recorder for Mac, Windows and Linux. Your own AI CLI prepares
 the script for a teleprompter that isn't recorded, and afterwards writes notes, titles, a description with chapters and subtitles.
 Transcription is local; everything stays on your computer. Record the whole screen, a window, an area or just the camera, with your
 camera in any shape, your mic and, if you want, the Mac's sound; pause and resume without gaps, use global shortcuts (⌃⌥⌘R / ⌃⌥⌘P,
@@ -146,3 +149,7 @@ Ctrl+Alt+Shift+R / P on Windows and Linux) and trim the start and end (transcrip
 **Install:** Mac and Linux `curl -fsSL https://raw.githubusercontent.com/graba-app/graba/main/instalar.sh | bash` · Windows (PowerShell)
 `irm https://raw.githubusercontent.com/graba-app/graba/main/instalar.ps1 | iex` · or the [latest release](https://github.com/graba-app/graba/releases/latest).
 Questions and ideas are welcome in [Discussions](https://github.com/graba-app/graba/discussions), in English or Spanish.
+
+---
+
+[![Hecho con Pieza](https://pieza-app.github.io/pieza/sello.svg)](https://pieza-app.github.io/pieza/) · Las piezas comunes (tu IA, idiomas, actualizaciones…) viven en [Pieza](https://github.com/pieza-app/pieza).

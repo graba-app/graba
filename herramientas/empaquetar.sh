@@ -1,7 +1,7 @@
 #!/bin/bash
 # Arma dist/Graba.app (autosuficiente) y dist/Graba-macOS.zip + .sha256, sin instalar nada.
 # Lo usan build.sh (en tu Mac) y la acción de GitHub que publica cada versión.
-# Dentro van: la app, graba-transcribir + whisper.framework, Python portátil y el código (bin/, ui/) en Contents/Resources/graba.
+# Dentro van: la app, graba-transcribir + whisper.framework, Python portátil y el código (bin/, ui/, app.json) en Contents/Resources/graba.
 # Los datos del usuario quedan en ~/Graba.
 set -euo pipefail
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:$PATH
@@ -28,6 +28,8 @@ cp Info.plist "$APP/Contents/Info.plist"
 ditto "$REL/whisper.framework" "$APP/Contents/Frameworks/whisper.framework"
 tar -xzf "$PY_TGZ" -C "$APP/Contents/Resources"   # → Resources/python/bin/python3
 for d in bin ui; do ditto "$RAIZ/$d" "$APP/Contents/Resources/graba/$d"; done
+# app.json: la descripción de la app que leen las piezas (bin/nucleo.py la busca junto a bin/; sin ella ningún script arranca).
+cp "$RAIZ/app.json" "$APP/Contents/Resources/graba/app.json"
 find "$APP/Contents/Resources/graba" -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
 chmod +x "$APP/Contents/Resources/graba/bin/"*.py
 

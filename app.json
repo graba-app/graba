@@ -1,0 +1,85 @@
+{
+ "nombre": "Graba",
+ "id": "graba",
+ "datos": "visible",
+ "icono": "docs/favicon.svg",
+ "plataformas": [
+  "mac",
+  "windows",
+  "linux"
+ ],
+ "config": {
+  "idioma_ui": [
+   "es",
+   "en"
+  ],
+  "ia": [
+   "claude",
+   "codex",
+   "gemini"
+  ],
+  "modelo": [
+   "turbo",
+   "small"
+  ],
+  "idioma_audio": [
+   "auto",
+   "es",
+   "en",
+   "pt",
+   "fr",
+   "de",
+   "it"
+  ],
+  "camara": "bool",
+  "microfono": "bool",
+  "teleprompter": "bool",
+  "teleprompter_texto": "texto",
+  "teleprompter_velocidad": "numero",
+  "teleprompter_letra": "numero",
+  "youtube_privacidad": [
+   "private",
+   "unlisted",
+   "public"
+  ],
+  "youtube_auto": "bool",
+  "youtube_client_id": "texto",
+  "youtube_client_secret": "texto",
+  "modo": {
+   "tipo": "texto",
+   "interfaz": false
+  },
+  "camara_forma": {
+   "tipo": "texto",
+   "interfaz": false
+  },
+  "camara_tamano": {
+   "tipo": "texto",
+   "interfaz": false
+  },
+  "camara_id": {
+   "tipo": "texto",
+   "interfaz": false
+  },
+  "microfono_id": {
+   "tipo": "texto",
+   "interfaz": false
+  },
+  "sonido_mac": {
+   "tipo": "bool",
+   "interfaz": false
+  },
+  "sonido_sistema": {
+   "tipo": "bool",
+   "interfaz": false
+  },
+  "youtube_canal": {
+   "tipo": "texto",
+   "interfaz": false
+  },
+  "youtube_categoria": {
+   "tipo": "texto",
+   "interfaz": false
+  }
+ }
+}

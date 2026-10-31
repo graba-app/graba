@@ -17,6 +17,11 @@ enum Rutas {
 }
 
 enum Config {
+    /// Claves que la interfaz puede cambiar con la acción "config": las de app.json sin "interfaz": false (igual que `editables`
+    /// en escritorio/src/servicios.js; pruebas/test_python.py revisa que las tres listas digan lo mismo).
+    static let editables: Set<String> = ["ia", "modelo", "idioma_audio", "idioma_ui", "camara", "microfono", "teleprompter", "teleprompter_texto",
+                                         "teleprompter_velocidad", "teleprompter_letra", "youtube_privacidad", "youtube_auto", "youtube_client_id",
+                                         "youtube_client_secret"]
     static let porDefecto: [String: Any] = ["ia": "", "modelo": "", "idioma_audio": "auto", "idioma_ui": "", "camara": true, "microfono": true]
 
     static func leer() -> [String: Any] {
@@ -130,38 +135,10 @@ enum IA {
         conocidas.map { ["id": $0.id, "nombre": $0.nombre, "instalada": buscar($0.comandos) != nil] }
     }
 
-    /// Prueba real: le pide una palabra. Así sabemos que está instalada y con la sesión iniciada.
-    static func probar(_ id: String, _ fin: @escaping @MainActor (Bool, String) -> Void) {
-        guard let ia = conocidas.first(where: { $0.id == id }), let ruta = buscar(ia.comandos) else { fin(false, Idioma.t("No está instalada.")); return }
-        let pedido = "Responde solo con la palabra: listo"
-        let esAgy = (ruta as NSString).lastPathComponent == "agy"
-        let args: [String]
-        switch id {
-        case "codex": args = ["exec", "--skip-git-repo-check", "-s", "read-only", "-"]
-        case "gemini" where esAgy: args = ["--output-format", "text", "--sandbox", "-p", pedido]
-        case "gemini": args = ["-p", "Responde a las instrucciones de arriba.", "-o", "text"]
-        default: args = ["-p", "--output-format", "text"]
-        }
-        let p = Process(), salida = Pipe(), error = Pipe(), entrada = Pipe()
-        p.executableURL = URL(fileURLWithPath: ruta)
-        p.arguments = args
-        var env = ProcessInfo.processInfo.environment
-        env["PATH"] = (dirs() + ["/bin"]).joined(separator: ":")
-        p.environment = env
-        p.currentDirectoryURL = FileManager.default.temporaryDirectory
-        p.standardInput = entrada; p.standardOutput = salida; p.standardError = error
-        p.terminationHandler = { pr in
-            let texto = String(data: salida.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: error.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            Task { @MainActor in
-                let ok = pr.terminationStatus == 0 && !texto.isEmpty
-                fin(ok, ok ? texto.trimmingCharacters(in: .whitespacesAndNewlines) : String(err.suffix(300)))
-            }
-        }
-        do { try p.run() } catch { fin(false, error.localizedDescription); return }
-        entrada.fileHandleForWriting.write(pedido.data(using: .utf8)!)
-        try? entrada.fileHandleForWriting.close()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 90) { if p.isRunning { p.terminate() } }
+    /// Prueba real (le pide una palabra) con la pieza «ia»: `ia.py probar <entrada {"ia"}> <salida>`, con las mismas protecciones
+    /// que al procesar (sin herramientas, sin MCP, sin la memoria de la persona, en una carpeta temporal). Responde {ia, ok, codigo?, valores?, error?}.
+    static func probar(_ id: String, _ fin: @escaping @MainActor ([String: Any]) -> Void) {
+        Procesador.conEntrada("ia.py", "probar", ["ia": id], fin: fin)
     }
 }
 
@@ -281,6 +258,18 @@ enum Procesador {
             }
         }
         do { try p.run() } catch { fin(["ok": false, "error": error.localizedDescription]) }
+    }
+
+    /// Como correrJSON, pero los datos van en un JSON de entrada (nunca como argumento): `script <accion> <entrada.json> <salida.json>`.
+    static func conEntrada(_ script: String, _ accion: String, _ datos: [String: Any], fin: @escaping @MainActor ([String: Any]) -> Void) {
+        let entrada = FileManager.default.temporaryDirectory.appendingPathComponent("graba-entrada-\(UUID().uuidString).json")
+        if let data = try? JSONSerialization.data(withJSONObject: datos) {
+            FileManager.default.createFile(atPath: entrada.path, contents: data, attributes: [.posixPermissions: 0o600])
+        }
+        correrJSON(script, [accion, entrada.path]) { r in
+            try? FileManager.default.removeItem(at: entrada)
+            fin(r)
+        }
     }
 
     static func encolar(_ carpeta: String, soloIA: Bool = false, alTerminar: @escaping @MainActor () -> Void) {

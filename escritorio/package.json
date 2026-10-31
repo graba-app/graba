@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Graba tu pantalla con tu cámara; tu IA te deja notas, guion, títulos, capítulos y subtítulos.",
   "homepage": "https://graba-app.github.io/graba/",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "author": {
     "name": "Graba",
     "email": "soydavidcornejo@users.noreply.github.com"
@@ -19,13 +19,13 @@
     "empaquetar:windows": "bash herramientas/preparar.sh windows && electron-builder --win dir && bash herramientas/instalador-windows.sh"
   },
   "devDependencies": {
-    "electron": "44.5.1",
-    "electron-builder": "26.15.3"
+    "electron": "44.9.2",
+    "electron-builder": "26.18.0"
   },
   "build": {
     "appId": "app.graba.escritorio",
     "productName": "Graba",
-    "copyright": "MIT · Graba",
+    "copyright": "AGPL-3.0 · Graba",
     "directories": {
       "output": "dist",
       "buildResources": "iconos"
@@ -52,6 +52,10 @@
           "**/*",
           "!demo.json"
         ]
+      },
+      {
+        "from": "../app.json",
+        "to": "graba/app.json"
       },
       {
         "from": "vendor/${os}/herramientas",

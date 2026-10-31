@@ -1,4 +1,4 @@
-// Configuración, idioma, permisos, IA, modelos y procesamiento. Equivale a Servicios.swift (misma config que bin/ia.py).
+// Configuración, idioma, permisos, IA, modelos y procesamiento. Equivale a Servicios.swift (config validada por app.json, la que leen bin/comun.py y la pieza «nucleo»).
 const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
@@ -18,10 +18,11 @@ function escribirJSON(ruta, datos) {
   fs.renameSync(tmp, ruta);
 }
 
-// ───────────── Configuración (~/Graba/.graba/config.json, compartida con bin/ia.py) ─────────────
+// ───────────── Configuración (~/Graba/.graba/config.json, la que leen los scripts con la pieza «nucleo») ─────────────
 const Config = {
   porDefecto: { ia: "", modelo: "", idioma_audio: "auto", idioma_ui: "", camara: true, microfono: true },
-  /** Claves que la interfaz puede cambiar con la acción "config" (las de arriba y las del teleprompter). */
+  /** Claves que la interfaz puede cambiar con la acción "config": las de app.json sin "interfaz": false (igual que Config.editables en
+   *  Servicios.swift; pruebas/test_python.py revisa que las tres listas digan lo mismo). */
   editables: ["ia", "modelo", "idioma_audio", "idioma_ui", "camara", "microfono", "teleprompter", "teleprompter_texto", "teleprompter_velocidad", "teleprompter_letra",
     "youtube_privacidad", "youtube_auto", "youtube_client_id", "youtube_client_secret"],
   leer() { return { ...this.porDefecto, ...(leerJSON(CONFIG, {}) || {}) }; },
@@ -99,39 +100,12 @@ const IA = {
   /** PATH completo para los procesos hijos (Python y la IA). */
   path() { return [herramientas(), ...new Set(this.dirs())].join(path.delimiter); },
   paraJS() { return this.conocidas.map((x) => ({ id: x.id, nombre: x.nombre, instalada: !!this.buscar(x.comandos) })); },
-  /** Prueba real: le pide una palabra. Así sabemos que está instalada y con la sesión iniciada. */
-  probar(id) {
-    return new Promise((fin) => {
-      const ia = this.conocidas.find((x) => x.id === id), ruta = ia && this.buscar(ia.comandos);
-      if (!ruta) return fin({ ok: false, texto: Idioma.t("No está instalada.") });
-      const pedido = "Responde solo con la palabra: listo";
-      const agy = /^agy(\.exe|\.cmd|\.bat)?$/i.test(path.basename(ruta));
-      const args = id === "codex" ? ["exec", "--skip-git-repo-check", "-s", "read-only", "-"]
-        : agy ? ["--output-format", "text", "--sandbox", "-p", pedido]
-          : id === "gemini" ? ["-p", "Responde a las instrucciones de arriba.", "-o", "text"]
-            : ["-p", "--output-format", "text"];
-      let p;
-      try { p = lanzar(ruta, args, { env: { ...process.env, PATH: this.path() }, cwd: os.tmpdir() }); } catch (e) { return fin({ ok: false, texto: e.message }); }
-      let out = "", err = "";
-      p.stdout.on("data", (d) => (out += d));
-      p.stderr.on("data", (d) => (err += d));
-      const reloj = setTimeout(() => p.kill(), 90000);
-      p.on("error", (e) => { clearTimeout(reloj); fin({ ok: false, texto: e.message }); });
-      p.on("close", (c) => { clearTimeout(reloj); fin(c === 0 && out.trim() ? { ok: true, texto: out.trim() } : { ok: false, texto: (err || out).slice(-300) }); });
-      p.stdin.on("error", () => {});
-      p.stdin.end(agy ? "" : pedido);
-    });
+  /** Prueba real (le pide una palabra) con la pieza «ia»: `ia.py probar <entrada {ia}> <salida>`, con las mismas protecciones que al
+   *  procesar (sin herramientas, sin MCP, sin la memoria de la persona, en una carpeta temporal). Responde {ia, ok, codigo?, valores?, error?}. */
+  async probar(id) {
+    return (await Procesador.conEntrada("ia.py", "probar", { ia: String(id || "") })) || { ok: false, error: Idioma.t("No pude terminar. Intenta de nuevo.") };
   },
 };
-
-/** spawn que también sirve para los .cmd de npm en Windows (necesitan pasar por la consola). */
-function lanzar(ruta, args, opciones = {}) {
-  if (ES_WIN && /\.(cmd|bat)$/i.test(ruta)) {
-    const citar = (a) => `"${String(a).replace(/"/g, '""')}"`;
-    return spawn(`${citar(ruta)} ${args.map(citar).join(" ")}`, { ...opciones, shell: true, windowsHide: true });
-  }
-  return spawn(ruta, args, { ...opciones, windowsHide: true });
-}
 
 // ───────────── Modelos de transcripción (whisper.cpp), descargados y verificados por huella ─────────────
 // Los mismos archivos y huellas que Modelos en Servicios.swift. Aquí whisper corre en el procesador (sin Metal):
@@ -221,6 +195,12 @@ const Procesador = {
       p.on("error", () => { if (!listo) { listo = true; terminar(); } });
       p.on("close", () => { if (!listo) { listo = true; terminar(); } });
     });
+  },
+  /** Como correrJSON, pero los datos van en un JSON de entrada (nunca como argumento): `script <accion> <entrada.json> <salida.json>`. */
+  async conEntrada(script, accion, datos) {
+    const entrada = path.join(os.tmpdir(), `graba-entrada-${crypto.randomUUID()}.json`);
+    fs.writeFileSync(entrada, JSON.stringify(datos || {}), { mode: 0o600 });
+    try { return await this.correrJSON(script, [accion, entrada]); } finally { fs.rmSync(entrada, { force: true }); }
   },
   _siguiente() {
     if (this.enCurso || !this.cola.length) return;
