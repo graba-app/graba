@@ -8,12 +8,17 @@
      file: es para la app de Mac (interfaz y videos desde el disco); graba: es el protocolo de Windows/Linux. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' file: graba:; script-src 'self' file: graba:; style-src 'self' 'unsafe-inline' file: graba:; img-src 'self' data: blob: file: graba:; media-src 'self' data: blob: file: graba:; font-src 'self' data: file: graba:; connect-src 'self' file: graba:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'">
 <title>Graba</title>
+<link rel="stylesheet" href="tema.css">
+<link rel="stylesheet" href="componentes.css">
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
 <div id="app"></div>
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="i18n.js"></script>
+<script src="host.js"></script>
+<script src="tema.js"></script>
+<script src="componentes.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

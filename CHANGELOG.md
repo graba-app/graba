@@ -5,6 +5,12 @@ Lo que cambia para quien usa Graba, en palabras simples. Las versiones anteriore
 *What changes for people using Graba, in plain words. Earlier versions are listed in Releases.*
 
 ## Sin publicar · Unreleased
+- **Apariencia y comentarios:** en Ajustes ahora puedes elegir claro, oscuro o como el sistema, y mandarnos un comentario o contar
+  un error (se abre GitHub con tu mensaje listo; lo publicas tú). Los diálogos se usan entero con el teclado (Tab no se escapa, Esc
+  cierra y el foco vuelve a donde estabas), los avisos ya no se pisan entre ellos y el rojo y el verde se leen mejor. · *Appearance
+  and feedback: in Settings you can now choose light, dark or match system, and send us feedback or report a bug (GitHub opens with
+  your message ready; you post it yourself). Dialogs work fully with the keyboard (Tab stays inside, Esc closes and focus goes back
+  where you were), notices no longer cover each other, and red and green are easier to read.*
 - **Por dentro, piezas de Pieza:** tu IA, la configuración y los idiomas ahora usan las piezas compartidas de la familia
   (`nucleo`, `ia`, `i18n`). Al probar tu IA en la bienvenida o en Ajustes, ahora va con las mismas protecciones que al escribir
   tus notas (sin herramientas ni tu memoria, en una carpeta temporal), y si falla te dice por qué en tu idioma. · *Under the hood,

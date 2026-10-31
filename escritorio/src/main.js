@@ -5,7 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { Readable } = require("stream");
-const { app, BrowserWindow, Menu, Tray, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, nativeImage, net, protocol, screen, session, shell } = require("electron");
+const { app, BrowserWindow, Menu, Tray, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, net, protocol, screen, session, shell } = require("electron");
 const { ES_WIN, BASE, INTERNO, recursos, dentroDeBase } = require("./rutas");
 const { Config, Idioma, Permisos, IA, Modelos, Procesador, YouTube } = require("./servicios");
 const { Actualizaciones, SIN_CONEXION } = require("./actualizaciones");
@@ -48,7 +48,14 @@ const ocultar = () => { if (ventana && !ventana.isDestroyed()) ventana.hide(); }
 /** Ventana de vidrio (translúcida, como la barra de grabación) donde el sistema lo permite: Windows 11 (22H2+). En Linux y Windows 10, fondo sólido. */
 const VIDRIO = process.platform === "win32" && Number(os.release().split(".")[2] || 0) >= 22621;
 
+/** Apariencia elegida en Ajustes (pieza «tema»): claro u oscuro fija la de Chromium (y el acrílico de Windows 11); «sistema», la del sistema. */
+function aplicarTema() {
+  const t = Config.leer().tema;
+  nativeTheme.themeSource = t === "claro" ? "light" : t === "oscuro" ? "dark" : "system";
+}
+
 function crearVentana() {
+  aplicarTema();
   let guardado = {};
   try { guardado = JSON.parse(fs.readFileSync(path.join(INTERNO, "ventana.json"), "utf8")); } catch {}
   lista = false;
@@ -667,17 +674,19 @@ const ACCIONES = {
   config(d) {
     // Solo claves conocidas (la interfaz no puede escribir cualquier cosa en la configuración).
     Config.guardar(Object.fromEntries(Object.entries(d || {}).filter(([k]) => Config.editables.includes(k))));
+    if (d && d.tema !== undefined) aplicarTema();
     actualizarBandeja();
     enviarEstado();
     // El aviso de versión nueva se escribió en el idioma de antes: se vuelve a revisar para que salga en el elegido.
     if (d && d.idioma_ui && Actualizaciones.disponible.hay) revisarActualizacion();
   },
   async probarIA(d) {
-    const id = String(d.id || "");
+    // La forma común de todas las apps (pieza «host-ui»): probarIA {ia} → iaProbada {ia, ok, codigo, plantilla, valores, texto}.
+    const id = String(d.ia || "");
     const r = await IA.probar(id);
     if (r.ok) Config.guardar({ ia: id });
-    // codigo + valores: la interfaz traduce el error (ver ERRORES de bin/ia.py); texto: el error ya en español.
-    llamar("iaProbada", { id, ok: !!r.ok, texto: r.error || "", codigo: r.codigo || "", valores: r.valores || {} });
+    // plantilla + valores: la interfaz traduce el error (pieza «componentes»); texto: el error ya en español.
+    llamar("iaProbada", { ia: id, ok: !!r.ok, texto: r.error || "", codigo: r.codigo || "", plantilla: r.plantilla || "", valores: r.valores || {} });
     enviarEstado();
   },
   async descargarModelo(d) {

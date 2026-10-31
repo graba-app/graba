@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contrato entre la interfaz (ui/app.js) y las apps: cada host.enviar("x") de la interfaz debe existir en Mac (Ventana.swift)
+"""Contrato entre la interfaz (ui/app.js y las piezas de ui/) y las apps: cada host.enviar("x") de la interfaz debe existir en Mac (Ventana.swift)
 y, cuando exista, en Windows/Linux (escritorio/src/main.js, objeto ACCIONES). Y cada window.Graba.x que llaman las apps debe existir."""
 import os
 import re
@@ -9,7 +9,10 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 leer = lambda r: open(os.path.join(RAIZ, r), encoding="utf-8").read() if os.path.exists(os.path.join(RAIZ, r)) else None
 ui = leer("ui/app.js")
 acciones = set(re.findall(r'host\.enviar\("(\w+)"', ui))
-funciones_ui = set(re.findall(r"^\s{4}(?:async\s+)?(\w+)\(", ui.split("window.Graba = {", 1)[1].split("\n  };", 1)[0], re.M))
+# Lo que mandan las piezas de la interfaz por su cuenta (componentes: probarIA, buscarActualizacion, actualizar, abrirEnlace, config).
+acciones |= set(re.findall(r'\benviar\("(\w+)"', leer("ui/componentes.js") or ""))
+# Las respuestas: lo que la interfaz registra con host.responder({...}) (pieza host-ui; queda en window.Graba).
+funciones_ui = set(re.findall(r"^\s{4}(?:async\s+)?(\w+)\(", ui.split("host.responder({", 1)[1].split("\n  });", 1)[0], re.M))
 problemas = []
 mac = leer("app/Sources/Graba/Ventana.swift")
 casos_mac = set(re.findall(r'case "(\w+)"', mac))

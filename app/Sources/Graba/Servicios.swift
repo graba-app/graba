@@ -21,7 +21,7 @@ enum Config {
     /// en escritorio/src/servicios.js; pruebas/test_python.py revisa que las tres listas digan lo mismo).
     static let editables: Set<String> = ["ia", "modelo", "idioma_audio", "idioma_ui", "camara", "microfono", "teleprompter", "teleprompter_texto",
                                          "teleprompter_velocidad", "teleprompter_letra", "youtube_privacidad", "youtube_auto", "youtube_client_id",
-                                         "youtube_client_secret"]
+                                         "youtube_client_secret", "tema"]
     static let porDefecto: [String: Any] = ["ia": "", "modelo": "", "idioma_audio": "auto", "idioma_ui": "", "camara": true, "microfono": true]
 
     static func leer() -> [String: Any] {

@@ -22,7 +22,7 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
 | `app/Sources/Graba/` | App de Mac (Swift, SwiftPM, macOS 15). `GrabaApp.swift`: arranque, flujo de grabación (`Estado`), grabaciones en disco (`Grabaciones`) y barra de menú. `Grabadora.swift`: ScreenCaptureKit + AVAssetWriter (pantalla + micrófono en AAC; pausa corriendo los tiempos; sonido del Mac aparte en `sistema.m4a` y mezclado al final), extracción del audio a WAV 16 kHz y `mezclarSonido`. `Atajos.swift`: ⌃⌥⌘R / ⌃⌥⌘P globales con `RegisterEventHotKey` (sin permiso de Accesibilidad). `Recorte.swift`: recortar sin recomprimir (`AVAssetExportPresetPassthrough`) y deshacer. `Flotantes.swift`: burbuja de la cámara (sale en el video) y controles (no salen). `Ventana.swift`: WKWebView + puente. `Servicios.swift`: rutas, configuración, idioma, permisos, IA, modelos y `Procesador`. |
 | `app/Sources/Transcribir/` | Binario `graba-transcribir`: whisper.cpp (xcframework oficial, Metal) con las mismas opciones que `whisper-cli`. |
 | `bin/` | Python **solo biblioteca estándar**: `nucleo.py` (pieza «nucleo»: `app.json`, carpeta de datos, config validada, escritura atómica), `ia.py` (pieza «ia»: la IA de la persona; `preguntar`, `frase`, `probar`), `comun.py` (lo propio de Graba sobre las piezas: `INTERNO`, `MODELOS`, `config()` con sus valores por defecto, `guardar_json`, `herramienta`, `nombre_ia`, `nombre_copia`), `procesar.py` (transcribir → subtítulos → IA → `grabacion.md` → renombrar la carpeta), `recortar.py` (corre los tiempos de transcripción, subtítulos, capítulos y duración al recortar; copia y deshacer en `.original/`). |
-| `ui/` | Interfaz web única (`app.js`, `i18n.js` (pieza «i18n»: `tr`, `Tp`, `traducirDOM`, paquetes de idioma validados), `app.css`), `demo.json` (datos ficticios para la vista previa) e `idiomas/en.json`. |
+| `ui/` | Interfaz web única: `app.js` y `app.css` (lo propio de Graba) sobre las piezas de interfaz (`i18n.js`, `host.js`, `tema.js` + `tema.css`, `componentes.js` + `componentes.css`; ver «Piezas»), `demo.json` (datos ficticios para la vista previa) e `idiomas/en.json`. |
 | `herramientas/` | `empaquetar.sh` (arma `dist/Graba.app` + zip + `.sha256`) y `revisar_privacidad.sh`. |
 | `build.sh` | Empaqueta e instala en `~/Applications/Graba.app` (se niega si hay una grabación o un procesamiento en curso). |
 | `instalar.sh` | Instalador de un comando (`curl … \| bash`): última Release, verifica SHA-256, instala. |
@@ -58,8 +58,9 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
   que va dejando el avance en `estado.json` (`procesando`, `paso`/`total`, `texto`) y al final `estado: lista` o `error`.
 - **IA:** `ia.preguntar(prompt)` (pieza «ia») en una carpeta temporal y modo solo lectura (pedido por la entrada estándar o en un archivo);
   devuelve `(texto, error)` y el error (`{codigo, valores}`) se muestra con `comun.error_ia` / `ia.frase`. Probar una IA (bienvenida y
-  Ajustes) es `ia.py probar <entrada {"ia"}> <salida>` desde los dos hosts (`IA.probar` → `Procesador.conEntrada`); la interfaz traduce
-  el error por su `codigo` (`ERRORES_IA` en `ui/app.js`, las mismas frases que `ERRORES` de `bin/ia.py`). La respuesta debe tener los marcadores de
+  Ajustes) es `probarIA {ia}` → `ia.py probar <entrada {"ia"}> <salida>` desde los dos hosts (`IA.probar` → `Procesador.conEntrada`) →
+  `iaProbada {ia, ok, codigo, plantilla, valores, texto}`; la pieza «componentes» muestra el error con `Tp(plantilla, valores)` (la
+  plantilla es la frase de `ERRORES` de `bin/ia.py`, clave de `en.json`). La respuesta debe tener los marcadores de
   `procesar.MARCADORES` (siempre en español); si faltan, no se escribe nada y queda `error` con la transcripción guardada (botón Reintentar).
   Los capítulos se corrigen solos (orden, duración, primero en 00:00).
 - **Datos:** `~/Graba/<AAAA-MM-DD HHMM - Título>/` y `~/Graba/.graba/` (`config.json`, `modelos/`, `vocabulario.txt`; `app.json` →
@@ -89,9 +90,12 @@ YouTube, títulos, descripción con capítulos y subtítulos. Mac primero; Windo
   Windows no se puede probar aquí.
 
 ## Puente interfaz ↔ app
-La UI llama `host.enviar(accion, datos)`; Mac lo atiende en el `switch` de `Ventana.swift` y responde con `window.Graba.<funcion>(json)`
-(`estado`, `iaProbada`, `modeloProgreso`, `modeloListo`, `recortado`…; acciones nuevas: `pausar`, `recortar`, `deshacerRecorte`). Una acción nueva va en Swift, en Electron (`ACCIONES`) y simulada en `simular()`
-para la vista previa. `pruebas/contrato.py` lo revisa.
+La UI llama `host.enviar(accion, datos)` (pieza «host-ui»: `PiezaHost.crearHost({nombre: "graba", global: "Graba", simular})`; el
+mensaje es `{accion, datos}`); Mac lo atiende en el `switch` de `Ventana.swift` y responde con `window.Graba.<funcion>(json)` (`estado`,
+`iaProbada`, `modeloProgreso`, `modeloListo`, `recortado`…), que la interfaz registra con `host.responder({…})`. Una acción nueva va en
+Swift, en Electron (`ACCIONES`) y en `simular(accion, d, c)` para la vista previa (responde con `c.responder("x", json)` y espera con
+`c.luego(ms, f)`; `abrirEnlace` y `copiar` son los de `PiezaHost.simulacionesComunes()`). `pruebas/contrato.py` lo revisa, contando
+también lo que manda `ui/componentes.js` (`probarIA`, `buscarActualizacion`, `actualizar`, `abrirEnlace`, `config`).
 
 ## Reglas al cambiar cosas
 - Código, comentarios, commits y textos en **español** (de Chile neutro). Todo texto nuevo visible (JS o Swift) va con su traducción en
@@ -107,7 +111,13 @@ para la vista previa. `pruebas/contrato.py` lo revisa.
   de la página propia; las actualizaciones, solo URLs de `esDescargaNuestra` y todo lo variable de un script bash con `comillas()`. Las ventanas de Electron van con `sandbox: true` y la de Mac solo navega dentro de `ui/`. En los
   workflows: actions fijadas por SHA (Dependabot las sube), permisos mínimos, `persist-credentials: false`, nunca
   `pull_request_target` ni `${{ … }}` dentro de `run:`.
-- Archivos de piezas (`bin/nucleo.py`, `bin/ia.py`, `ui/i18n.js`): no se editan aquí; ver «Piezas».
+- Archivos de piezas (`bin/nucleo.py`, `bin/ia.py`, `ui/i18n.js`, `ui/host.js`, `ui/tema.*`, `ui/componentes.*`): no se editan aquí; ver «Piezas».
+- Interfaz: colores solo con los tokens de la pieza «tema» (`--fondo`, `--panel`, `--panel-2`, `--linea`, `--texto`, `--texto-suave`,
+  `--acento`, `--rojo`, `--verde` y los derivados `--acento-suave`, `--rojo-suave`…); un color nuevo se escribe como par en `:root` de
+  `app.css` o con `light-dark()`. Botones, filas, diálogos y avisos son los de «componentes» (`.pz-boton`, `.pz-principal`,
+  `.pz-peligro`, `.pz-fila`/`.pz-txt`, `.pz-campo`, `.pz-pie`, `.pz-ok`, `.pz-error-texto`; `ui.dialogo`, `ui.confirmar`,
+  `ui.aviso`); lo propio de Graba en `app.css` (`.grabar`, `.grande`, `.chico`, `.pausa`, `.chip`, `html.vidrio`). Un diálogo nuevo
+  va con `ui.dialogo({id, titulo, cuerpo, pie})` y su cierre en `cerrarDialogo()`.
 - Antes de cerrar un cambio: `bash pruebas/correr.sh` y mirar la interfaz (`cd ui && python3 -m http.server 8765`, `?idioma=en`,
   `?bienvenida`, `window.Graba._probar(E => …)`). Swift solo compila en un Mac (o en el job `mac` de GitHub).
 - Privacidad: `bash herramientas/revisar_privacidad.sh` antes de cada commit (usa `.terminos-privados`, local y nunca versionado).
@@ -121,6 +131,9 @@ Graba usa piezas de Pieza, la base de la familia de apps: código probado que se
 | `nucleo` | `bin/nucleo.py` | `app.json`, carpeta de datos (`~/Graba/.graba`, o `GRABA_DATOS`), config validada por `app.json`, `escribir_atomico`/`escribir_json`, `responder`, `recursos()` (`GRABA_RECURSOS`). `comun.py` lo envuelve con lo propio de Graba. |
 | `ia` | `bin/ia.py` | La IA de la persona (`preguntar`, `frase`, `nombre`, `elegida`, `probar`). Lo propio de Graba (prompts, `MARCADORES`, mensajes) sigue en `procesar.py`, `corregir.py`, `guion.py` y `comun.py`. |
 | `i18n` | `ui/i18n.js` | `tr`, `Tp`, `traducirDOM`, `idiomaDelSistema`, `elegir` (lo recién elegido > `?idioma=` > `idioma_ui` > el del sistema). `ui/idiomas/en.json` lleva `codigo`. |
+| `host-ui` | `ui/host.js` | El puente: `host.enviar`, `host.responder` (queda en `window.Graba`), `host.plataforma` y `<html data-host>`; en el navegador llama `simular`. |
+| `tema` | `ui/tema.css`, `ui/tema.js` | Los tokens de color (cada uno como par `--x-claro`/`--x-oscuro`, resuelto con `light-dark()`); el bloque de Graba va al comienzo de `app.css`. «Apariencia» en Ajustes (`config.tema`: sistema, claro u oscuro; `?tema=` para capturas). La app nativa sigue la elección: `NSWindow.appearance` en Mac y `nativeTheme.themeSource` en Electron (el vidrio también). |
+| `componentes` | `ui/componentes.js`, `ui/componentes.css` | Diálogos (`ui.dialogo`, foco adentro, Esc, el foco vuelve), `ui.confirmar` (borrar), avisos en cola (`toast` = `ui.aviso`), «Tu IA» (`ui.filasIA`), actualizaciones (`ui.filaActualizacion`; `ui.act` también alimenta el aviso de arriba), «Acerca de» y «Enviar comentarios» (issue prellenado en GitHub). `html.vidrio` lleva reglas propias sobre `.pz-dialogo`, `.pz-capa` y `.pz-toast`. |
 
 - **No edites a mano los archivos de una pieza.** Se actualizan con «Pieza al día» (`.github/workflows/pieza-al-dia.yml`, una vez por
   semana abre un PR o un issue) o con `python3 <pieza>/herramientas/pieza.py actualizar .`. Si hay que cambiar algo, el cambio va

@@ -65,9 +65,20 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavig
         if !v.setFrameUsingName("Graba") { v.center() }
         ventana = v
         web = w
+        aplicarTema()
         let indice = Rutas.recursos.appendingPathComponent("ui/index.html")
         // Acceso de lectura a todo el disco del usuario para reproducir los videos de ~/Graba (solo lectura).
         w.loadFileURL(indice, allowingReadAccessTo: URL(fileURLWithPath: "/"))
+    }
+
+    /// Apariencia elegida en Ajustes (pieza «tema»): claro u oscuro fija la de la ventana (el vidrio y la interfaz la siguen);
+    /// «sistema» (o nada) la deja seguir a macOS.
+    private func aplicarTema() {
+        switch Config.leer()["tema"] as? String ?? "sistema" {
+        case "claro": ventana?.appearance = NSAppearance(named: .aqua)
+        case "oscuro": ventana?.appearance = NSAppearance(named: .darkAqua)
+        default: ventana?.appearance = nil
+        }
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
@@ -170,19 +181,21 @@ final class Ventana: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavig
         case "config":
             // Solo claves conocidas (las de app.json que la interfaz puede cambiar): la interfaz no escribe cualquier cosa.
             Config.guardar(d.filter { Config.editables.contains($0.key) })
+            if d["tema"] != nil { aplicarTema() }
             enviarEstado()
             // El aviso de versión nueva se escribió en el idioma de antes: se vuelve a revisar para que salga en el elegido.
             if d["idioma_ui"] != nil, Actualizaciones.disponible["hay"] as? Bool == true {
                 Actualizaciones.revisar { _, _ in Ventana.shared.enviarEstado() }
             }
         case "probarIA":
-            let id = d["id"] as? String ?? ""
+            // La forma común de todas las apps (pieza «host-ui»): probarIA {ia} → iaProbada {ia, ok, codigo, plantilla, valores, texto}.
+            let id = d["ia"] as? String ?? ""
             IA.probar(id) { r in
                 let ok = r["ok"] as? Bool == true
                 if ok { Config.guardar(["ia": id]) }
-                // codigo + valores: la interfaz traduce el error (ver ERRORES de bin/ia.py); texto: el error ya en español.
-                Ventana.shared.llamar("iaProbada", ["id": id, "ok": ok, "texto": r["error"] as? String ?? "", "codigo": r["codigo"] as? String ?? "",
-                                                    "valores": r["valores"] as? [String: Any] ?? [:]])
+                // plantilla + valores: la interfaz traduce el error (pieza «componentes»); texto: el error ya en español.
+                Ventana.shared.llamar("iaProbada", ["ia": id, "ok": ok, "texto": r["error"] as? String ?? "", "codigo": r["codigo"] as? String ?? "",
+                                                    "plantilla": r["plantilla"] as? String ?? "", "valores": r["valores"] as? [String: Any] ?? [:]])
                 Ventana.shared.enviarEstado()
             }
         case "descargarModelo":
