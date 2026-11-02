@@ -1,6 +1,7 @@
 import AVFoundation
 import AppKit
 import ScreenCaptureKit
+import PiezaHost
 
 /// Graba la pantalla donde está el mouse (con la burbuja de la cámara, que es una ventana más) y el micrófono en un .mp4.
 /// Usa ScreenCaptureKit + AVAssetWriter. No usamos SCRecordingOutput: con micrófono deja archivos que no se pueden reproducir

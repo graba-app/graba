@@ -7,11 +7,13 @@
   const host = PiezaHost.crearHost({ nombre: "graba", global: "Graba", simular: (accion, d, c) => simular(accion, d, c) });
   const HOST = host.plataforma;
   // Vidrio: fondo translúcido como la barra de grabación (lo pone el sistema: Mac y Windows 11). En el navegador, ?vidrio para verlo.
-  if (window.GRABA_VIDRIO || new URLSearchParams(location.search).has("vidrio")) document.documentElement.classList.add("vidrio");
+  // (Mac lo dice con window.GRABA_VIDRIO; Windows 11, con `vidrio: true` en el estado.)
+  const vidrio = () => document.documentElement.classList.add("vidrio");
+  if (window.GRABA_VIDRIO || new URLSearchParams(location.search).has("vidrio")) vidrio();
   const E = {
     fase: "inactiva", grabaciones: [], config: {}, ias: [], modelos: { lista: [] }, permisos: {}, carpeta: "", version: "", procesando: null,
-    sel: null, pestana: "notas", ajustes: false, bv: null, bvCerrada: false, descarga: null,
-    idioma: "es", idiomaFoco: null, actualizacion: { hay: false }, youtube: { conectado: false }, conectandoYT: false,
+    sel: null, pestana: "notas", ajustes: false, bvCerrada: false, descarga: null,
+    idioma: "es", actualizacion: { hay: false }, youtube: { conectado: false }, conectandoYT: false,
   };
   const ENLACES = { sitio: "https://graba-app.github.io/graba/", codigo: "https://github.com/graba-app/graba",
     comunidad: "https://github.com/graba-app/graba/discussions", aportar: "https://github.com/graba-app/graba/blob/main/CONTRIBUTING.md",
@@ -24,8 +26,6 @@
   // texto plano. E.idioma es solo un espejo de i18n.idioma para el resto de la interfaz (fechas, pantalla de idioma).
   const i18n = PiezaI18n.crear();
   const { tr, Tp, traducirDOM } = i18n;
-  /** Idioma del sistema: el que se sugiere en la pantalla de idioma y el que se usa mientras la persona no elige. */
-  const idiomaSistema = () => i18n.idiomaDelSistema();
   let idiomaElegido = null;
   async function cargarIdioma(elegido) {
     // Lo recién elegido > ?idioma= (vista previa y pruebas) > lo guardado > el del sistema.
@@ -40,7 +40,7 @@
     i18n, host, app: "Graba", repo: "graba-app/graba", version: () => E.version,
     pintar: () => render(),
     cerrar: cerrarDialogo,                          // Esc, el velo o ✕ sobre un diálogo de Graba
-    retener: () => E.bv === 0,                      // en la pantalla de idioma no se muestra nada más
+    retener: () => bv.soloIdioma,                   // en la pantalla de idioma no se muestra nada más
     elegirIA: (id) => { E.config.ia = id; },        // la app ya la guardó al probarla bien
   });
   /** Avisos: la frase en español (se traduce) o, con { traducido: true }, el texto tal cual (lo que ya viene traducido de la app). */
@@ -49,6 +49,25 @@
     host.enviar("copiar", { texto });
     toast(aviso);
   }
+
+  // ───────────── Bienvenida: pieza «bienvenida» (ui/bienvenida.js). El idioma siempre primero, sola en la pantalla. ─────────────
+  // Se abre mientras falte la IA o el transcriptor (cada vez que se abre Graba, hasta que esté todo); «Lo hago después» la cierra
+  // por ahora. Elegir el idioma lo guarda con la acción `config`, igual que Ajustes.
+  const bv = PiezaBienvenida.crear({
+    i18n, listo: false, pintar: () => render(), mostrarAviso: (...a) => toast(...a),
+    guardarIdioma: (c) => { E.config.idioma_ui = c; host.enviar("config", { idioma_ui: c }); },
+    cargarIdioma: (c) => cargarIdioma(c),
+    terminar: () => { E.bvCerrada = true; E.config.bienvenida = true; host.enviar("config", { bienvenida: true }); },
+  });
+  const pasoBv = (texto, filas = "") => `<p>${texto}</p>${filas ? `<div class="seccion">${filas}</div>` : ""}`;
+  bv.sumarPaso({ id: "hola", orden: 10, titulo: "Hola, esto es Graba",
+    cuerpo: () => pasoBv("Graba tu pantalla con tu cámara y tu voz. Al terminar, la app transcribe en tu computador y tu propia IA escribe notas, un guion para YouTube, títulos, descripción con capítulos y subtítulos. Nada se sube a ningún servidor.") });
+  bv.sumarPaso({ id: "ia", orden: 20, titulo: "Elige tu IA", puede: () => !!E.config.ia,
+    cuerpo: () => pasoBv("Graba usa la IA que ya tienes, con tu cuenta. La probamos con una pregunta corta.", filasIA()) });
+  bv.sumarPaso({ id: "transcriptor", orden: 30, titulo: "Descarga el transcriptor", puede: () => (E.modelos.lista || []).some((m) => m.listo && m.id === E.config.modelo),
+    cuerpo: () => pasoBv("Convierte tu voz en texto dentro de tu computador. Se descarga una sola vez.", filasModelo()) });
+  bv.sumarPaso({ id: "permisos", orden: 40, titulo: "Permisos",
+    cuerpo: () => pasoBv("macOS pide permiso para grabar la pantalla, la cámara y el micrófono. Puedes cambiarlos cuando quieras.", filasPermisos()) });
 
   // ───────────── Leer una grabación (grabacion.md: ver "Formato de las grabaciones" en el README) ─────────────
   function parsearGrabacion(md) {
@@ -105,15 +124,19 @@
   const estadoDe = (t) => t?.estado?.estado || (t?.md ? "lista" : "");
   const tituloDe = (t) => parsearGrabacion(t.md).titulo || ({ grabando: tr("Grabando…"), procesando: tr("Procesando…") }[estadoDe(t)] || tr("Grabación sin título"));
 
+  /** En la app el video llega como graba://video/<versión>/<ruta> (la versión ya va adentro: el host no acepta «?»); en la vista
+   *  previa, una ruta con ?v= para que el navegador no muestre el de antes de un recorte. */
+  const srcVideo = (t) => (t.video.startsWith("graba:") ? t.video : t.video + (t.video.includes("?") ? "&" : "?") + "v=" + (t.version || 0));
+
   // ───────────── Pintar ─────────────
   function render() {
     const raiz = $("#app");
     // Primer uso: lo primero es elegir el idioma, sola en la pantalla (sin la app detrás ni avisos).
-    if (E.bv === 0) {
-      const foco = document.activeElement?.dataset?.idiomaUi || E.idiomaFoco || idiomaSistema();
-      raiz.innerHTML = pantallaIdioma();
+    if (bv.soloIdioma) {
+      const foco = document.activeElement?.dataset?.bvIdioma;
+      raiz.innerHTML = `<div class="pantalla-idioma"><div class="tarjeta-idioma">${LOGO}${bv.html()}</div></div>`;
       document.documentElement.lang = E.idioma;
-      $(`[data-idioma-ui="${foco}"]`)?.focus();
+      if (foco) $(`[data-bv-idioma="${foco}"]`)?.focus(); else bv.enfocar();
       return;
     }
     const scroll = $(".principal-area")?.scrollTop || 0;
@@ -211,7 +234,7 @@
           <button class="icono" data-accion="borrar" title="Borrar" aria-label="Borrar">🗑</button>
         </div></div>
       <div class="meta" data-sin-traducir>${esc(fechaCorta(m.inicio))}${m.duracion_seg ? " · " + reloj(m.duracion_seg) : ""}</div>
-      ${t.video ? `<video id="video" controls preload="metadata" src="${esc(t.video + (t.video.includes("?") ? "&" : "?") + "v=" + (t.version || 0))}"></video>` : ""}
+      ${t.video ? `<video id="video" controls preload="metadata" src="${esc(srcVideo(t))}"></video>` : ""}
       ${E.recorte && E.recorte.ruta === t.ruta ? panelRecorte(t) : t.recortada && e === "lista" ? `<div class="aviso-recorte"><span>Esta grabación está recortada. El original quedó guardado.</span><button class="pz-boton" data-accion="deshacer-recorte">Volver al original</button></div>` : ""}
       ${cuerpo}</div>`;
   }
@@ -379,7 +402,8 @@
         <div class="pz-pie"><button class="pz-boton" data-accion="cerrar">Cancelar</button>
           <button class="pz-boton pz-principal" data-accion="enviar-correccion" ${c.enviando ? "disabled" : ""}>${c.enviando ? "Tu IA está corrigiendo…" : "Corregir"}</button></div>` });
     }
-    if (E.bv !== null) return bienvenida();
+    // La caja accesible de «componentes» (foco adentro, sin Esc: tiene «Lo hago después»); cada paso trae su data-pz-clave.
+    if (bv.activa) return ui.envolver(bv.html(), { id: "t-bv", sinEsc: true });
     if (!E.ajustes) return "";
     const sel = (clave, opciones) => `<select data-config="${clave}">${opciones.map(([v, n]) => `<option value="${v}" ${E.config[clave] === v ? "selected" : ""}>${n}</option>`).join("")}</select>`;
     return ui.dialogo({ id: "t-ajustes", titulo: "Ajustes", cuerpo: `<p>Todo se procesa en tu computador. La IA usa tu propia cuenta.</p>
@@ -407,44 +431,6 @@
       pie: `<button class="pz-boton pz-principal" data-accion="cerrar">Listo</button>` });
   }
 
-  /** Paso 0 de la bienvenida: el idioma, antes que cualquier otra cosa. Cada opción va escrita en su propio idioma y no se traduce. */
-  function pantallaIdioma() {
-    const sugerido = idiomaSistema();
-    const opcion = (codigo, nombre, nota) => `<button class="opcion-idioma ${codigo === sugerido ? "sugerido" : ""}" lang="${codigo}" data-idioma-ui="${codigo}"
-        ${codigo === sugerido ? `aria-describedby="nota-${codigo}"` : ""}><b>${nombre}</b>${codigo === sugerido ? `<small id="nota-${codigo}">${nota}</small>` : ""}</button>`;
-    return `<div class="pantalla-idioma" data-sin-traducir><div class="tarjeta-idioma" role="dialog" aria-modal="true" aria-labelledby="t-idioma">${LOGO}
-      <h1 id="t-idioma"><span lang="es">Elige tu idioma<span aria-hidden="true">&nbsp;·</span></span> <span lang="en">Choose your language</span></h1>
-      <div class="opciones-idioma" role="group" aria-labelledby="t-idioma">
-        ${opcion("es", "Español", "Idioma de tu sistema")}${opcion("en", "English", "Your system language")}</div></div></div>`;
-  }
-  async function elegirIdioma(codigo) {
-    E.config.idioma_ui = codigo;
-    host.enviar("config", { idioma_ui: codigo }); // el mismo camino que Ajustes
-    await cargarIdioma(codigo);
-    E.bv = 1;
-    render();
-    $("#t-bv")?.focus();
-  }
-
-  function bienvenida() {
-    const paso = E.bv;
-    const marcas = `<div class="pasos-bv">${[1, 2, 3, 4].map((i) => `<i class="${i <= paso ? "hecho" : ""}"></i>`).join("")}</div>`;
-    const iaLista = !!E.config.ia, modeloListo = (E.modelos.lista || []).some((m) => m.listo && m.id === E.config.modelo);
-    const pasos = [
-      null, // el idioma (pantallaIdioma)
-      [`Hola, esto es Graba`, `Graba tu pantalla con tu cámara y tu voz. Al terminar, la app transcribe en tu computador y tu propia IA escribe notas, un guion para YouTube, títulos, descripción con capítulos y subtítulos. Nada se sube a ningún servidor.`, "", true],
-      [`Elige tu IA`, `Graba usa la IA que ya tienes, con tu cuenta. La probamos con una pregunta corta.`, filasIA(), iaLista],
-      [`Descarga el transcriptor`, `Convierte tu voz en texto dentro de tu computador. Se descarga una sola vez.`, filasModelo(), modeloListo],
-      [`Permisos`, `macOS pide permiso para grabar la pantalla, la cámara y el micrófono. Puedes cambiarlos cuando quieras.`, filasPermisos(), true],
-    ];
-    const [titulo, texto, filas, puede] = pasos[paso];
-    // La bienvenida no se cierra con Esc ni con el velo: tiene «Lo hago después».
-    return ui.dialogo({ id: "t-bv", titulo, cerrable: false, sinEsc: true, cuerpo: `${marcas}<p>${texto}</p><div class="seccion">${filas}</div>`, pie: `<button class="pz-boton" data-bv="${paso - 1}">Atrás</button>
-        <button class="pz-boton" data-accion="bv-despues">Lo hago después</button>
-        ${paso < 4 ? `<button class="pz-boton pz-principal" data-bv="${paso + 1}" ${puede ? "" : "disabled"}>Siguiente</button>`
-          : `<button class="pz-boton pz-principal" data-accion="bv-fin">Empezar</button>`}` });
-  }
-
   // ───────────── Eventos ─────────────
   /** Cierra el diálogo de Graba que está abierto (Esc, el velo, ✕ o «Cancelar»). Mientras la IA corrige, ese no se cierra. */
   function cerrarDialogo() {
@@ -457,10 +443,10 @@
     // Primero lo de las piezas: apariencia, diálogos, Tu IA, actualizaciones, enlaces y comentarios.
     if (tema.manejarClic(ev)) return render();
     if (ui.manejarClic(ev)) return;
-    const el = ev.target.closest("[data-accion],[data-sel],[data-pestana],[data-copiar],[data-teleprompter],[data-quitar-archivo],[data-alternar],[data-modelo],[data-modelo-usar],[data-permiso],[data-bv],[data-ir],[data-idioma-ui]");
+    if (bv.manejarClic(ev)) return;
+    const el = ev.target.closest("[data-accion],[data-sel],[data-pestana],[data-copiar],[data-teleprompter],[data-quitar-archivo],[data-alternar],[data-modelo],[data-modelo-usar],[data-permiso],[data-ir]");
     if (!el) return;
     const d = el.dataset;
-    if (d.idiomaUi) return elegirIdioma(d.idiomaUi === "en" ? "en" : "es");
     if (d.ir) { const v = $("#video"); if (v) { v.currentTime = Number(d.ir); v.play?.(); } return; }
     if (d.sel) { E.sel = d.sel; return render(); }
     if (d.pestana) { E.pestana = d.pestana; return render(); }
@@ -471,7 +457,6 @@
     if (d.modelo) { E.descarga = { id: d.modelo, pct: 0 }; host.enviar("descargarModelo", { id: d.modelo }); return render(); }
     if (d.modeloUsar) { E.config.modelo = d.modeloUsar; host.enviar("config", { modelo: d.modeloUsar }); return render(); }
     if (d.permiso) return host.enviar("permiso", { tipo: d.permiso });
-    if (d.bv) { E.bv = Number(d.bv); return render(); }
     const t = E.grabaciones.find((x) => x.ruta === E.sel);
     switch (d.accion) {
       case "grabar": return host.enviar("grabar");
@@ -531,7 +516,6 @@
       case "regenerar": if (t) { host.enviar("procesar", { ruta: t.ruta, soloIA: true }); toast("Volviendo a escribir…"); } return;
       case "reintentar": if (t) host.enviar("procesar", { ruta: t.ruta, soloIA: !t.audio }); return;
       case "borrar": return borrar(t);
-      case "bv-despues": case "bv-fin": E.bv = null; E.bvCerrada = true; return render();
     }
   });
   async function borrar(t) {
@@ -577,14 +561,8 @@
   });
   document.addEventListener("keydown", (ev) => {
     if (ui.manejarTecla(ev)) return;   // Esc y Tab en los diálogos (pieza «componentes»)
-    // Pantalla de idioma: las flechas pasan de una opción a la otra (Tab y Enter funcionan solos).
-    const opcion = ev.target.closest?.("[data-idioma-ui]");
-    if (opcion && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(ev.key)) {
-      ev.preventDefault();
-      const otra = $(`[data-idioma-ui="${opcion.dataset.idiomaUi === "es" ? "en" : "es"}"]`);
-      E.idiomaFoco = otra?.dataset.idiomaUi; otra?.focus();
-      return;
-    }
+    // Pantalla de idioma (pieza «bienvenida»): 1/2 eligen y las flechas pasan de una opción a la otra.
+    if (bv.manejarTecla(ev)) return;
     if (ev.key === "Escape" && E.recorte && !E.recorte.enviando && !document.querySelector('[aria-modal="true"]')) { E.recorte = null; return render(); }
     if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey) && E.corregir && !E.corregir.enviando) $("[data-accion=enviar-correccion]")?.click();
   });
@@ -605,7 +583,8 @@
       if (!E.sel && E.grabaciones.length) E.sel = E.grabaciones[0].ruta;
       const falta = !E.config.ia || !(E.modelos.lista || []).some((m) => m.listo);
       // Con la bienvenida pendiente, el idioma va primero (si ya lo eligió, se parte en el saludo).
-      if (falta && E.bv === null && !E.bvCerrada) E.bv = E.config.idioma_ui ? 1 : 0;
+      if (falta && !bv.activa && !E.bvCerrada) bv.abrir({ config: { ...E.config, bienvenida: false } });
+      if (e.vidrio) vidrio();
       await cargarIdioma();
       tema.aplicar(tema.elegir({ config: E.config.tema }));
       ui.actualizacionDisponible(E.actualizacion.hay ? E.actualizacion : null);
@@ -645,9 +624,13 @@
     iaProbada(r) { ui.iaProbada(r); },
     modeloProgreso(r) { E.descarga = { id: r.id, pct: r.pct }; render(); },
     modeloListo(r) { E.descarga = null; if (r.ok) { E.config.modelo = r.id; toast("Descargado"); } else toast(r.error || "No se pudo descargar"); render(); },
+    // Los menús de la app (pieza «host-mac» / «host-escritorio»): «Ajustes…» abre Ajustes; «guardar» (al cerrar o salir) no tiene
+    // nada pendiente en Graba (todo se guarda al tiro).
+    copiado() {},   // el aviso «Copiado» ya lo muestra la interfaz al pedirlo
+    menu(m) { if (m && m.accion === "ajustes" && !bv.soloIdioma) { E.ajustes = true; render(); } },
     _probar(f) { f(E); render(); },
     // Para las pruebas (pruebas/interfaz.mjs).
-    _pruebas: { parsearGrabacion, mdHTML, reloj, paraTeleprompter, ui },
+    _pruebas: { parsearGrabacion, mdHTML, reloj, paraTeleprompter, ui, bv },
   });
 
   // ───────────── Vista previa en el navegador (datos ficticios de demo.json) ─────────────
@@ -663,6 +646,8 @@
       case "listo": return enviar();
       case "abrirEnlace": case "copiar": return COMUNES[accion](d, c);
       case "grabar": return toast("En la app, aquí empieza la grabación");
+      case "abrirCarpeta": return toast("En la app, aquí se abre la carpeta en tu computador");
+      case "procesar": return toast("En la app, aquí tu IA vuelve a escribir los textos");
       case "terminar": return toast("En la app, aquí termina la grabación");
       case "pausar": DEMO.pausada = !DEMO.pausada; if (!DEMO.pausada) DEMO.grabandoDesde = Date.now() - (DEMO.segundos || 0) * 1000; return enviar();
       case "config": Object.assign(DEMO.config, d); return enviar();

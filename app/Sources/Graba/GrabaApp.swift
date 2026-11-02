@@ -1,44 +1,60 @@
 import AVFoundation
 import AppKit
+import PiezaActualizaciones
+import PiezaHost
 
 /// Graba: graba tu pantalla con tu cámara (como Loom), transcribe en tu Mac y tu IA te deja notas, guion para YouTube,
 /// títulos, descripción, capítulos y subtítulos. Vive en la barra de menú; la ventana es la interfaz web de ui/.
+///
+/// Sobre la pieza «host-mac» (target `PiezaHost`): la ventana con su puente y sus guardas (solo el marco principal con un archivo
+/// de ui/), config e idioma desde app.json, menús en el idioma elegido, apariencia de config.tema, los scripts de bin/ con límite
+/// de tiempo, el Llavero, `graba://video/…` con rangos, las actualizaciones (pieza «actualizaciones») y la acción declarada
+/// `probarIA` (pieza «ia», en acciones.json). Lo propio de Graba se registra aquí: grabar, pausar, recortar, permisos, modelos,
+/// guion, YouTube, la barra de menú, los atajos globales y los flotantes (Barra.swift, Flotantes.swift, Grabadora.swift).
 @main
-@MainActor
-final class GrabaApp: NSObject, NSApplicationDelegate {
-    static func main() {
-        let app = NSApplication.shared
-        let delegado = GrabaApp()
-        app.delegate = delegado
-        app.setActivationPolicy(.accessory)
-        app.run()
+enum GrabaApp {
+    @MainActor static func main() {
+        Host.arrancar(.init(ancho: 1120, alto: 740, minAncho: 760, minAlto: 520, sitio: "https://graba-app.github.io/graba/",
+                            codigo: "https://github.com/graba-app/graba", global: "Graba", estadoScript: nil)) { p in preparar(p) }
     }
 
-    func applicationDidFinishLaunching(_ aviso: Notification) {
-        try? FileManager.default.createDirectory(at: Rutas.interno, withIntermediateDirectories: true)
+    @MainActor static func preparar(_ p: Puente) {
+        Rutas.migrar()
         Grabaciones.repararCortadas()
         // El idioma en que se habla parte igual al del sistema: con poca voz, "detectar solo" puede confundirse.
-        if Grabaciones.leerJSON(Rutas.config)["idioma_audio"] == nil {
+        if Config.leer()["idioma_audio"] == nil {
             let sistema = String((Locale.preferredLanguages.first ?? "es").prefix(2))
-            Config.guardar(["idioma_audio": ["es", "en", "pt", "fr", "de", "it"].contains(sistema) ? sistema : "auto"])
+            Config.deLaApp(["idioma_audio": ["es", "en", "pt", "fr", "de", "it"].contains(sistema) ? sistema : "auto"])
         }
+        Ventana.shared.preparar(p)
+        p.estado = { base, listo in listo(Ventana.shared.estado(base)) }
+        // Lo de la interfaz (idioma, cámara, IA elegida…) también lo leen la barra de menú y la barra de grabar.
+        p.alCambiarConfig = { _, _ in BarraMenu.shared.actualizar(); Ventana.shared.enviarEstado() }
+        p.menus = { m in [m.archivo([m.nativo("Abrir la carpeta de grabaciones") { _ = NSWorkspace.shared.open(Rutas.base) }]), m.edicion(), m.ver([])] }
+        p.registrarMedios("video") { ruta in Rutas.videoDe(ruta) }
+
+        // Pieza «actualizaciones»: solo los Releases de graba-app/graba (Graba-macOS.zip + .sha256), en la misma ruta de la app.
+        // Instalación de desarrollo (build.sh deja la ruta del checkout en ~/Graba/.graba/desarrollo): git pull + empaquetar.sh.
+        Actualizaciones.configurar(.init(repo: "graba-app/graba", nombre: "Graba",
+            archivoDesarrollo: Host.datos.appendingPathComponent("desarrollo"), variableProgreso: Host.prefijo + "PROGRESO"))
+        p.actualizaciones = .init(revisar: { fin in Actualizaciones.revisar { r in BarraMenu.shared.actualizar(); fin(r) } },
+            revisarCadaRato: { fin in Actualizaciones.revisarCadaRato { r in BarraMenu.shared.actualizar(); fin(r) } },
+            seguir: Actualizaciones.seguir, instalar: Actualizaciones.instalar, aviso: Actualizaciones.aviso,
+            disponible: { Actualizaciones.disponible })
+
+        Acciones.registrar(p)
         BarraMenu.shared.instalar()
         Atajos.instalar()
-        Actualizaciones.revisarCadaRato()
-        // La primera vez (o si falta algo para funcionar) se abre la ventana con el asistente.
-        if Config.texto("ia").isEmpty || !Modelos.lista.contains(where: Modelos.existe) { Ventana.shared.mostrar() }
+        // La primera vez (o si falta algo para funcionar) se abre la ventana con el asistente; si no, Graba queda en la barra de menú.
+        Ventana.shared.alArrancar(abrir: GrabaApp.faltaAlgo)
     }
+
+    /// Falta la IA o el transcriptor: se abre la bienvenida (pieza «bienvenida» en ui/).
+    @MainActor static var faltaAlgo: Bool { Config.texto("ia").isEmpty || !Modelos.lista.contains(where: Modelos.existe) }
 
     /// Primer uso: mientras la persona no elija el idioma (paso 0 de la bienvenida) no se muestra ni se pide nada más:
     /// ni la barra de grabar ni los permisos de macOS. Si ya tenía todo listo y nunca eligió idioma, no se le vuelve a preguntar.
-    static var faltaIdioma: Bool {
-        Config.texto("idioma_ui").isEmpty && (Config.texto("ia").isEmpty || !Modelos.lista.contains(where: Modelos.existe))
-    }
-
-    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        Ventana.shared.mostrar()
-        return true
-    }
+    @MainActor static var faltaIdioma: Bool { !Idioma.elegido && faltaAlgo }
 }
 
 // MARK: - Grabación
@@ -47,7 +63,14 @@ final class GrabaApp: NSObject, NSApplicationDelegate {
 enum Estado {
     enum Fase: String { case inactiva, preparando, cuenta, grabando, terminando }
     /// Cada cambio de fase llega a la barra de menú y a la ventana: el botón Grabar de la ventana dice siempre lo mismo que la barra.
-    static var fase = Fase.inactiva { didSet { BarraMenu.shared.actualizar(); Ventana.shared.enviarEstado() } }
+    /// Mientras graba (o prepara, o guarda) la app está ocupada para el host: actualizar espera y, si no termina, no se instala.
+    static var fase = Fase.inactiva {
+        didSet {
+            if oldValue == .inactiva, fase != .inactiva { Puente.shared.ocupar() }
+            if oldValue != .inactiva, fase == .inactiva { Puente.shared.soltar() }
+            BarraMenu.shared.actualizar(); Ventana.shared.enviarEstado()
+        }
+    }
     static var segundos = 0
     /// En pausa: no se escribe nada y el reloj se detiene (la fase sigue siendo .grabando).
     static var pausada = false { didSet { BarraMenu.shared.actualizar(); Barra.shared.estado.pausada = pausada; Ventana.shared.enviarEstado() } }
@@ -189,7 +212,7 @@ enum Estado {
                     try? FileManager.default.removeItem(at: sistema)
                 }
             }
-            Procesador.encolar(c.path) { Ventana.shared.enviarEstado() }
+            Procesamiento.encolar(c.path) { Ventana.shared.enviarEstado() }
             Ventana.shared.enviarEstado()
         }
     }
@@ -282,15 +305,17 @@ enum Grabaciones {
             let video = c.appendingPathComponent("video.mp4")
             let md = try? String(contentsOf: c.appendingPathComponent("grabacion.md"), encoding: .utf8)
             let srt = c.appendingPathComponent("subtitulos.srt")
+            let version = Int(((try? fm.attributesOfItem(atPath: video.path)[.modificationDate]) as? Date)?.timeIntervalSince1970 ?? 0)
             lista.append(["ruta": c.path, "nombre": c.lastPathComponent, "meta": meta,
                           "estado": leerJSON(c.appendingPathComponent("estado.json")),
-                          "video": fm.fileExists(atPath: video.path) ? video.absoluteString : NSNull(),
+                          // graba://video/<versión>/<ruta> (lo sirve el host con rangos: la ventana solo lee ui/ del disco).
+                          "video": (fm.fileExists(atPath: video.path) ? Rutas.urlVideo(video, version: version) : nil).map { $0 as Any } ?? NSNull(),
                           "md": md ?? NSNull(),
                           "srt": fm.fileExists(atPath: srt.path) ? srt.path : NSNull(),
                           "audio": fm.fileExists(atPath: c.appendingPathComponent("audio.wav").path),
                           // Recortada: se puede volver al original. version: cambia cuando el video cambia (así la ventana no muestra el viejo).
                           "recortada": fm.fileExists(atPath: c.appendingPathComponent(".original/video.mp4").path),
-                          "version": Int(((try? fm.attributesOfItem(atPath: video.path)[.modificationDate]) as? Date)?.timeIntervalSince1970 ?? 0),
+                          "version": version,
                           "youtube": leerJSON(c.appendingPathComponent("youtube.json"))])
         }
         return lista.sorted { (($0["meta"] as? [String: Any])?["inicio"] as? String ?? "") > (($1["meta"] as? [String: Any])?["inicio"] as? String ?? "") }
@@ -369,8 +394,8 @@ final class BarraMenu: NSObject, NSMenuDelegate {
     @objc func terminar() { Estado.detener() }
     @objc func pausar() { Estado.alternarPausa() }
     @objc func descartar() { Estado.cancelar() }
-    @objc func alternarCamara() { Config.guardar(["camara": !Config.bool("camara")]); Ventana.shared.enviarEstado() }
-    @objc func alternarMicrofono() { Config.guardar(["microfono": !Config.bool("microfono")]); Ventana.shared.enviarEstado() }
+    @objc func alternarCamara() { Config.deLaApp(["camara": !Config.bool("camara")]); Ventana.shared.enviarEstado() }
+    @objc func alternarMicrofono() { Config.deLaApp(["microfono": !Config.bool("microfono")]); Ventana.shared.enviarEstado() }
     @objc func abrir() { Ventana.shared.mostrar() }
     @objc func carpeta() { NSWorkspace.shared.open(Rutas.base) }
     @objc func salir() {

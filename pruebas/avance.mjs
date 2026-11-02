@@ -1,4 +1,4 @@
-// La ventana solo se refresca cuando cambia el avance (escritorio/src/avance.js; lo mismo en Ventana.swift).
+// La ventana solo se refresca cuando cambia el avance (escritorio/src/avance.js; lo mismo en Vidrio.swift, Ventana.firmaAvance).
 import { createRequire } from "module";
 import fs from "fs";
 import os from "os";

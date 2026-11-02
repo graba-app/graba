@@ -381,17 +381,24 @@ class Piezas(unittest.TestCase):
         import nucleo
         self.assertEqual(os.path.realpath(nucleo.carpeta_datos()), os.path.realpath(os.path.join(DATOS, ".graba")))
         de_la_interfaz = sorted(k for k, v in app["config"].items() if not (isinstance(v, dict) and v.get("interfaz") is False))
-        js = open(os.path.join(RAIZ, "escritorio", "src", "servicios.js"), encoding="utf-8").read()
-        editables = re.search(r"editables: \[([^\]]*)\]", js).group(1)
-        self.assertEqual(sorted(re.findall(r'"(\w+)"', editables)), de_la_interfaz)
-        swift = open(os.path.join(RAIZ, "app", "Sources", "Graba", "Servicios.swift"), encoding="utf-8").read()
-        editables = re.search(r"static let editables: Set<String> = \[([^\]]*)\]", swift).group(1)
-        self.assertEqual(sorted(re.findall(r'"(\w+)"', editables)), de_la_interfaz)
+        # La acción `config` de los hosts (piezas «host-mac» y «host-escritorio») acepta de la interfaz justo estas claves, las de
+        # app.json sin "interfaz": false: las mismas de siempre (más «bienvenida», de la pieza «bienvenida»).
+        self.assertEqual(de_la_interfaz, sorted(["ia", "modelo", "idioma_audio", "idioma_ui", "camara", "microfono", "teleprompter", "teleprompter_texto",
+                                                  "teleprompter_velocidad", "teleprompter_letra", "youtube_privacidad", "youtube_auto", "youtube_client_id",
+                                                  "youtube_client_secret", "tema", "bienvenida"]))
+        # Ninguna app lleva ya su propia lista: la regla es una sola, la de app.json.
+        for ruta in (("escritorio", "src", "servicios.js"), ("app", "Sources", "Graba", "Servicios.swift")):
+            with open(os.path.join(RAIZ, *ruta), encoding="utf-8") as f:
+                self.assertNotIn("editables", f.read())
 
     def test_empaquetado_lleva_app_json(self):
         self.assertIn('app.json', open(os.path.join(RAIZ, "herramientas", "empaquetar.sh"), encoding="utf-8").read())
         extra = json.load(open(os.path.join(RAIZ, "escritorio", "package.json"), encoding="utf-8"))["build"]["extraResources"]
         self.assertIn({"from": "../app.json", "to": "graba/app.json"}, extra)
+        # acciones.json (las acciones declaradas que atienden los hosts) va junto a app.json en las dos apps.
+        self.assertIn({"from": "../acciones.json", "to": "graba/acciones.json"}, extra)
+        with open(os.path.join(RAIZ, "herramientas", "empaquetar.sh"), encoding="utf-8") as f:
+            self.assertIn('cp "$RAIZ/acciones.json" "$APP/Contents/Resources/graba/acciones.json"', f.read())
         piezas = json.load(open(os.path.join(RAIZ, "piezas.json"), encoding="utf-8"))["piezas"]
         for pid, info in piezas.items():
             for ruta in info["archivos"]:

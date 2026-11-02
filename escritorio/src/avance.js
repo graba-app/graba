@@ -1,4 +1,4 @@
-// Firma del avance (equivale a Ventana.firmaAvance en Ventana.swift). Mientras se procesa o se sube una grabación, la ventana se
+// Firma del avance (equivale a Ventana.firmaAvance en app/Sources/Graba/Vidrio.swift). Mientras se procesa o se sube una grabación, la ventana se
 // refresca cada segundo; antes eso volvía a leer TODAS las grabaciones (con sus notas) y a mandarlas a la interfaz aunque nada hubiera
 // cambiado. El avance de verdad vive en estado.json y youtube.json de las carpetas activas: si esos archivos no cambiaron, no se
 // manda nada. Solo fs y path, para poder probarlo sin Electron (pruebas/avance.mjs).

@@ -4,15 +4,22 @@
 const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
-const { BASE, PLATAFORMA, binario } = require("./rutas");
-const { leerJSON, escribirJSON, Idioma } = require("./servicios");
+const { BASE, PLATAFORMA, binario, dentroDeBase, leerJSON, escribirJSON, Idioma } = require("./servicios");
 
 const dos = (n) => String(n).padStart(2, "0");
 const fechaCarpeta = (d) => `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())} ${dos(d.getHours())}${dos(d.getMinutes())}${dos(d.getSeconds())}`;
 const fechaISO = (d) => `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}T${dos(d.getHours())}:${dos(d.getMinutes())}:${dos(d.getSeconds())}`;
 
-/** URL del video para la interfaz: se sirve por graba://video/… (el protocolo valida que esté dentro de ~/Graba). */
-const urlVideo = (archivo) => "graba://video/" + encodeURIComponent(archivo);
+/** URL del video para la interfaz: graba://video/<versión>/<ruta dentro de ~/Graba> (lo sirve el host con rangos; la versión
+ *  cambia cuando cambia el video, así la ventana nunca muestra el de antes de un recorte). Igual que Rutas.urlVideo en Mac. */
+const urlVideo = (archivo, version) => `graba://video/${version}/` + path.relative(BASE, archivo).split(path.sep).map(encodeURIComponent).join("/");
+/** Lo contrario, para el resolvedor de medios del host: solo un video de una grabación dentro de ~/Graba. */
+function videoDe(ruta) {
+  const m = /^(\d+)\/(.+)$/.exec(String(ruta || ""));
+  if (!m || m[2].split(/[\\/]/).includes("..")) return null;
+  const archivo = path.resolve(BASE, m[2]);
+  return dentroDeBase(archivo) && /\.(mp4|webm)$/i.test(archivo) ? archivo : null;
+}
 
 const Grabaciones = {
   nueva() {
@@ -47,13 +54,13 @@ const Grabaciones = {
       const c = path.join(BASE, d.name);
       const meta = leerJSON(path.join(c, "meta.json"), {}) || {};
       if (!Object.keys(meta).length) continue;
-      const video = this.video(c);
+      const video = this.video(c), version = video ? Math.floor(fs.statSync(video).mtimeMs / 1000) : 0;
       let md = null;
       try { md = fs.readFileSync(path.join(c, "grabacion.md"), "utf8"); } catch {}
       const srt = path.join(c, "subtitulos.srt");
       lista.push({ ruta: c, nombre: d.name, meta, estado: leerJSON(path.join(c, "estado.json"), {}) || {},
-        video: video ? urlVideo(video) : null, md, srt: fs.existsSync(srt) ? srt : null, audio: fs.existsSync(path.join(c, "audio.wav")),
-        recortada: fs.existsSync(path.join(c, ".original", "video.mp4")), version: video ? Math.floor(fs.statSync(video).mtimeMs / 1000) : 0,
+        video: video ? urlVideo(video, version) : null, md, srt: fs.existsSync(srt) ? srt : null, audio: fs.existsSync(path.join(c, "audio.wav")),
+        recortada: fs.existsSync(path.join(c, ".original", "video.mp4")), version,
         youtube: leerJSON(path.join(c, "youtube.json"), {}) || {} });
     }
     return lista.sort((a, b) => String(b.meta.inicio || "").localeCompare(String(a.meta.inicio || "")));
@@ -150,4 +157,4 @@ function deshacerRecorteVideo(c) {
   fs.renameSync(original, path.join(c, "video.mp4"));
 }
 
-module.exports = { Grabaciones, prepararVideo, recortarVideo, deshacerRecorteVideo };
+module.exports = { Grabaciones, videoDe, urlVideo, prepararVideo, recortarVideo, deshacerRecorteVideo };

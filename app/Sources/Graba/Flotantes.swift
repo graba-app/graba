@@ -2,6 +2,7 @@ import AVFoundation
 import AppKit
 import ScreenCaptureKit
 import SwiftUI
+import PiezaHost
 
 /// Panel flotante que no le quita el foco a la app en la que la persona está trabajando.
 class PanelFlotante: NSPanel {
@@ -147,7 +148,7 @@ final class EstadoTeleprompter: ObservableObject {
     @Published var editando = true
 
     func guardar() {
-        Config.guardar(["teleprompter_texto": texto, "teleprompter_velocidad": velocidad, "teleprompter_letra": letra])
+        Config.deLaApp(["teleprompter_texto": texto, "teleprompter_velocidad": velocidad, "teleprompter_letra": letra])
     }
 }
 

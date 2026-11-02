@@ -34,3 +34,6 @@ capturas/
 # Pieza: la descripción de la app y las piezas que usa
 !/app.json
 !/piezas.json
+
+# Pieza: archivos de la raíz que usa la app
+!/acciones.json

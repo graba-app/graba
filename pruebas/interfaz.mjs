@@ -45,7 +45,8 @@ for (const [idioma, consulta] of [["español", ""], ["inglés", "?idioma=en"]]) 
     await p.addInitScript(() => { window._faltantes = new Set(); });
     await p.goto(BASE + (consulta ? consulta + (bv ? "&bienvenida" : "") : bv ? "?bienvenida" : ""));
     await p.waitForFunction(() => window.Graba && document.querySelector(".app, .pantalla-idioma"));
-    const pasos = bv ? [0, 1, 2, 3, 4].map((n) => `E=>{E.bv=${n}}`) : VISTAS;
+    // La bienvenida es la pieza «bienvenida»: el paso 0 (idioma) se abre forzado; del saludo (que siempre se puede pasar) se salta al resto.
+    const pasos = bv ? [0, 1, 2, 3, 4].map((n) => `()=>{const b=window.Graba._pruebas.bv;${n === 0 ? "b.abrir({config:{},forzar:true})" : `b.abrir({config:{idioma_ui:"es"}});b.ir(${n})`}}`) : VISTAS;
     for (const [i, f] of pasos.entries()) {
       await p.evaluate(`window.Graba._probar(${f})`);
       await p.waitForTimeout(80);
@@ -65,19 +66,19 @@ for (const [locale, sugerido] of [["en-US", "en"], ["es-CL", "es"]]) {
   p.on("pageerror", (e) => falla(`error de JavaScript (idioma primero): ${e.message}`));
   await p.goto(BASE + "?bienvenida");
   await p.waitForSelector(".pantalla-idioma");
-  const primera = await p.evaluate(() => ({ app: !!document.querySelector(".app"), titulo: document.querySelector("#t-idioma")?.textContent,
-    botones: [...document.querySelectorAll("[data-idioma-ui]")].map((b) => b.querySelector("b").textContent), foco: document.activeElement?.dataset?.idiomaUi }));
+  const primera = await p.evaluate(() => ({ app: !!document.querySelector(".app"), titulo: document.querySelector(".pieza-bv-idioma #t-bv")?.textContent,
+    botones: [...document.querySelectorAll("[data-bv-idioma]")].map((b) => b.querySelector("b").textContent), foco: document.activeElement?.dataset?.bvIdioma }));
   if (primera.app || !/Elige tu idioma/.test(primera.titulo) || !/Choose your language/.test(primera.titulo)) falla(`con ?bienvenida la primera pantalla no es la de idioma: ${JSON.stringify(primera)}`);
   if (primera.botones.join("|") !== "Español|English") falla(`opciones de idioma: ${primera.botones}`);
   if (primera.foco !== sugerido) falla(`con el sistema en ${locale} el foco debería estar en "${sugerido}" y está en "${primera.foco}"`);
   if (locale === "en-US") {
     // Con teclado: flecha a Español y de vuelta a English, Enter.
     await p.keyboard.press("ArrowLeft");
-    if (await p.evaluate(() => document.activeElement?.dataset?.idiomaUi) !== "es") falla("las flechas no mueven el foco entre idiomas");
+    if (await p.evaluate(() => document.activeElement?.dataset?.bvIdioma) !== "es") falla("las flechas no mueven el foco entre idiomas");
     await p.keyboard.press("ArrowRight");
     await p.keyboard.press("Enter");
-    await p.waitForSelector("#t-bv");
-    const despues = await p.evaluate(() => { let g; window.Graba._probar((E) => { g = { idioma_ui: E.config.idioma_ui, bv: E.bv }; }); return { ...g, titulo: document.querySelector("#t-bv").textContent, lang: document.documentElement.lang }; });
+    await p.waitForSelector(".pieza-bv[data-paso] #t-bv");
+    const despues = await p.evaluate(() => { let g; window.Graba._probar((E) => { g = { idioma_ui: E.config.idioma_ui, bv: window.Graba._pruebas.bv.paso }; }); return { ...g, titulo: document.querySelector("#t-bv").textContent, lang: document.documentElement.lang }; });
     if (despues.titulo !== "Hi, this is Graba" || despues.lang !== "en") falla(`al elegir English el siguiente paso no quedó en inglés: ${JSON.stringify(despues)}`);
     if (despues.idioma_ui !== "en") falla(`no se guardó idioma_ui (quedó ${JSON.stringify(despues.idioma_ui)})`);
     if (despues.bv !== 1) falla(`después del idioma debería venir el saludo (paso 1) y vino ${despues.bv}`);
@@ -90,9 +91,10 @@ console.log("  ✓ El idioma va primero");
   const p = await navegador.newPage();
   await p.goto(BASE + "?bienvenida");
   await p.waitForSelector(".pantalla-idioma");
-  await p.evaluate(() => window.Graba._probar((E) => { E.bv = null; E.config.idioma_ui = "es"; }));
+  // Se cierra («Lo hago después») y se vuelve a abrir Graba con el idioma ya guardado y todavía sin IA.
+  await p.evaluate(() => { window.Graba._pruebas.bv.terminar(); window.Graba._probar((E) => { E.bvCerrada = false; E.config.idioma_ui = "es"; }); });
   await p.evaluate(() => window.Graba.estado({ config: { ia: "", idioma_ui: "es" }, ias: [], modelos: { lista: [] } }));
-  if (!(await p.$("#t-bv")) || (await p.$(".pantalla-idioma"))) falla("con el idioma ya elegido no debería volver a preguntarlo");
+  if (!(await p.$(".pieza-bv[data-paso=hola]")) || (await p.$(".pantalla-idioma"))) falla("con el idioma ya elegido no debería volver a preguntarlo");
   await p.close();
 }
 // Contraste del botón Grabar en modo claro y oscuro.

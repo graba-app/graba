@@ -1,6 +1,7 @@
 import AVFoundation
 import AppKit
 import SwiftUI
+import PiezaHost
 
 /// La barra de grabación: una sola pieza abajo al centro, como la de captura de macOS.
 /// Preparar: qué grabar · cámara · micrófono · guion · Grabar. Grabando: tiempo · Terminar · descartar.

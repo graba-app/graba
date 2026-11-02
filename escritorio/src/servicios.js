@@ -1,11 +1,50 @@
-// Configuración, idioma, permisos, IA, modelos y procesamiento. Equivale a Servicios.swift (config validada por app.json, la que leen bin/comun.py y la pieza «nucleo»).
+// Lo propio de Graba sobre la pieza «host-escritorio» (host.js): la ventana, el puente, config, idioma, el procesador con límite de
+// tiempo, safeStorage y las actualizaciones ya los trae el host. Aquí queda lo de Graba (equivale a Servicios.swift): dónde viven las
+// grabaciones y las herramientas, los valores por defecto de su config, permisos, la lista de IA instaladas, la descarga de modelos
+// (pendiente #4 de Pieza: modelos en el host), la fila de procesamiento y YouTube. main.js lo conecta con el host (`usar(host)`).
 const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { spawn } = require("child_process");
-const { app, net, safeStorage, shell, systemPreferences } = require("electron");
-const { ES_WIN, HOME, INTERNO, CONFIG, MODELOS, recursos, herramientas, python } = require("./rutas");
+const { app, net, shell, systemPreferences } = require("electron");
+
+const ES_WIN = process.platform === "win32";
+const PLATAFORMA = ES_WIN ? "windows" : "linux";
+/** Carpeta de escritorio/vendor (mismos nombres que usa electron-builder en ${os}: linux, win). */
+const VENDOR = ES_WIN ? "win" : "linux";
+const HOME = os.homedir();
+/** Las grabaciones: una carpeta por grabación. Fuera de la app, así actualizar no borra nada. La carpeta de datos del host
+ *  (`"datos": "visible"` de app.json) es ~/Graba/.graba: la de siempre. */
+const BASE = path.join(HOME, "Graba");
+const INTERNO = path.join(BASE, ".graba");
+const MODELOS = path.join(INTERNO, "modelos");
+/** Raíz del repo cuando se corre sin empaquetar (escritorio/src → raíz). */
+const REPO = path.resolve(__dirname, "..", "..");
+
+/** whisper-cli y ffmpeg (vienen con la app). */
+function herramientas() {
+  return app.isPackaged ? path.join(process.resourcesPath, "herramientas") : path.join(REPO, "escritorio", "vendor", VENDOR, "herramientas");
+}
+
+/** Un binario de la app (herramientas/) o, si no viene, el del sistema (PATH). */
+function binario(nombre) {
+  const exe = ES_WIN ? nombre + ".exe" : nombre;
+  const dentro = path.join(herramientas(), exe);
+  if (fs.existsSync(dentro)) return dentro;
+  for (const d of (process.env.PATH || "").split(path.delimiter).filter(Boolean)) {
+    const r = path.join(d, exe);
+    try { if (fs.statSync(r).isFile()) return r; } catch {}
+  }
+  return null;
+}
+
+/** Solo se tocan carpetas dentro de ~/Graba (igual que Rutas.dentro en Servicios.swift). */
+function dentroDeBase(ruta) {
+  if (typeof ruta !== "string" || !ruta || ruta.includes("\0")) return false;
+  const r = path.resolve(ruta);
+  const relativa = path.relative(BASE, r);
+  return !!relativa && !relativa.startsWith("..") && !path.isAbsolute(relativa);
+}
 
 function leerJSON(ruta, defecto = {}) {
   try { return JSON.parse(fs.readFileSync(ruta, "utf8")); } catch { return defecto; }
@@ -18,41 +57,26 @@ function escribirJSON(ruta, datos) {
   fs.renameSync(tmp, ruta);
 }
 
-// ───────────── Configuración (~/Graba/.graba/config.json, la que leen los scripts con la pieza «nucleo») ─────────────
+/** El host (pieza «host-escritorio»): lo pone main.js al arrancar. */
+let H = null;
+function usar(host) { H = host; }
+
+// ───────────── Configuración (la del host, validada por app.json, con los valores por defecto de Graba) ─────────────
 const Config = {
   porDefecto: { ia: "", modelo: "", idioma_audio: "auto", idioma_ui: "", camara: true, microfono: true },
-  /** Claves que la interfaz puede cambiar con la acción "config": las de app.json sin "interfaz": false (igual que Config.editables en
-   *  Servicios.swift; pruebas/test_python.py revisa que las tres listas digan lo mismo). */
-  editables: ["ia", "modelo", "idioma_audio", "idioma_ui", "camara", "microfono", "teleprompter", "teleprompter_texto", "teleprompter_velocidad", "teleprompter_letra",
-    "youtube_privacidad", "youtube_auto", "youtube_client_id", "youtube_client_secret", "tema"],
-  leer() { return { ...this.porDefecto, ...(leerJSON(CONFIG, {}) || {}) }; },
-  guardar(cambios) {
-    const d = { ...this.leer(), ...(cambios || {}) };
-    fs.mkdirSync(INTERNO, { recursive: true });
-    escribirJSON(CONFIG, d);
-  },
+  leer() { return { ...this.porDefecto, ...H.config.leer() }; },
+  /** Lo que escribe la app (incluye las claves "interfaz": false de app.json: modo, cámara, micrófono elegido, canal…). */
+  guardar(cambios) { H.config.guardar(cambios || {}, { desdeInterfaz: false }); },
   bool(clave) { const v = this.leer()[clave]; return typeof v === "boolean" ? v : !!this.porDefecto[clave]; },
   texto(clave) { const v = this.leer()[clave]; return typeof v === "string" ? v : ""; },
 };
 
-// ───────────── Idioma (las claves son el texto en español, igual que en ui/idiomas) ─────────────
+// ───────────── Idioma (el del host: las claves son el texto en español, igual que en ui/idiomas) ─────────────
 const Idioma = {
-  _cache: null,
-  get codigo() {
-    const elegido = Config.texto("idioma_ui");
-    if (elegido) return elegido;
-    return (app.getLocale() || "").toLowerCase().startsWith("es") ? "es" : "en";
-  },
-  t(texto) {
-    const c = this.codigo;
-    if (c === "es") return texto;
-    if (!this._cache || this._cache.codigo !== c) {
-      const j = leerJSON(path.join(recursos(), "ui", "idiomas", `${c}.json`), {}) || {};
-      this._cache = { codigo: c, textos: j.textos || {} };
-    }
-    return this._cache.textos[texto] || texto;
-  },
-  f(plantilla, n) { return this.t(plantilla).replace(/\{n\}/g, String(n)); },
+  get codigo() { return H.idioma.codigo; },
+  get elegido() { return H.idioma.elegido; },
+  t(texto) { return H ? H.t(texto) : texto; },
+  f(plantilla, n) { return H.idioma.f(plantilla, { n }); },
 };
 
 // ───────────── Permisos ─────────────
@@ -100,11 +124,6 @@ const IA = {
   /** PATH completo para los procesos hijos (Python y la IA). */
   path() { return [herramientas(), ...new Set(this.dirs())].join(path.delimiter); },
   paraJS() { return this.conocidas.map((x) => ({ id: x.id, nombre: x.nombre, instalada: !!this.buscar(x.comandos) })); },
-  /** Prueba real (le pide una palabra) con la pieza «ia»: `ia.py probar <entrada {ia}> <salida>`, con las mismas protecciones que al
-   *  procesar (sin herramientas, sin MCP, sin la memoria de la persona, en una carpeta temporal). Responde {ia, ok, codigo?, valores?, error?}. */
-  async probar(id) {
-    return (await Procesador.conEntrada("ia.py", "probar", { ia: String(id || "") })) || { ok: false, error: Idioma.t("No pude terminar. Intenta de nuevo.") };
-  },
 };
 
 // ───────────── Modelos de transcripción (whisper.cpp), descargados y verificados por huella ─────────────
@@ -166,132 +185,80 @@ async function descargarVerificado(url, sha256, destino, progreso = () => {}) {
   try { fs.rmSync(destino, { force: true }); fs.renameSync(tmp, destino); } catch { throw new Error(Idioma.t("No pude guardar la descarga.")); }
 }
 
-// ───────────── Procesamiento (bin/procesar.py con el Python que viene dentro de la app) ─────────────
-const Procesador = {
+// ───────────── Procesamiento (bin/procesar.py, de a una grabación, con el procesador del host) ─────────────
+const Procesamiento = {
   enCurso: null,
   cola: [],
-  /** Avisos para la ventana (lo asigna main.js). */
+  /** Avisos para la ventana (los asigna main.js). */
   alCambiar: () => {},
-  alFallarInicio: () => {},
   /** Al terminar bien una grabación nueva (no un "Regenerar"): main.js la sube a YouTube si está activado. */
   alTerminarBien: () => {},
+  /** Lo que los scripts de Graba necesitan además de lo que pone el host: whisper-cli y ffmpeg, y el PATH con las IA. */
+  entorno() { return { GRABA_HERRAMIENTAS: herramientas(), PATH: IA.path() }; },
   encolar(carpeta, soloIA = false) {
     this.cola.push([carpeta, soloIA]);
     this._siguiente();
   },
-  entorno() {
-    return { ...process.env, GRABA_RECURSOS: recursos(), GRABA_HERRAMIENTAS: herramientas(), PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1",
-      PYTHONDONTWRITEBYTECODE: "1", PATH: IA.path() };
+  /** Otro script de bin/ (corregir.py, guion.py) con el entorno de Graba. La IA de la persona puede tardar: 15 minutos como mucho. */
+  correrJSON(script, args, { limite = 900, entorno = {} } = {}) {
+    return H.procesador.correrJSON(script, args, { limite, entorno: { ...this.entorno(), ...entorno } });
   },
-  /** Corre otro script de bin/ (p. ej. corregir.py) con el mismo Python y entorno; el último argumento es la ruta del JSON de salida. */
-  correrJSON(script, args, entorno = {}) {
-    return new Promise((fin) => {
-      const salida = path.join(os.tmpdir(), `graba-${crypto.randomUUID()}.json`);
-      const terminar = () => { const r = leerJSON(salida, null); fs.rmSync(salida, { force: true }); fin(r); };
-      let p;
-      try { p = spawn(python(), [path.join(recursos(), "bin", script), ...args, salida], { env: { ...this.entorno(), ...entorno }, stdio: "ignore", windowsHide: true }); }
-      catch { return fin(null); }
-      let listo = false;
-      p.on("error", () => { if (!listo) { listo = true; terminar(); } });
-      p.on("close", () => { if (!listo) { listo = true; terminar(); } });
-    });
-  },
-  /** Como correrJSON, pero los datos van en un JSON de entrada (nunca como argumento): `script <accion> <entrada.json> <salida.json>`. */
-  async conEntrada(script, accion, datos) {
-    const entrada = path.join(os.tmpdir(), `graba-entrada-${crypto.randomUUID()}.json`);
-    fs.writeFileSync(entrada, JSON.stringify(datos || {}), { mode: 0o600 });
-    try { return await this.correrJSON(script, [accion, entrada]); } finally { fs.rmSync(entrada, { force: true }); }
-  },
-  _siguiente() {
+  /** Sin tope de tiempo mientras procesar.py lata (pieza «trabajos»: `mantener_vivo()`): una grabación larga transcribe por mucho
+   *  rato, pero si el proceso se cuelga (45 s sin latido) el host lo corta. */
+  async _siguiente() {
     if (this.enCurso || !this.cola.length) return;
     const [carpeta, soloIA] = this.cola.shift();
     this.enCurso = carpeta;
-    const salida = path.join(os.tmpdir(), `graba-${crypto.randomUUID()}.json`);
-    const terminar = () => {
-      const r = leerJSON(salida, null);
-      fs.rmSync(salida, { force: true });
-      if (r && r.ok && !soloIA && r.carpeta) try { this.alTerminarBien(r.carpeta); } catch {}
-      this.enCurso = null;
-      this.alCambiar();
-      this._siguiente();
-    };
-    let p;
-    try {
-      p = spawn(python(), [path.join(recursos(), "bin", "procesar.py"), carpeta, salida, ...(soloIA ? ["--solo-ia"] : [])],
-        { env: this.entorno(), stdio: "ignore", windowsHide: true });
-    } catch (e) {
-      this.alFallarInicio(carpeta, e.message);
-      return terminar();
+    const r = await H.procesador.correrJSON("procesar.py", [carpeta, ...(soloIA ? ["--solo-ia"] : [])], { latido: true, entorno: this.entorno() });
+    // El script no alcanzó a dejar su error (lo cortó el host o no arrancó): queda como error recuperable.
+    if (!r.ok && (leerJSON(path.join(carpeta, "estado.json"), {}) || {}).estado === "procesando") {
+      try { escribirJSON(path.join(carpeta, "estado.json"), { estado: "error", error: Idioma.t("No pude terminar. Intenta de nuevo.") }); } catch {}
     }
-    let listo = false;
-    p.on("error", (e) => { if (listo) return; listo = true; this.alFallarInicio(carpeta, e.message); terminar(); });
-    p.on("close", () => { if (listo) return; listo = true; terminar(); });
+    if (r.ok && !soloIA && r.carpeta) try { this.alTerminarBien(r.carpeta); } catch {}
+    this.enCurso = null;
+    this.alCambiar();
+    this._siguiente();
   },
 };
 
-// ───────────── Tokens (cifrados con el llavero del sistema: DPAPI en Windows, libsecret/kwallet en Linux; nunca en texto plano) ─────────────
-const Tokens = {
-  archivo: path.join(INTERNO, ".tokens"),
-  /** En Linux sin llavero (gnome-keyring, kwallet…) Electron cae a "basic_text", que no protege nada: ahí no se guarda. */
-  get seguro() {
-    if (!safeStorage.isEncryptionAvailable()) return false;
-    try { return process.platform !== "linux" || safeStorage.getSelectedStorageBackend() !== "basic_text"; } catch { return true; }
-  },
-  _todos() { return leerJSON(this.archivo, {}) || {}; },
-  guardar(cuenta, token) {
-    if (!this.seguro) return false;
-    const t = this._todos();
-    t[cuenta] = safeStorage.encryptString(token).toString("base64");
-    fs.mkdirSync(INTERNO, { recursive: true });
-    escribirJSON(this.archivo, t);
-    try { fs.chmodSync(this.archivo, 0o600); } catch {}
-    return true;
-  },
-  leer(cuenta) {
-    const c = this._todos()[cuenta];
-    if (!c || !this.seguro) return null;
-    try { return safeStorage.decryptString(Buffer.from(c, "base64")); } catch { return null; }
-  },
-  borrar(cuenta) {
-    const t = this._todos();
-    if (!(cuenta in t)) return;
-    delete t[cuenta];
-    escribirJSON(this.archivo, t);
-  },
-};
-
-// ───────────── YouTube (bin/youtube.py; el permiso queda cifrado con el llavero del sistema) ─────────────
+// ───────────── YouTube (bin/youtube.py; el permiso queda cifrado con safeStorage, en el mismo archivo de siempre) ─────────────
+/** Los secretos del host con el archivo de antes (~/Graba/.graba/.tokens, cuenta «youtube»): quien ya conectó su canal no lo pierde. */
+const tokens = () => H.secretos("tokens", { archivo: ".tokens" });
 const YouTube = {
   subiendo: new Set(),
-  get conectado() { return !!Tokens.leer("youtube"); },
+  get conectado() { return !!tokens().leer("youtube"); },
   /** ¿Hay un cliente OAuth para conectar? (el del proyecto o el propio de la persona, en Ajustes). */
   get disponible() {
-    const archivo = leerJSON(path.join(recursos(), "bin", "youtube_cliente.json"), {}) || {};
+    const archivo = leerJSON(path.join(H.recursos, "bin", "youtube_cliente.json"), {}) || {};
     return !!archivo.id || !!Config.texto("youtube_client_id");
   },
   paraJS() { return { conectado: this.conectado, disponible: this.disponible, canal: Config.texto("youtube_canal") }; },
+  /** Conectar espera a que la persona dé permiso en su navegador: hasta 10 minutos. */
   async conectar() {
-    const r = (await Procesador.correrJSON("youtube.py", ["conectar"])) || { ok: false, error: Idioma.t("No pude terminar. Intenta de nuevo.") };
+    const r = await Procesamiento.correrJSON("youtube.py", ["conectar"], { limite: 600 });
     if (r.ok && r.refresh_token) {
-      if (!Tokens.guardar("youtube", r.refresh_token)) { delete r.refresh_token; return { ok: false, error: Idioma.t("No pude guardar el permiso de YouTube en el llavero del sistema.") }; }
+      if (!tokens().guardar("youtube", r.refresh_token)) { delete r.refresh_token; return { ok: false, error: Idioma.t("No pude guardar el permiso de YouTube en el llavero del sistema.") }; }
       Config.guardar({ youtube_canal: r.canal || "" });
     }
     delete r.refresh_token; // a la interfaz nunca llega el token
     return r;
   },
   desconectar() {
-    Tokens.borrar("youtube");
+    tokens().borrar("youtube");
     Config.guardar({ youtube_canal: "", youtube_auto: false });
   },
+  /** bin/youtube.py lee el token de GRABA_YT_TOKEN (no se toca en esta migración: pendiente #5 de Pieza, la pieza «youtube»).
+   *  Subir un video largo tarda: hasta una hora, el tope del host. */
   async subir(carpeta) {
-    const token = Tokens.leer("youtube");
+    const token = tokens().leer("youtube");
     if (!token || this.subiendo.has(carpeta)) return null;
     this.subiendo.add(carpeta);
     try { escribirJSON(path.join(carpeta, "youtube.json"), { estado: "subiendo", pct: 0 }); } catch {}
-    const r = (await Procesador.correrJSON("youtube.py", ["subir", carpeta], { GRABA_YT_TOKEN: token })) || { ok: false, error: Idioma.t("No pude terminar. Intenta de nuevo.") };
+    const r = await Procesamiento.correrJSON("youtube.py", ["subir", carpeta], { limite: 3600, entorno: { GRABA_YT_TOKEN: token } });
     this.subiendo.delete(carpeta);
     return r;
   },
 };
 
-module.exports = { leerJSON, escribirJSON, Config, Idioma, Permisos, IA, Modelos, Procesador, Tokens, YouTube, descargarVerificado };
+module.exports = { ES_WIN, PLATAFORMA, HOME, BASE, INTERNO, MODELOS, herramientas, binario, dentroDeBase, leerJSON, escribirJSON, usar,
+  Config, Idioma, Permisos, IA, Modelos, Procesamiento, YouTube, descargarVerificado };
