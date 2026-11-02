@@ -65,6 +65,15 @@ no sale en el video; en Linux sí (no hay cómo ocultarla) y, con Wayland, el si
 La primera vez, Graba te ayuda a elegir tu IA ([cómo instalarla](https://graba-app.github.io/graba/ia.html)), descarga el transcriptor
 (una sola vez) y pide los permisos de pantalla, cámara y micrófono.
 
+### Permisos e internet
+
+- **Permisos:** en Mac, Grabación de pantalla, Cámara y Micrófono (macOS los pregunta la primera vez); el Llavero solo si conectas
+  YouTube. En Windows respeta tus interruptores de privacidad de cámara y micrófono; en Linux no pide nada. Los atajos globales no piden
+  Accesibilidad.
+- **Internet:** GitHub (al abrir y cada 6 horas, para saber si hay una versión nueva, que se baja de sus Releases con su huella),
+  Hugging Face (una vez, el transcriptor) y YouTube solo si conectas tu canal. Tu IA habla con su proveedor con tu cuenta. Nada más:
+  sin servidores propios ni analítica.
+
 ## Formato de las grabaciones
 
 ```
@@ -119,7 +128,9 @@ bash pruebas/correr.sh                                            # pruebas (int
 cd ui && python3 -m http.server 8765                              # interfaz en el navegador con datos ficticios
 ```
 
-La guía completa para personas y para IAs de programación está en [`AGENTS.md`](AGENTS.md).
+La app nativa es la de [Pieza](https://github.com/pieza-app/pieza) (piezas «host-mac» y «host-escritorio»: la ventana, el puente, la
+config y los scripts con límite de tiempo) y Graba le suma lo suyo: grabar, la barra y los flotantes, la barra de menú o bandeja, los
+atajos y el recorte. La guía completa para personas y para IAs de programación está en [`AGENTS.md`](AGENTS.md).
 
 ## Comunidad
 
@@ -148,6 +159,8 @@ camera in any shape, your mic and, if you want, the Mac's sound; pause and resum
 Ctrl+Alt+Shift+R / P on Windows and Linux) and trim the start and end (transcript, subtitles and chapters shift on their own).
 **Install:** Mac and Linux `curl -fsSL https://raw.githubusercontent.com/graba-app/graba/main/instalar.sh | bash` · Windows (PowerShell)
 `irm https://raw.githubusercontent.com/graba-app/graba/main/instalar.ps1 | iex` · or the [latest release](https://github.com/graba-app/graba/releases/latest).
+**Permissions:** on Mac, Screen Recording, Camera and Microphone (and the Keychain only if you connect YouTube). **Internet:** GitHub for
+updates, Hugging Face once for the transcriber, YouTube only if you connect your channel; your AI talks to its provider with your account.
 Questions and ideas are welcome in [Discussions](https://github.com/graba-app/graba/discussions), in English or Spanish.
 
 ---

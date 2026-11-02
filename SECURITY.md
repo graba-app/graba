@@ -42,8 +42,18 @@ Solo la última versión publicada en [Releases](https://github.com/graba-app/gr
 - La IA corre en una carpeta temporal, sin herramientas ni servidores MCP, sin la memoria de Claude ni las variables de la
   app; el pedido nunca va como argumento del proceso. Las protecciones van siempre (nunca se quitan para que un CLI viejo funcione):
   si su CLI no conoce una, no corre. Lo hace la pieza «ia» de [Pieza](https://github.com/pieza-app/pieza) (`bin/ia.py`).
-- Solo la interfaz propia (marco principal) puede hablarle a la app, y las versiones nuevas solo se bajan de
-  `github.com/graba-app/graba/releases/download/`.
+- La app nativa es la de [Pieza](https://github.com/pieza-app/pieza) (piezas «host-mac» y «host-escritorio»): solo el marco
+  principal con la interfaz propia (un archivo de `ui/` en Mac, `graba://ui/` en Windows y Linux) puede hablarle a la app, la ventana
+  nunca navega fuera de `ui/`, las ventanas de Electron van con `sandbox` y `contextIsolation`, y todo permiso del navegador se
+  niega salvo cámara, micrófono y pantalla para las páginas propias. `graba://video/…` sirve solo videos de las grabaciones de
+  `~/Graba` y `graba://app/…`, solo las páginas propias de la barra, la cuenta, el área, la burbuja, el teleprompter y la grabadora.
+- Cada script de `bin/` corre con **límite de tiempo** (al cumplirse se corta también lo que lanzó), sin las variables `GRABA_*` de
+  afuera y con lo de la persona en un archivo de entrada privado, nunca como argumento. Procesar una grabación no tiene tope mientras
+  el script «lata» (pieza «trabajos»): si se cuelga, se corta. Al salir de la app no queda nada corriendo.
+- El permiso de YouTube queda en el Llavero (Mac) o cifrado con el llavero del sistema (`safeStorage`, Windows y Linux; sin llavero
+  en Linux no se guarda) y nunca llega a la interfaz.
+- Las versiones nuevas (pieza «actualizaciones») solo se bajan de `github.com/graba-app/graba/releases/download/`, con su `.sha256`
+  obligatorio, y el guion que instala solo lleva texto entre comillas.
 
 ---
 
@@ -54,3 +64,7 @@ Graba runs on your computer and handles private data (screen, camera and microph
 *Security* tab. Include what you found, how to reproduce it (steps, OS and Graba version) and its impact. Please don't
 open a public issue or pull request with the details until it's fixed. We reply within a week, ship a fixed release (the
 apps update themselves) and publish an advisory, crediting you if you want. Only the latest release is supported.
+
+How we protect you: the native app is Pieza's (pieces «host-mac» and «host-escritorio»): only the app's own interface can talk to it,
+windows never navigate away from `ui/`, every script runs with a time limit and without outside `GRABA_*` variables, the YouTube
+permission stays in the Keychain or `safeStorage`, and updates only come from this repo's Releases with their `.sha256`.
