@@ -100,7 +100,7 @@ final class Ventana {
         franja.autoresizingMask = [.width, .minYMargin]
         fondo.addSubview(franja)
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: v, queue: .main) { _ in
-            MainActor.assumeIsolated { NSApp.setActivationPolicy(.accessory) }
+            MainActor.assumeIsolated { _ = NSApp.setActivationPolicy(.accessory) }
         }
     }
 
