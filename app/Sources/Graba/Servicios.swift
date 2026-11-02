@@ -22,8 +22,9 @@ enum Rutas {
     /// Solo carpetas dentro de ~/Graba (igual que dentroDeBase en escritorio/src/servicios.js).
     static func dentro(_ ruta: String) -> URL? {
         guard !ruta.isEmpty, !ruta.contains("\u{0}") else { return nil }
-        let u = URL(fileURLWithPath: ruta).standardizedFileURL
-        return u.path.hasPrefix(base.standardizedFileURL.path + "/") ? u : nil
+        // Con los enlaces simbólicos resueltos: un enlace dentro de ~/Graba que apunta afuera no cuenta como de adentro.
+        let u = URL(fileURLWithPath: ruta).standardizedFileURL.resolvingSymlinksInPath()
+        return u.path.hasPrefix(base.standardizedFileURL.resolvingSymlinksInPath().path + "/") ? u : nil
     }
 
     /// El video para la interfaz: graba://video/<versión>/<ruta dentro de ~/Graba> (lo sirve el host con rangos; la versión cambia

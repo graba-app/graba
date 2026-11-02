@@ -48,7 +48,9 @@ Solo la última versión publicada en [Releases](https://github.com/graba-app/gr
   niega salvo cámara, micrófono y pantalla para las páginas propias. `graba://video/…` sirve solo videos de las grabaciones de
   `~/Graba` y `graba://app/…`, solo las páginas propias de la barra, la cuenta, el área, la burbuja, el teleprompter y la grabadora.
 - Cada script de `bin/` corre con **límite de tiempo** (al cumplirse se corta también lo que lanzó), sin las variables `GRABA_*` de
-  afuera y con lo de la persona en un archivo de entrada privado, nunca como argumento. Procesar una grabación no tiene tope mientras
+  afuera y con lo de la persona en un archivo de entrada privado, nunca como argumento (la ruta de una grabación sí va como
+  argumento, solo si está dentro de `~/Graba`; el permiso de YouTube llega a `bin/youtube.py`, por ahora, en una variable de
+  entorno del proceso hijo, nunca en un archivo ni en la interfaz). Procesar una grabación no tiene tope mientras
   el script «lata» (pieza «trabajos»): si se cuelga, se corta. Al salir de la app no queda nada corriendo.
 - El permiso de YouTube queda en el Llavero (Mac) o cifrado con el llavero del sistema (`safeStorage`, Windows y Linux; sin llavero
   en Linux no se guarda) y nunca llega a la interfaz.

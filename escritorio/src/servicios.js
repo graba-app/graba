@@ -41,8 +41,10 @@ function binario(nombre) {
 /** Solo se tocan carpetas dentro de ~/Graba (igual que Rutas.dentro en Servicios.swift). */
 function dentroDeBase(ruta) {
   if (typeof ruta !== "string" || !ruta || ruta.includes("\0")) return false;
-  const r = path.resolve(ruta);
-  const relativa = path.relative(BASE, r);
+  // Con los enlaces simbólicos resueltos: un enlace dentro de ~/Graba que apunta afuera no cuenta como de adentro.
+  const real = (p) => { try { return fs.realpathSync(p); } catch { return p; } };
+  const r = real(path.resolve(ruta));
+  const relativa = path.relative(real(BASE), r);
   return !!relativa && !relativa.startsWith("..") && !path.isAbsolute(relativa);
 }
 
