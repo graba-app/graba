@@ -401,6 +401,8 @@
     "Todo listo": "All set",
     "Ya puedes empezar. Todo lo que elegiste se cambia cuando quieras en Ajustes.": "You're ready to go. You can change anything you chose at any time in Settings.",
     "En la app, aquí se abre la carpeta en tu computador": "In the app, this opens the folder on your computer",
-    "En la app, aquí tu IA vuelve a escribir los textos": "In the app, this is where your AI rewrites the texts"
+    "En la app, aquí tu IA vuelve a escribir los textos": "In the app, this is where your AI rewrites the texts",
+    "Ya puedes empezar. Todo lo que elegiste se cambia cuando quieras en {donde}.": "You're ready to go. You can change anything you chose at any time in {donde}.",
+    "Ya puedes empezar.": "You're ready to go."
   }
 }

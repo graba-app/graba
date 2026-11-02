@@ -228,9 +228,6 @@ enum Procesamiento {
     private(set) static var enCurso: String?
     private static var cola: [(String, Bool)] = []
 
-    /// Lo que los scripts de Graba necesitan además de lo que pone el host: dónde está graba-transcribir.
-    static var entorno: [String: String] { [Host.prefijo + "HERRAMIENTAS": Rutas.herramientas.path] }
-
     static func encolar(_ carpeta: String, soloIA: Bool = false, alTerminar: @escaping @MainActor () -> Void) {
         cola.append((carpeta, soloIA))
         siguiente(alTerminar)
@@ -243,7 +240,7 @@ enum Procesamiento {
         guard enCurso == nil, !cola.isEmpty else { return }
         let (carpeta, soloIA) = cola.removeFirst()
         enCurso = carpeta
-        Procesador.correr("procesar.py", [carpeta] + (soloIA ? ["--solo-ia"] : []), latido: true, entorno: entorno) { resultado in
+        Procesador.correr("procesar.py", [carpeta] + (soloIA ? ["--solo-ia"] : []), latido: true) { resultado in
             let r = resultado.respuesta
             if r["ok"] as? Bool != true, (Grabaciones.leerJSON(URL(fileURLWithPath: carpeta).appendingPathComponent("estado.json"))["estado"] as? String) == "procesando" {
                 // El script no alcanzó a dejar su error (lo cortó el host o no arrancó): queda como error recuperable.
@@ -256,9 +253,10 @@ enum Procesamiento {
         }
     }
 
-    /// Otro script de bin/ con el entorno de Graba (corregir.py, guion.py). La IA de la persona puede tardar: 15 minutos como mucho.
+    /// Otro script de bin/ (corregir.py, guion.py; `GRABA_HERRAMIENTAS` lo pone el host con `Procesador.entornoApp`). La IA de la
+    /// persona puede tardar: 15 minutos como mucho.
     static func correrJSON(_ script: String, _ args: [String], limite: Int = 900, fin: @escaping @MainActor ([String: Any]) -> Void) {
-        Procesador.correr(script, args, limite: limite, entorno: entorno) { fin($0.respuesta) }
+        Procesador.correr(script, args, limite: limite) { fin($0.respuesta) }
     }
 }
 
@@ -303,9 +301,7 @@ enum YouTube {
         guard let token = llavero.leer("youtube"), !subiendo.contains(carpeta) else { return }
         subiendo.insert(carpeta)
         Grabaciones.escribirJSON(URL(fileURLWithPath: carpeta).appendingPathComponent("youtube.json"), ["estado": "subiendo", "pct": 0])
-        var entorno = Procesamiento.entorno
-        entorno[Host.prefijo + "YT_TOKEN"] = token
-        Procesador.correr("youtube.py", ["subir", carpeta], limite: 3600, entorno: entorno) { resultado in
+        Procesador.correr("youtube.py", ["subir", carpeta], limite: 3600, entorno: [Host.prefijo + "YT_TOKEN": token]) { resultado in
             subiendo.remove(carpeta)
             fin?(resultado.respuesta)
             Ventana.shared.llamar("youtubeSubido", resultado.respuesta)

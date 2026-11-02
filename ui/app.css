@@ -154,7 +154,7 @@ input.texto { width: 100%; font: inherit; padding: 8px 10px; border-radius: 8px;
 .tarjeta-idioma { width: min(520px, 100%); background: var(--panel); border: 1px solid var(--linea); border-radius: 18px; padding: 34px 28px 30px;
   box-shadow: var(--sombra); text-align: center; }
 html.vidrio .tarjeta-idioma { background: var(--solido); -webkit-backdrop-filter: blur(30px) saturate(1.4); backdrop-filter: blur(30px) saturate(1.4); }
-.tarjeta-idioma .logo { width: 52px; height: 52px; margin-bottom: 16px; }
+.tarjeta-idioma .logo { width: 52px; height: 52px; margin-bottom: 8px; }
 /* El paso del idioma lo dibuja la pieza «bienvenida» (bienvenida.css, con los colores de «tema»); aquí, solo el tamaño del título. */
 .tarjeta-idioma .pieza-bv-idioma h2 { font-size: 21px; font-weight: 650; text-wrap: balance; }
 .tarjeta-idioma .opcion-idioma.sugerido { background: var(--acento-suave); }
