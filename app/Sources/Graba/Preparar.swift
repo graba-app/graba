@@ -2,6 +2,7 @@ import AVFoundation
 import AppKit
 import ScreenCaptureKit
 import SwiftUI
+import PiezaHost
 
 /// Lo que se elige antes de grabar (en la barra): qué grabar (pantalla, ventana o área), la cámara, el micrófono y el guion.
 /// Se aplica en vivo: la burbuja cambia mientras eliges.
@@ -58,7 +59,7 @@ final class Preparacion: ObservableObject {
     }
 
     func guardar() {
-        Config.guardar(["modo": modo, "camara": camara, "camara_forma": forma.rawValue, "camara_tamano": tamano,
+        Config.deLaApp(["modo": modo, "camara": camara, "camara_forma": forma.rawValue, "camara_tamano": tamano,
                         "camara_id": camaraID, "microfono_id": microfonoID,
                         "microfono": microfono, "sonido_mac": sonidoMac, "teleprompter": teleprompter])
     }

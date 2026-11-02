@@ -1,74 +1,71 @@
 import AVFoundation
 import AppKit
 import CoreGraphics
+import PiezaHost
 
-// MARK: - Rutas y configuración (compartida con bin/ia.py)
+// Lo propio de Graba sobre la pieza «host-mac» (PiezaHost): la ventana, el puente, config, idioma, el Procesador con límite, el
+// Llavero (Secretos) y las actualizaciones ya los trae el host. Aquí queda lo de Graba: dónde viven las grabaciones, los valores
+// por defecto de su config, permisos, la lista de IA instaladas, la descarga de modelos (pendiente #4 de Pieza: modelos en el
+// host), la fila de procesamiento y YouTube.
 
+// MARK: - Rutas de Graba (la carpeta de datos es Host.datos = ~/Graba/.graba, por "datos": "visible" de app.json)
+
+@MainActor
 enum Rutas {
-    /// Datos del usuario: una carpeta por grabación. Fuera de la app, así actualizar no borra nada.
-    static var base: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Graba") }
-    static var interno: URL { base.appendingPathComponent(".graba") }
-    static var config: URL { interno.appendingPathComponent("config.json") }
+    /// Las grabaciones: una carpeta por grabación. Fuera de la app, así actualizar no borra nada.
+    static var base: URL { Host.datos.deletingLastPathComponent() }
+    static var interno: URL { Host.datos }
     static var modelos: URL { interno.appendingPathComponent("modelos") }
-    /// Código (bin/, ui/): dentro de Graba.app.
-    static var recursos: URL { Bundle.main.resourceURL!.appendingPathComponent("graba") }
-    static var python: URL { Bundle.main.resourceURL!.appendingPathComponent("python/bin/python3") }
+    /// graba-transcribir (y whisper.framework al lado): junto al ejecutable de la app.
     static var herramientas: URL { Bundle.main.executableURL!.deletingLastPathComponent() }
+
+    /// Solo carpetas dentro de ~/Graba (igual que dentroDeBase en escritorio/src/servicios.js).
+    static func dentro(_ ruta: String) -> URL? {
+        guard !ruta.isEmpty, !ruta.contains("\u{0}") else { return nil }
+        // Con los enlaces simbólicos resueltos: un enlace dentro de ~/Graba que apunta afuera no cuenta como de adentro.
+        let u = URL(fileURLWithPath: ruta).standardizedFileURL.resolvingSymlinksInPath()
+        return u.path.hasPrefix(base.standardizedFileURL.resolvingSymlinksInPath().path + "/") ? u : nil
+    }
+
+    /// El video para la interfaz: graba://video/<versión>/<ruta dentro de ~/Graba> (lo sirve el host con rangos; la versión cambia
+    /// cuando cambia el video, así la ventana nunca muestra el de antes de un recorte).
+    static func urlVideo(_ video: URL, version: Int) -> String? {
+        let b = base.standardizedFileURL.path + "/", p = video.standardizedFileURL.path
+        guard p.hasPrefix(b), let rel = String(p.dropFirst(b.count)).addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return nil }
+        return "graba://video/\(version)/\(rel)"
+    }
+
+    /// Quien ya usaba Graba con todo listo y nunca eligió idioma sigue sin que se le pregunte: queda la bienvenida como hecha
+    /// (`bienvenida: true`, la clave de la pieza «bienvenida»), así el host revisa las actualizaciones y arma los menús como antes.
+    static func migrar() {
+        let c = Config.leer()
+        guard (c["idioma_ui"] as? String ?? "").isEmpty, c["bienvenida"] == nil, !GrabaApp.faltaAlgo else { return }
+        Config.deLaApp(["bienvenida": true])
+    }
+
+    /// Lo contrario, para el resolvedor de medios: solo un .mp4 dentro de ~/Graba.
+    static func videoDe(_ ruta: String) -> URL? {
+        let partes = ruta.split(separator: "/", maxSplits: 1).map(String.init)
+        guard partes.count == 2, Int(partes[0]) != nil, !partes[1].split(separator: "/").contains(".."),
+              let u = dentro(base.appendingPathComponent(partes[1]).path), u.pathExtension.lowercased() == "mp4" else { return nil }
+        return u
+    }
 }
 
-enum Config {
-    /// Claves que la interfaz puede cambiar con la acción "config": las de app.json sin "interfaz": false (igual que `editables`
-    /// en escritorio/src/servicios.js; pruebas/test_python.py revisa que las tres listas digan lo mismo).
-    static let editables: Set<String> = ["ia", "modelo", "idioma_audio", "idioma_ui", "camara", "microfono", "teleprompter", "teleprompter_texto",
-                                         "teleprompter_velocidad", "teleprompter_letra", "youtube_privacidad", "youtube_auto", "youtube_client_id",
-                                         "youtube_client_secret", "tema"]
+// MARK: - Config de Graba (la de app.json, con los valores por defecto de siempre)
+
+extension Config {
     static let porDefecto: [String: Any] = ["ia": "", "modelo": "", "idioma_audio": "auto", "idioma_ui": "", "camara": true, "microfono": true]
 
-    static func leer() -> [String: Any] {
-        var d = porDefecto
-        if let data = try? Data(contentsOf: Rutas.config), let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            d.merge(j) { _, nuevo in nuevo }
-        }
-        return d
-    }
-
-    static func guardar(_ cambios: [String: Any]) {
-        var d = leer()
-        d.merge(cambios) { _, nuevo in nuevo }
-        try? FileManager.default.createDirectory(at: Rutas.interno, withIntermediateDirectories: true)
-        if let data = try? JSONSerialization.data(withJSONObject: d, options: [.prettyPrinted, .sortedKeys]) { try? data.write(to: Rutas.config) }
-    }
-
+    /// Lo que va a la interfaz: los valores por defecto + lo guardado (validado por app.json).
+    static var conDefectos: [String: Any] { porDefecto.merging(leer()) { _, guardado in guardado } }
     static func bool(_ clave: String) -> Bool { (leer()[clave] as? Bool) ?? (porDefecto[clave] as? Bool ?? false) }
-    static func texto(_ clave: String) -> String { (leer()[clave] as? String) ?? "" }
+    /// Lo que escribe la app (incluye las claves "interfaz": false de app.json: modo, cámara, micrófono elegido, canal…).
+    static func deLaApp(_ cambios: [String: Any]) { guardar(cambios, desdeInterfaz: false) }
 }
 
-// MARK: - Idioma (las claves son el texto en español, igual que en ui/idiomas)
-
-enum Idioma {
-    nonisolated(unsafe) private static var cache: (codigo: String, textos: [String: String])?
-
-    static var codigo: String {
-        let elegido = Config.texto("idioma_ui")
-        if !elegido.isEmpty { return elegido }
-        return Locale.preferredLanguages.first?.hasPrefix("es") == true ? "es" : "en"
-    }
-
-    static func t(_ texto: String) -> String {
-        let c = codigo
-        guard c != "es" else { return texto }
-        if cache?.codigo != c {
-            var textos: [String: String] = [:]
-            let url = Rutas.recursos.appendingPathComponent("ui/idiomas/\(c).json")
-            if let d = try? Data(contentsOf: url), let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
-                textos = j["textos"] as? [String: String] ?? [:]
-            }
-            cache = (c, textos)
-        }
-        return cache?.textos[texto] ?? texto
-    }
-
-    static func f(_ plantilla: String, _ n: Int) -> String { t(plantilla).replacingOccurrences(of: "{n}", with: String(n)) }
+extension Idioma {
+    static func f(_ plantilla: String, _ n: Int) -> String { f(plantilla, ["n": String(n)]) }
 }
 
 // MARK: - Permisos
@@ -133,12 +130,6 @@ enum IA {
 
     static var paraJS: [[String: Any]] {
         conocidas.map { ["id": $0.id, "nombre": $0.nombre, "instalada": buscar($0.comandos) != nil] }
-    }
-
-    /// Prueba real (le pide una palabra) con la pieza «ia»: `ia.py probar <entrada {"ia"}> <salida>`, con las mismas protecciones
-    /// que al procesar (sin herramientas, sin MCP, sin la memoria de la persona, en una carpeta temporal). Responde {ia, ok, codigo?, valores?, error?}.
-    static func probar(_ id: String, _ fin: @escaping @MainActor ([String: Any]) -> Void) {
-        Procesador.conEntrada("ia.py", "probar", ["ia": id], fin: fin)
     }
 }
 
@@ -229,131 +220,72 @@ final class Descarga: NSObject, URLSessionDownloadDelegate, @unchecked Sendable 
     }
 }
 
-// MARK: - Procesamiento (bin/procesar.py con el Python que viene dentro de la app)
+
+// MARK: - Procesamiento (bin/procesar.py, de a una grabación, con el Procesador del host)
 
 @MainActor
-enum Procesador {
+enum Procesamiento {
     private(set) static var enCurso: String?
     private static var cola: [(String, Bool)] = []
 
-    /// Corre otro script de bin/ (el último argumento es el JSON de salida) y devuelve lo que escribió.
-    static func correrJSON(_ script: String, _ args: [String], entorno: [String: String] = [:], fin: @escaping @MainActor ([String: Any]) -> Void) {
-        let salida = FileManager.default.temporaryDirectory.appendingPathComponent("graba-\(UUID().uuidString).json")
-        let p = Process()
-        p.executableURL = Rutas.python
-        p.arguments = [Rutas.recursos.appendingPathComponent("bin/\(script)").path] + args + [salida.path]
-        var env = ProcessInfo.processInfo.environment
-        env["GRABA_RECURSOS"] = Rutas.recursos.path
-        env["GRABA_HERRAMIENTAS"] = Rutas.herramientas.path
-        env["PYTHONIOENCODING"] = "utf-8"
-        env.merge(entorno) { _, nuevo in nuevo }
-        p.environment = env
-        p.standardOutput = FileHandle.nullDevice
-        p.standardError = FileHandle.nullDevice
-        p.terminationHandler = { _ in
-            Task { @MainActor in
-                let r = Grabaciones.leerJSON(salida)
-                try? FileManager.default.removeItem(at: salida)
-                fin(r.isEmpty ? ["ok": false, "error": Idioma.t("No pude terminar. Intenta de nuevo.")] : r)
-            }
-        }
-        do { try p.run() } catch { fin(["ok": false, "error": error.localizedDescription]) }
-    }
-
-    /// Como correrJSON, pero los datos van en un JSON de entrada (nunca como argumento): `script <accion> <entrada.json> <salida.json>`.
-    static func conEntrada(_ script: String, _ accion: String, _ datos: [String: Any], fin: @escaping @MainActor ([String: Any]) -> Void) {
-        let entrada = FileManager.default.temporaryDirectory.appendingPathComponent("graba-entrada-\(UUID().uuidString).json")
-        if let data = try? JSONSerialization.data(withJSONObject: datos) {
-            FileManager.default.createFile(atPath: entrada.path, contents: data, attributes: [.posixPermissions: 0o600])
-        }
-        correrJSON(script, [accion, entrada.path]) { r in
-            try? FileManager.default.removeItem(at: entrada)
-            fin(r)
-        }
-    }
+    /// Lo que los scripts de Graba necesitan además de lo que pone el host: dónde está graba-transcribir.
+    static var entorno: [String: String] { [Host.prefijo + "HERRAMIENTAS": Rutas.herramientas.path] }
 
     static func encolar(_ carpeta: String, soloIA: Bool = false, alTerminar: @escaping @MainActor () -> Void) {
         cola.append((carpeta, soloIA))
         siguiente(alTerminar)
     }
 
+    /// Sin tope de tiempo mientras procesar.py lata (pieza «trabajos»: `mantener_vivo()`): una grabación larga transcribe por mucho
+    /// rato, pero si el proceso se cuelga (45 s sin latido) el host lo corta. Al salir de la app se corta y queda como error
+    /// recuperable («Se interrumpió. Puedes volver a procesarla.»).
     private static func siguiente(_ alTerminar: @escaping @MainActor () -> Void) {
         guard enCurso == nil, !cola.isEmpty else { return }
         let (carpeta, soloIA) = cola.removeFirst()
         enCurso = carpeta
-        let salida = FileManager.default.temporaryDirectory.appendingPathComponent("graba-\(UUID().uuidString).json")
-        let p = Process()
-        p.executableURL = Rutas.python
-        p.arguments = [Rutas.recursos.appendingPathComponent("bin/procesar.py").path, carpeta, salida.path] + (soloIA ? ["--solo-ia"] : [])
-        var env = ProcessInfo.processInfo.environment
-        env["GRABA_RECURSOS"] = Rutas.recursos.path
-        env["GRABA_HERRAMIENTAS"] = Rutas.herramientas.path
-        env["PYTHONIOENCODING"] = "utf-8"
-        p.environment = env
-        p.standardOutput = FileHandle.nullDevice
-        p.standardError = FileHandle.nullDevice
-        p.terminationHandler = { _ in
-            Task { @MainActor in
-                let r = Grabaciones.leerJSON(salida)
-                try? FileManager.default.removeItem(at: salida)
-                if r["ok"] as? Bool == true, !soloIA, Config.bool("youtube_auto"), let c = r["carpeta"] as? String { YouTube.subir(c) }
-                enCurso = nil
-                alTerminar()
-                siguiente(alTerminar)
+        Procesador.correr("procesar.py", [carpeta] + (soloIA ? ["--solo-ia"] : []), latido: true, entorno: entorno) { resultado in
+            let r = resultado.respuesta
+            if r["ok"] as? Bool != true, (Grabaciones.leerJSON(URL(fileURLWithPath: carpeta).appendingPathComponent("estado.json"))["estado"] as? String) == "procesando" {
+                // El script no alcanzó a dejar su error (lo cortó el host o no arrancó): queda como error recuperable.
+                Grabaciones.escribirEstado(carpeta, ["estado": "error", "error": Idioma.t("No pude terminar. Intenta de nuevo.")])
             }
-        }
-        do { try p.run() } catch {
-            Grabaciones.escribirEstado(carpeta, ["estado": "error", "error": Idioma.t("No pude iniciar el procesamiento.") + " " + error.localizedDescription])
+            if r["ok"] as? Bool == true, !soloIA, Config.bool("youtube_auto"), let c = r["carpeta"] as? String { YouTube.subir(c) }
             enCurso = nil
             alTerminar()
+            siguiente(alTerminar)
         }
     }
-}
 
-// MARK: - Llavero (tokens: nunca en archivos)
-
-enum Llavero {
-    private static let servicio = "Graba"
-
-    static func guardar(_ valor: String, cuenta: String) {
-        let base: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: servicio, kSecAttrAccount as String: cuenta]
-        SecItemDelete(base as CFDictionary)
-        var nuevo = base
-        nuevo[kSecValueData as String] = Data(valor.utf8)
-        SecItemAdd(nuevo as CFDictionary, nil)
-    }
-
-    static func leer(_ cuenta: String) -> String? {
-        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: servicio,
-                                kSecAttrAccount as String: cuenta, kSecReturnData as String: true]
-        var r: CFTypeRef?
-        guard SecItemCopyMatching(q as CFDictionary, &r) == errSecSuccess, let d = r as? Data else { return nil }
-        return String(data: d, encoding: .utf8)
-    }
-
-    static func borrar(_ cuenta: String) {
-        SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: servicio, kSecAttrAccount as String: cuenta] as CFDictionary)
+    /// Otro script de bin/ con el entorno de Graba (corregir.py, guion.py). La IA de la persona puede tardar: 15 minutos como mucho.
+    static func correrJSON(_ script: String, _ args: [String], limite: Int = 900, fin: @escaping @MainActor ([String: Any]) -> Void) {
+        Procesador.correr(script, args, limite: limite, entorno: entorno) { fin($0.respuesta) }
     }
 }
 
-// MARK: - YouTube (bin/youtube.py; el permiso queda en el Llavero)
+// MARK: - YouTube (bin/youtube.py; el permiso queda en el Llavero con los Secretos del host)
 
 @MainActor
 enum YouTube {
+    /// El mismo servicio y la misma cuenta del Llavero de siempre («Graba» / «youtube»): quien ya conectó su canal no lo pierde.
+    static let llavero = Secretos(servicio: "Graba")
     private(set) static var subiendo: Set<String> = []
-    static var conectado: Bool { Llavero.leer("youtube") != nil }
+    static var conectado: Bool { llavero.leer("youtube") != nil }
     /// ¿Hay un cliente OAuth para conectar? (el del proyecto o el propio de la persona, en Ajustes).
     static var disponible: Bool {
-        let archivo = Grabaciones.leerJSON(Rutas.recursos.appendingPathComponent("bin/youtube_cliente.json"))
+        let archivo = Grabaciones.leerJSON(Host.recursos.appendingPathComponent("bin/youtube_cliente.json"))
         return !((archivo["id"] as? String) ?? "").isEmpty || !Config.texto("youtube_client_id").isEmpty
     }
 
+    /// Conectar espera a que la persona dé permiso en su navegador: hasta 10 minutos.
     static func conectar(_ fin: @escaping @MainActor ([String: Any]) -> Void) {
-        Procesador.correrJSON("youtube.py", ["conectar"]) { r in
+        Procesamiento.correrJSON("youtube.py", ["conectar"], limite: 600) { r in
             var r = r
             if r["ok"] as? Bool == true, let token = r["refresh_token"] as? String {
-                Llavero.guardar(token, cuenta: "youtube")
-                Config.guardar(["youtube_canal": r["canal"] as? String ?? ""])
+                if llavero.guardar(token, cuenta: "youtube") {
+                    Config.deLaApp(["youtube_canal": r["canal"] as? String ?? ""])
+                } else {
+                    r = ["ok": false, "error": Idioma.t("No pude guardar el permiso de YouTube en el llavero del sistema.")]
+                }
             }
             r.removeValue(forKey: "refresh_token")  // a la interfaz nunca llega el token
             fin(r)
@@ -361,18 +293,22 @@ enum YouTube {
     }
 
     static func desconectar() {
-        Llavero.borrar("youtube")
-        Config.guardar(["youtube_canal": "", "youtube_auto": false])
+        llavero.borrar("youtube")
+        Config.deLaApp(["youtube_canal": "", "youtube_auto": false])
     }
 
+    /// bin/youtube.py lee el token de GRABA_YT_TOKEN (no se toca en esta migración: pendiente #5 de Pieza, la pieza «youtube», que
+    /// lo pasará por la entrada estándar). Subir un video largo tarda: hasta una hora, el tope del host.
     static func subir(_ carpeta: String, fin: (@MainActor ([String: Any]) -> Void)? = nil) {
-        guard let token = Llavero.leer("youtube"), !subiendo.contains(carpeta) else { return }
+        guard let token = llavero.leer("youtube"), !subiendo.contains(carpeta) else { return }
         subiendo.insert(carpeta)
         Grabaciones.escribirJSON(URL(fileURLWithPath: carpeta).appendingPathComponent("youtube.json"), ["estado": "subiendo", "pct": 0])
-        Procesador.correrJSON("youtube.py", ["subir", carpeta], entorno: ["GRABA_YT_TOKEN": token]) { r in
+        var entorno = Procesamiento.entorno
+        entorno[Host.prefijo + "YT_TOKEN"] = token
+        Procesador.correr("youtube.py", ["subir", carpeta], limite: 3600, entorno: entorno) { resultado in
             subiendo.remove(carpeta)
-            fin?(r)
-            Ventana.shared.llamar("youtubeSubido", r)
+            fin?(resultado.respuesta)
+            Ventana.shared.llamar("youtubeSubido", resultado.respuesta)
             Ventana.shared.enviarEstado()
         }
     }

@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import comun  # noqa: E402
 import ia  # noqa: E402  (pieza «ia»)
 import nucleo  # noqa: E402  (pieza «nucleo»)
+import trabajos  # noqa: E402  (pieza «trabajos»: el latido para el host)
 import transcribir as transcribir_  # noqa: E402  (pieza «transcribir»)
 
 PASOS = 3
@@ -239,6 +240,9 @@ def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if len(args) != 2:
         sys.exit(__doc__)
+    # El host lo corre sin tope de tiempo mientras lata (una grabación larga transcribe por mucho rato); si el proceso se cuelga,
+    # deja de latir y el host lo corta. Sin GRABA_LATIDO (pruebas, terminal) no hace nada.
+    trabajos.mantener_vivo()
     carpeta, salida = os.path.abspath(args[0]), args[1]
     try:
         final = procesar(carpeta, "--solo-ia" in sys.argv)

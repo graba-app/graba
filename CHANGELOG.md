@@ -5,6 +5,15 @@ Lo que cambia para quien usa Graba, en palabras simples. Las versiones anteriore
 *What changes for people using Graba, in plain words. Earlier versions are listed in Releases.*
 
 ## Sin publicar · Unreleased
+- **Por dentro, más segura y más fácil de mantener:** Graba usa ahora la app nativa de Pieza en Mac, Windows y Linux. Para ti
+  sigue igual: tus grabaciones, ajustes, idioma, atajos y la conexión con YouTube quedan donde estaban. Lo nuevo: si algo se cuelga
+  mientras procesa, Graba lo corta y te deja reintentar en vez de quedarse esperando; en Mac la ventana trae los menús de siempre
+  (Archivo, Edición con copiar y pegar, Ver, Ventana) y «Ajustes…» con ⌘,; y la página dice qué permisos pide la app y a qué se
+  conecta. · *Under the hood, safer and easier to maintain: Graba now uses Pieza's native app on Mac, Windows and Linux. For you
+  nothing changes: your recordings, settings, language, shortcuts and YouTube connection stay where they were. What's new: if
+  something hangs while processing, Graba stops it and lets you retry instead of waiting forever; on Mac the window has the usual
+  menus (File, Edit with copy and paste, View, Window) and «Settings…» with ⌘,; and the website lists which permissions the app asks
+  for and what it connects to.*
 - **Tus «gracias» quedan:** si al final de un video dices «Gracias» o «Thank you», ahora queda en la transcripción y los
   subtítulos; solo se quita cuando whisper lo inventa en un silencio. · *Your «thank you» stays: if you say «Gracias» or «Thank
   you» at the end of a video, it now stays in the transcript and subtitles; it's only removed when whisper makes it up in silence.*

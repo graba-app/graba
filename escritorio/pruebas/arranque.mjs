@@ -27,7 +27,8 @@ for (let i = 0; i < 60 && !ventana; i++) { ventana = app.windows().find((w) => w
 if (!ventana) throw new Error("no apareció la ventana principal");
 ventana.on("pageerror", (e) => falla("interfaz: " + e.message));
 let esperar404 = false; // la prueba de abajo pide a propósito un archivo que no se sirve
-ventana.on("console", (m) => { if (m.type() === "error" && !(esperar404 && /404/.test(m.text()))) falla("consola: " + m.text()); });
+// Pedir a propósito lo que no se sirve deja un 404 (o el bloqueo de Chromium entre graba://ui y graba://video) en la consola.
+ventana.on("console", (m) => { if (m.type() === "error" && !(esperar404 && /404|CORS|ERR_FAILED/.test(m.text()))) falla("consola: " + m.text()); });
 await espera(2500);
 const info = await ventana.evaluate(() => ({ host: window.GRABA_HOST, html: document.getElementById("app").innerHTML.length, titulo: document.title }));
 console.log("host:", info.host, "| título:", info.titulo, "| interfaz:", info.html, "caracteres");
@@ -46,7 +47,7 @@ if (process.env.SOLO_ARRANQUE) {
 const r = await ventana.evaluate(() => new Promise((ok) => {
   const antes = window.Graba.iaProbada;
   window.Graba.iaProbada = (x) => { antes(x); ok(x); };
-  window.grabaEscritorio.enviar({ accion: "probarIA", datos: { id: "claude" } });
+  window.grabaEscritorio.enviar({ accion: "probarIA", datos: { ia: "claude" } });
   setTimeout(() => ok({ ok: false, texto: "sin respuesta" }), 20000);
 }));
 console.log("probarIA:", JSON.stringify(r));
@@ -62,7 +63,7 @@ const config = JSON.parse(fs.readFileSync(path.join(process.env.HOME, "Graba", "
 if ("inventada" in config) falla("config aceptó una clave desconocida");
 
 // Ajustes en inglés
-await ventana.evaluate(() => window.Graba._probar((E) => { E.bv = null; E.bvCerrada = true; E.ajustes = true; }));
+await ventana.evaluate(() => { window.Graba._pruebas.bv.terminar(); window.Graba._probar((E) => { E.ajustes = true; }); });
 await espera(500);
 await ventana.screenshot({ path: `${salida}/2-ajustes.png` });
 await ventana.evaluate(() => window.Graba._probar((E) => { E.ajustes = false; }));
@@ -156,8 +157,11 @@ if (!yt) falla("youtubeDesconectar falló");
 
 // Rutas fuera de ~/Graba no se sirven (el 404 sale en la consola: es lo esperado)
 esperar404 = true;
-const fuera = await ventana.evaluate(() => fetch("graba://video/" + encodeURIComponent("/etc/passwd")).then((r) => r.status).catch(() => "error"));
-if (fuera !== 404 && fuera !== "error") falla("graba://video sirvió un archivo fuera de ~/Graba");
+for (const url of ["graba://video/" + encodeURIComponent("/etc/passwd"), "graba://video/1/" + encodeURIComponent("../../../etc/passwd"), "graba://video/1/..%2F..%2Fetc%2Fpasswd",
+  "graba://app/main.js", "graba://app/servicios.js", "graba://ui/../bin/ia.py"]) {
+  const fuera = await ventana.evaluate((u) => fetch(u).then((r) => r.status).catch(() => "error"), url);
+  if (fuera !== 404 && fuera !== "error") falla(`${url} se sirvió (solo videos de ~/Graba y las páginas propias)`);
+}
 await espera(300);
 esperar404 = false;
 fs.writeFileSync(`${salida}/errores.json`, JSON.stringify(errores, null, 1));

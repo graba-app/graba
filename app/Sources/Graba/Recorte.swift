@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import PiezaHost
 
 /// Recortar el inicio y el final de una grabación (botón «Recortar» de la ventana).
 /// El video se corta sin recomprimir (AVAssetExportSession «passthrough»: queda exacto gracias a la lista de edición del MP4)

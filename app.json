@@ -8,6 +8,7 @@
   "windows",
   "linux"
  ],
+ "repo": "graba-app/graba",
  "config": {
   "idioma_ui": [
    "es",
@@ -34,7 +35,10 @@
   "camara": "bool",
   "microfono": "bool",
   "teleprompter": "bool",
-  "teleprompter_texto": "texto",
+  "teleprompter_texto": {
+   "tipo": "texto",
+   "max": 200000
+  },
   "teleprompter_velocidad": "numero",
   "teleprompter_letra": "numero",
   "youtube_privacidad": [
@@ -85,6 +89,11 @@
    "sistema",
    "claro",
    "oscuro"
-  ]
- }
+  ],
+  "bienvenida": "bool"
+ },
+ "sin_acciones": [
+  "listaIA",
+  "modelosVoz"
+ ]
 }

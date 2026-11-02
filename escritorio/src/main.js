@@ -1,27 +1,23 @@
-// Graba para Windows y Linux. Misma interfaz (ui/) y mismo procesamiento (bin/) que la app de Mac;
-// aquí está lo que en Mac hacen GrabaApp.swift (Estado, Grabaciones, BarraMenu), Ventana.swift (puente) y Flotantes.swift.
-const crypto = require("crypto");
+// Graba para Windows y Linux, sobre la pieza «host-escritorio» (host.js): la ventana con sandbox, el puente con sus guardas (solo el
+// marco principal de graba://ui/), config e idioma desde app.json, el menú, la apariencia de config.tema, los scripts de bin/ con
+// límite de tiempo, safeStorage, graba://video/… con rangos, las actualizaciones (pieza «actualizaciones») y la acción declarada
+// probarIA (pieza «ia», en acciones.json). Aquí queda lo propio de Graba (lo que en Mac hacen GrabaApp.swift, Acciones.swift,
+// Barra.swift y Flotantes.swift): grabar, la barra y los flotantes, la bandeja, los atajos globales, recortar, modelos y YouTube.
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { Readable } = require("stream");
-const { app, BrowserWindow, Menu, Tray, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, net, protocol, screen, session, shell } = require("electron");
-const { ES_WIN, BASE, INTERNO, recursos, dentroDeBase } = require("./rutas");
-const { Config, Idioma, Permisos, IA, Modelos, Procesador, YouTube } = require("./servicios");
-const { Actualizaciones, SIN_CONEXION } = require("./actualizaciones");
-const { Grabaciones, prepararVideo, recortarVideo, deshacerRecorteVideo } = require("./grabaciones");
+const electron = require("electron");
+const { app, BrowserWindow, Menu, Tray, desktopCapturer, dialog, globalShortcut, ipcMain, nativeImage, net, screen, session, shell } = electron;
+const { crearHost } = require("./host");
+const { crear: crearActualizaciones } = require("./actualizaciones");
+const S = require("./servicios");
+const { ES_WIN, BASE, dentroDeBase, Config, Idioma, Permisos, IA, Modelos, Procesamiento, YouTube } = S;
+const { Grabaciones, videoDe, prepararVideo, recortarVideo, deshacerRecorteVideo } = require("./grabaciones");
 const { EscritorWav } = require("./wav");
 const { firmaAvance } = require("./avance");
 
-if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
-if (ES_WIN) app.setAppUserModelId("app.graba.escritorio");
-app.setName("Graba");
 // La grabadora es una ventana oculta: sin esto Chromium deja el AudioContext suspendido hasta un clic.
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
-
-// La interfaz se sirve desde graba://ui/… (así fetch() de archivos relativos funciona igual que en Mac), las páginas propias
-// desde graba://app/… y los videos de ~/Graba desde graba://video/<ruta> (con rangos, para poder adelantar).
-protocol.registerSchemesAsPrivileged([{ scheme: "graba", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } }]);
 
 const ICONOS = path.join(__dirname, "..", "iconos");
 const icono = (n) => nativeImage.createFromPath(path.join(ICONOS, n));
@@ -29,54 +25,66 @@ const t = (s) => Idioma.t(s);
 const reloj = (s) => (s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
   : `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`);
 
-// ───────────────────────── Ventana principal (equivale a Ventana.swift) ─────────────────────────
-let ventana = null, lista = false, pendiente = {}, refresco = null, bandeja = null, ultimaFirma = "";
+/** Ventana de vidrio (translúcida, como la barra de grabación) donde el sistema lo permite: Windows 11 (22H2+). En Linux y Windows 10, fondo sólido. */
+const VIDRIO = process.platform === "win32" && Number(os.release().split(".")[2] || 0) >= 22621;
+/** Al abrir con --oculta (al iniciar sesión) y con todo listo, Graba queda solo en la bandeja. */
+const OCULTA = process.argv.includes("--oculta");
+
+// ───────────────────────── El host (pieza «host-escritorio») ─────────────────────────
+// Pieza «actualizaciones»: solo los Releases de graba-app/graba (Graba-Windows.exe, Graba-Linux.AppImage o .tar.gz, con su .sha256).
+const act = crearActualizaciones({ app, net, repo: "graba-app/graba", nombre: "Graba" });
+const actualizaciones = {
+  get disponible() { return act.disponible; },
+  async revisar() { const r = await act.revisar(); actualizarBandeja(); return r; },
+  revisarCadaRato(avisar) { return act.revisarCadaRato((r) => { actualizarBandeja(); avisar(r); }); },
+  instalar: (avance) => act.instalar(avance),
+};
+const PERMISOS = ["media", "display-capture", "clipboard-sanitized-write"];
+
+const host = crearHost({
+  electron,
+  global: "Graba",
+  appUserModelId: "app.graba.escritorio",
+  // Cerrar la ventana no cierra la app: sigue en la bandeja (como en Mac, en la barra de menú).
+  ventana: { ancho: 1120, alto: 740, minAncho: 760, minAlto: 520, icono: path.join(ICONOS, "graba-256.png"), fondo: { claro: "#f6f5fa", oscuro: "#17151c" }, alCerrar: "esconder" },
+  sitio: "https://graba-app.github.io/graba/", codigo: "https://github.com/graba-app/graba",
+  estadoScript: null,
+  actualizaciones,
+  // Cámara, micrófono y pantalla para las páginas propias (Windows además respeta sus interruptores de privacidad).
+  permisos: (permiso) => PERMISOS.includes(permiso),
+  estado: (base) => estadoDeGraba(base),
+  alCambiarConfig: () => { actualizarBandeja(); actualizarBarra(); enviarEstado(); },
+  alCrearVentana: (v) => alCrearVentana(v),
+  antesDeSalir: () => antesDeSalir(),
+});
+S.usar(host);
+const llamar = (funcion, datos) => host.llamar(funcion, datos);
+
+// ───────────────────────── Ventana principal ─────────────────────────
+let pendiente = {}, refresco = null, bandeja = null, ultimaFirma = "", primeraVentana = true;
 let grabadora = null, burbuja = null, teleprompter = null;
 
 function mostrar({ seleccionar, aviso } = {}) {
   if (seleccionar) pendiente.seleccionar = seleccionar;
   if (aviso) pendiente.aviso = aviso;
-  if (!ventana || ventana.isDestroyed()) crearVentana();
-  else {
-    if (ventana.isMinimized()) ventana.restore();
-    ventana.show(); ventana.focus();
-    if (lista) enviarEstado();
-  }
+  host.mostrar();
+  if (host.lista) enviarEstado();
   iniciarRefresco();
 }
-const ocultar = () => { if (ventana && !ventana.isDestroyed()) ventana.hide(); };
+const ocultar = () => { const v = host.ventana(); if (v && !v.isDestroyed()) v.hide(); };
 
-/** Ventana de vidrio (translúcida, como la barra de grabación) donde el sistema lo permite: Windows 11 (22H2+). En Linux y Windows 10, fondo sólido. */
-const VIDRIO = process.platform === "win32" && Number(os.release().split(".")[2] || 0) >= 22621;
-
-/** Apariencia elegida en Ajustes (pieza «tema»): claro u oscuro fija la de Chromium (y el acrílico de Windows 11); «sistema», la del sistema. */
-function aplicarTema() {
-  const t = Config.leer().tema;
-  nativeTheme.themeSource = t === "claro" ? "light" : t === "oscuro" ? "dark" : "system";
-}
-
-function crearVentana() {
-  aplicarTema();
-  let guardado = {};
-  try { guardado = JSON.parse(fs.readFileSync(path.join(INTERNO, "ventana.json"), "utf8")); } catch {}
-  lista = false;
-  ventana = new BrowserWindow({
-    width: guardado.width || 1120, height: guardado.height || 740, x: guardado.x, y: guardado.y, minWidth: 760, minHeight: 520,
-    show: false, autoHideMenuBar: true, backgroundColor: VIDRIO ? "#00000000" : "#17151c", title: "Graba", icon: icono("graba-256.png"),
-    ...(VIDRIO ? { backgroundMaterial: "acrylic" } : {}),
-    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, sandbox: true, spellcheck: false },
-  });
-  ventana.setMenuBarVisibility(false);
-  ventana.loadURL("graba://ui/index.html" + (VIDRIO ? "?vidrio=1" : ""));
-  ventana.once("ready-to-show", () => ventana.show());
-  // Cerrar la ventana no cierra la app: sigue en la bandeja (como en Mac, en la barra de menú).
-  ventana.on("close", (e) => {
-    try { fs.mkdirSync(INTERNO, { recursive: true }); fs.writeFileSync(path.join(INTERNO, "ventana.json"), JSON.stringify(ventana.getNormalBounds())); } catch {}
-    if (!saliendo) { e.preventDefault(); ventana.hide(); }
-  });
-  ventana.on("closed", () => { ventana = null; lista = false; });
-  ventana.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: "deny" }; });
-  ventana.webContents.on("will-navigate", (e, url) => { if (!url.startsWith("graba://ui/")) { e.preventDefault(); if (/^https:\/\//.test(url)) shell.openExternal(url); } });
+/** Lo propio de la ventana de Graba: sin barra de menú a la vista (Alt la muestra), vidrio en Windows 11 y, al abrir con
+ *  --oculta y todo listo, nada a la vista (solo la bandeja). */
+function alCrearVentana(v) {
+  v.setMenuBarVisibility(false);
+  v.setAutoHideMenuBar(true);
+  if (VIDRIO) { try { v.setBackgroundMaterial("acrylic"); v.setBackgroundColor("#00000000"); } catch {} }
+  if (primeraVentana && OCULTA && !faltaAlgo()) {
+    v.removeAllListeners("ready-to-show");  // el host la muestra apenas carga: esta vez no
+  } else {
+    iniciarRefresco();
+  }
+  primeraVentana = false;
 }
 
 /** Mientras se procesa una grabación, la interfaz se actualiza sola cada segundo (avance por pasos), pero solo si el avance cambió
@@ -85,9 +93,10 @@ function iniciarRefresco() {
   if (refresco) return;
   refresco = setInterval(() => {
     // Sin nada en curso se olvida la firma: lo próximo que empiece se manda en el primer segundo aunque su avance se parezca al de antes.
-    if (!(Procesador.enCurso || preparando.size || YouTube.subiendo.size)) { ultimaFirma = ""; return; }
-    if (!ventana || ventana.isDestroyed() || !ventana.isVisible()) return;
-    const firma = firmaAvance([Procesador.enCurso, ...preparando, ...YouTube.subiendo]);
+    if (!(Procesamiento.enCurso || preparando.size || YouTube.subiendo.size)) { ultimaFirma = ""; return; }
+    const v = host.ventana();
+    if (!v || v.isDestroyed() || !v.isVisible()) return;
+    const firma = firmaAvance([Procesamiento.enCurso, ...preparando, ...YouTube.subiendo]);
     if (firma === ultimaFirma) return;
     ultimaFirma = firma;
     enviarEstado();
@@ -95,21 +104,18 @@ function iniciarRefresco() {
 }
 
 // ───────────────────────── Hacia la interfaz ─────────────────────────
-function llamar(funcion, datos) {
-  if (!ventana || ventana.isDestroyed() || !lista) return;
-  ventana.webContents.executeJavaScript(`window.Graba && window.Graba.${funcion}(${JSON.stringify(datos)})`).catch(() => {});
-}
+const enviarEstado = () => { host.enviarEstado().catch((e) => console.error("Graba: estado", e)); };
 
-function enviarEstado() {
-  if (!lista) return;
+/** Lo de Graba sobre el estado del host (versión, idioma, plataforma, config, actualización). */
+function estadoDeGraba(base) {
   const e = {
+    ...base,
     fase: Estado.fase, grabandoDesde: Estado.fase === "grabando" && !Estado.pausada ? Date.now() - Estado.segundos * 1000 : 0,
     pausada: Estado.pausada, segundos: Estado.segundos, atajos: ATAJOS_TEXTO, grabaciones: Grabaciones.listar(), config: Config.leer(), ias: IA.paraJS(), modelos: Modelos.paraJS(),
-    permisos: Permisos.paraJS(), carpeta: BASE, procesando: Procesador.enCurso || null, version: app.getVersion(),
-    actualizacion: Actualizaciones.disponible, youtube: YouTube.paraJS(), ...pendiente,
+    permisos: Permisos.paraJS(), carpeta: BASE, procesando: Procesamiento.enCurso || null, youtube: YouTube.paraJS(), vidrio: VIDRIO, ...pendiente,
   };
   pendiente = {};
-  llamar("estado", e);
+  return e;
 }
 
 // ───────────────────────── Grabación (equivale a Estado en GrabaApp.swift) ─────────────────────────
@@ -132,7 +138,10 @@ const Estado = {
   area: null,      // { x, y, ancho, alto } en puntos, relativo a la pantalla
 };
 
+/** Mientras graba (o prepara, o guarda) la app está ocupada para el host: actualizar espera y, si no termina, no se instala. */
 function cambiarFase(f) {
+  if (Estado.fase === "inactiva" && f !== "inactiva") host.ocupar();
+  if (Estado.fase !== "inactiva" && f === "inactiva") host.soltar();
   Estado.fase = f;
   actualizarBandeja();
   actualizarBarra();
@@ -149,7 +158,8 @@ function esperarGrabadora(tipo, ms) {
 
 /** Primer uso (como GrabaApp.faltaIdioma en Mac): mientras la persona no elija el idioma (paso 0 de la bienvenida) no se muestra ni
  * se pide nada más. Si ya tenía todo listo y nunca eligió idioma, no se le vuelve a preguntar. */
-const faltaIdioma = () => !Config.texto("idioma_ui") && (!Config.texto("ia") || !Modelos.hayAlguno());
+const faltaAlgo = () => !Config.texto("ia") || !Modelos.hayAlguno();
+const faltaIdioma = () => !Idioma.elegido && faltaAlgo();
 
 /** Abre la barra para preparar la grabación (equivale a Estado.grabar en Mac). */
 function grabar() {
@@ -284,13 +294,15 @@ async function detener() {
 /** Convierte el video y encola el procesamiento (transcribir → IA). */
 async function terminarVideo(c) {
   preparando.add(c);
+  host.ocupar();
   try { await prepararVideo(c); } catch (e) { console.error("Graba: preparar video", e); }
   preparando.delete(c);
+  host.soltar();
   if (!Grabaciones.video(c)) {
     Grabaciones.escribirEstado(c, { estado: "error", error: t("No pude guardar el video.") });
     return enviarEstado();
   }
-  Procesador.encolar(c);
+  Procesamiento.encolar(c);
   enviarEstado();
 }
 
@@ -589,7 +601,7 @@ function actualizarBandeja() {
   // Primer uso: el idioma va primero. Estos textos son bilingües a propósito (aún no se sabe cuál prefiere la persona).
   if (faltaIdioma()) {
     return bandeja.setContextMenu(Menu.buildFromTemplate([{ label: "Elegir idioma · Choose language…", click: () => mostrar() },
-      { type: "separator" }, { label: "Salir · Quit", click: () => salir() }]));
+      { type: "separator" }, { label: "Salir · Quit", click: () => host.salir() }]));
   }
   const items = [];
   if (Estado.fase === "preparando") {
@@ -604,10 +616,10 @@ function actualizarBandeja() {
       { label: t("Cámara"), type: "checkbox", checked: Config.bool("camara"), click: () => alternar("camara") },
       { label: t("Micrófono"), type: "checkbox", checked: Config.bool("microfono"), click: () => alternar("microfono") });
   }
-  if (Actualizaciones.disponible.hay) items.push({ type: "separator" }, { label: t("Hay una versión nueva: actualizar…"), click: () => mostrar() });
+  if (act.disponible.hay) items.push({ type: "separator" }, { label: t("Hay una versión nueva: actualizar…"), click: () => mostrar() });
   items.push({ type: "separator" }, { label: t("Abrir Graba"), click: () => mostrar() },
     { label: t("Abrir la carpeta de grabaciones"), click: () => { fs.mkdirSync(BASE, { recursive: true }); shell.openPath(BASE); } },
-    { type: "separator" }, { label: t("Salir de Graba"), click: () => salir() });
+    { type: "separator" }, { label: t("Salir de Graba"), click: () => host.salir() });
   bandeja.setContextMenu(Menu.buildFromTemplate(items));
 }
 
@@ -617,15 +629,13 @@ function alternar(clave) {
   enviarEstado();
 }
 
-// ───────────────────────── Desde la interfaz (equivale al switch de Ventana.swift) ─────────────────────────
+// ───────────────────────── Desde la interfaz: las acciones propias de Graba (equivale a Acciones.swift) ─────────────────────────
+// Lo que trae el host (listo, config, copiar, abrirEnlace, buscarActualizacion, actualizar) y lo declarado en acciones.json
+// (probarIA, de la pieza «ia») no va aquí.
 const rutaValida = (d) => dentroDeBase(d && d.ruta);
 const archivosElegidos = new Set();
 
 const ACCIONES = {
-  listo() {
-    lista = true;
-    enviarEstado();
-  },
   grabar() {
     grabar();
   },
@@ -637,64 +647,39 @@ const ACCIONES = {
   },
   async recortar(d) {
     // No mientras se procesa esa misma grabación.
-    if (!rutaValida(d) || Procesador.enCurso === path.resolve(d.ruta)) return llamar("recortado", { ok: false, error: t("Espera a que termine de procesar y vuelve a intentarlo.") });
+    if (!rutaValida(d) || Procesamiento.enCurso === path.resolve(d.ruta)) return llamar("recortado", { ok: false, error: t("Espera a que termine de procesar y vuelve a intentarlo.") });
     const c = path.resolve(d.ruta), inicio = Number(d.inicio), fin = Number(d.fin);
     if (!(fin - inicio >= 1) || inicio < 0) return llamar("recortado", { ok: false, error: t("El recorte tiene que durar al menos un segundo.") });
-    let r = (await Procesador.correrJSON("recortar.py", ["preparar", c])) || { ok: false };
+    let r = await host.procesador.correrJSON("recortar.py", ["preparar", c]);
     if (r.ok) {
-      try { await recortarVideo(c, inicio, fin); r = (await Procesador.correrJSON("recortar.py", ["textos", c, String(inicio), String(fin)])) || { ok: false, error: t("No pude recortar.") }; }
+      try { await recortarVideo(c, inicio, fin); r = await host.procesador.correrJSON("recortar.py", ["textos", c, String(inicio), String(fin)]); }
       catch (e) { r = { ok: false, error: e.message }; }
     }
     llamar("recortado", r);
     enviarEstado();
   },
   async deshacerRecorte(d) {
-    if (!rutaValida(d) || Procesador.enCurso === path.resolve(d.ruta)) return llamar("recortado", { ok: false, deshacer: true, error: t("Espera a que termine de procesar y vuelve a intentarlo.") });
+    if (!rutaValida(d) || Procesamiento.enCurso === path.resolve(d.ruta)) return llamar("recortado", { ok: false, deshacer: true, error: t("Espera a que termine de procesar y vuelve a intentarlo.") });
     const c = path.resolve(d.ruta);
     let r;
-    try { deshacerRecorteVideo(c); r = (await Procesador.correrJSON("recortar.py", ["deshacer", c])) || { ok: false }; }
+    try { deshacerRecorteVideo(c); r = await host.procesador.correrJSON("recortar.py", ["deshacer", c]); }
     catch (e) { r = { ok: false, error: e.message }; }
     llamar("recortado", { ...r, deshacer: true });
     enviarEstado();
   },
   abrirCarpeta(d) {
-    if (rutaValida(d)) shell.showItemInFolder(path.resolve(d.ruta));
+    if (rutaValida(d)) host.mostrarEnCarpeta(path.resolve(d.ruta));
     else { fs.mkdirSync(BASE, { recursive: true }); shell.openPath(BASE); }
   },
-  abrirVideo(d) {
-    const v = rutaValida(d) && Grabaciones.video(path.resolve(d.ruta));
-    if (v) shell.openPath(v);
-  },
-  copiar(d) {
-    clipboard.writeText(String(d.texto || ""));
-  },
   async borrar(d) {
-    if (rutaValida(d)) { try { await shell.trashItem(path.resolve(d.ruta)); } catch (e) { console.error("Graba: borrar", e.message); } }
+    if (rutaValida(d)) await host.papelera(path.resolve(d.ruta));
     enviarEstado();
   },
   procesar(d) {
     if (!rutaValida(d)) return;
     const ruta = path.resolve(d.ruta);
     Grabaciones.escribirEstado(ruta, { estado: "procesando", paso: 0, total: 3, texto: "En espera…" });
-    Procesador.encolar(ruta, !!d.soloIA);
-    enviarEstado();
-  },
-  config(d) {
-    // Solo claves conocidas (la interfaz no puede escribir cualquier cosa en la configuración).
-    Config.guardar(Object.fromEntries(Object.entries(d || {}).filter(([k]) => Config.editables.includes(k))));
-    if (d && d.tema !== undefined) aplicarTema();
-    actualizarBandeja();
-    enviarEstado();
-    // El aviso de versión nueva se escribió en el idioma de antes: se vuelve a revisar para que salga en el elegido.
-    if (d && d.idioma_ui && Actualizaciones.disponible.hay) revisarActualizacion();
-  },
-  async probarIA(d) {
-    // La forma común de todas las apps (pieza «host-ui»): probarIA {ia} → iaProbada {ia, ok, codigo, plantilla, valores, texto}.
-    const id = String(d.ia || "");
-    const r = await IA.probar(id);
-    if (r.ok) Config.guardar({ ia: id });
-    // plantilla + valores: la interfaz traduce el error (pieza «componentes»); texto: el error ya en español.
-    llamar("iaProbada", { ia: id, ok: !!r.ok, texto: r.error || "", codigo: r.codigo || "", plantilla: r.plantilla || "", valores: r.valores || {} });
+    Procesamiento.encolar(ruta, d.soloIA === true);
     enviarEstado();
   },
   async descargarModelo(d) {
@@ -711,19 +696,21 @@ const ACCIONES = {
   },
   async corregir(d) {
     // "Dice Grava y es Graba": la IA corrige el texto y las palabras mal transcritas también en los subtítulos (bin/corregir.py).
+    // La instrucción va en un archivo 0600 dentro de una carpeta propia (nunca como argumento) que se borra al terminar.
     const texto = String(d.texto || "").trim();
-    if (!rutaValida(d) || !texto) return;
-    const instruccion = path.join(os.tmpdir(), `graba-instruccion-${crypto.randomUUID()}.txt`);
-    fs.writeFileSync(instruccion, texto, "utf8");
-    const r = (await Procesador.correrJSON("corregir.py", [path.resolve(d.ruta), instruccion])) || { ok: false, error: t("No pude terminar. Intenta de nuevo.") };
-    fs.rmSync(instruccion, { force: true });
+    if (!rutaValida(d) || !texto || texto.length > 20000) return;
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "graba-"));
+    const instruccion = path.join(dir, "instruccion.txt");
+    fs.writeFileSync(instruccion, texto, { encoding: "utf8", mode: 0o600 });
+    const r = await Procesamiento.correrJSON("corregir.py", [path.resolve(d.ruta), instruccion]);
+    fs.rmSync(dir, { recursive: true, force: true });
     llamar("corregido", r);
     if (r.carpeta) pendiente.seleccionar = r.carpeta;
     enviarEstado();
   },
   async elegirArchivos() {
     // Presentación, documentos o imágenes para que la IA escriba el guion (solo se leen, no se mueven).
-    const r = await dialog.showOpenDialog(ventana, { title: t("Elige tu presentación, documentos o imágenes"), properties: ["openFile", "multiSelections"],
+    const r = await dialog.showOpenDialog(host.ventana() || undefined, { title: t("Elige tu presentación, documentos o imágenes"), properties: ["openFile", "multiSelections"],
       filters: [{ name: t("Presentaciones, documentos e imágenes"), extensions: ["pdf", "pptx", "key", "docx", "txt", "md", "rtf", "png", "jpg", "jpeg", "gif", "webp", "heic"] }] });
     if (r.canceled || !r.filePaths.length) return;
     r.filePaths.forEach((f) => archivosElegidos.add(path.resolve(f)));
@@ -731,36 +718,24 @@ const ACCIONES = {
   },
   async crearGuion(d) {
     // Solo se pasan a la IA archivos que la persona eligió en el diálogo (la interfaz no puede pedir otros).
-    const entrada = path.join(os.tmpdir(), `graba-guion-${crypto.randomUUID()}.json`);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "graba-"));
+    const entrada = path.join(dir, "guion.json");
     const archivos = (Array.isArray(d.archivos) ? d.archivos : []).map((f) => path.resolve(String(f))).filter((f) => archivosElegidos.has(f));
-    fs.writeFileSync(entrada, JSON.stringify({ ...d, archivos }), "utf8");
-    const r = (await Procesador.correrJSON("guion.py", [entrada])) || { ok: false, error: t("No pude terminar. Intenta de nuevo.") };
-    fs.rmSync(entrada, { force: true });
+    fs.writeFileSync(entrada, JSON.stringify({ ...d, archivos }), { encoding: "utf8", mode: 0o600 });
+    const r = await Procesamiento.correrJSON("guion.py", [entrada]);
+    fs.rmSync(dir, { recursive: true, force: true });
     llamar("guionCreado", r);
   },
   grabarConGuion(d) {
     // El guion queda en el teleprompter y se abre la barra para grabar: llegar y grabar.
-    Config.guardar({ teleprompter_texto: String(d.texto || ""), teleprompter: true });
+    Config.guardar({ teleprompter_texto: String(d.texto || "").slice(0, 200000), teleprompter: true });
     if (Estado.fase === "preparando") { cerrar(teleprompter); teleprompter = null; aplicarFlotantes(); actualizarBarra(); }
     else grabar();
   },
   teleprompter(d) {
     // El guion de una grabación queda listo en el teleprompter para la próxima (solo lo ve la persona), igual que en Mac.
-    Config.guardar({ teleprompter_texto: String(d.texto || ""), teleprompter: true });
+    Config.guardar({ teleprompter_texto: String(d.texto || "").slice(0, 200000), teleprompter: true });
     enviarEstado();
-  },
-  async buscarActualizacion() {
-    const r = await Actualizaciones.revisar();
-    actualizarBandeja();
-    llamar("actualizacionRevisada", { hay: r.hay, detalle: r.detalle, sinConexion: r.detalle === SIN_CONEXION });
-    enviarEstado();
-  },
-  actualizar() {
-    // Nunca en medio de una grabación o de un procesamiento: cerrar la app los cortaría.
-    if (Estado.fase !== "inactiva" || Procesador.enCurso || preparando.size || YouTube.subiendo.size) {
-      return llamar("actualizacionProgreso", { paso: "error", texto: t("Espera a que termine la grabación o el procesamiento y vuelve a intentarlo.") });
-    }
-    Actualizaciones.instalar((d) => llamar("actualizacionProgreso", d));
   },
   async youtubeConectar() {
     const r = await YouTube.conectar();
@@ -775,18 +750,8 @@ const ACCIONES = {
     if (!rutaValida(d)) return;
     subirAYouTube(path.resolve(d.ruta));
   },
-  abrirEnlace(d) {
-    try { const u = new URL(String(d.url || "")); if (u.protocol === "https:") shell.openExternal(u.toString()); } catch {}
-  },
 };
-
-ipcMain.on("graba", async (e, msg) => {
-  // Solo la ventana principal, su marco principal y la interfaz propia (graba://ui/) hablan con el puente.
-  if (!ventana || ventana.isDestroyed() || e.sender !== ventana.webContents || !esDeLaApp(e, "graba://ui/")) return;
-  const fn = msg && typeof msg.accion === "string" && Object.hasOwn(ACCIONES, msg.accion) && ACCIONES[msg.accion];
-  if (!fn) return;
-  try { await fn(msg.datos || {}); } catch (err) { console.error("Graba:", msg.accion, err); }
-});
+for (const [nombre, fn] of Object.entries(ACCIONES)) host.acciones.registrar(nombre, fn);
 
 /** Sube a YouTube (la interfaz se refresca cada segundo mientras tanto: youtube.json tiene el avance). */
 async function subirAYouTube(carpeta) {
@@ -797,49 +762,16 @@ async function subirAYouTube(carpeta) {
   enviarEstado();
 }
 
-async function revisarActualizacion() {
-  try { await Actualizaciones.revisar(); } catch {}
-  actualizarBandeja();
-  enviarEstado();
-}
-
-// ───────────────────────── Protocolo graba:// ─────────────────────────
-function servirVideo(req, archivo) {
-  let tam;
-  try { tam = fs.statSync(archivo).size; } catch { return new Response("no", { status: 404 }); }
-  const tipo = archivo.endsWith(".webm") ? "video/webm" : "video/mp4";
-  const rango = /bytes=(\d*)-(\d*)/.exec(req.headers.get("range") || "");
-  if (rango && tam > 0) {
-    let desde = rango[1] ? Number(rango[1]) : Math.max(0, tam - Number(rango[2] || 0));
-    let hasta = rango[1] && rango[2] ? Math.min(Number(rango[2]), tam - 1) : tam - 1;
-    if (desde >= tam || desde > hasta) return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${tam}` } });
-    return new Response(Readable.toWeb(fs.createReadStream(archivo, { start: desde, end: hasta })), { status: 206,
-      headers: { "Content-Type": tipo, "Accept-Ranges": "bytes", "Content-Length": String(hasta - desde + 1), "Content-Range": `bytes ${desde}-${hasta}/${tam}` } });
-  }
-  return new Response(Readable.toWeb(fs.createReadStream(archivo)), { status: 200,
-    headers: { "Content-Type": tipo, "Accept-Ranges": "bytes", "Content-Length": String(tam) } });
-}
-
-function registrarProtocolo() {
-  protocol.handle("graba", (req) => {
-    const u = new URL(req.url);
-    if (u.host === "video") {
-      const archivo = path.resolve(decodeURIComponent(u.pathname.slice(1)));
-      if (!dentroDeBase(archivo) || !/\.(mp4|webm)$/.test(archivo)) return new Response("no", { status: 404 });
-      return servirVideo(req, archivo);
-    }
-    const raiz = u.host === "ui" ? path.join(recursos(), "ui") : u.host === "app" ? __dirname : null;
-    const ruta = raiz && path.normalize(path.join(raiz, decodeURIComponent(u.pathname)));
-    if (!ruta || !ruta.startsWith(raiz + path.sep)) return new Response("no", { status: 404 });
-    return net.fetch(require("url").pathToFileURL(ruta).toString());
-  });
-}
+// ───────────────────────── Medios: los videos y las páginas propias (barra, cuenta, área, burbuja, teleprompter, grabadora) ─────────────────────────
+// graba://video/<versión>/<ruta dentro de ~/Graba> (solo videos de una grabación) y graba://app/<página> (solo estos archivos de src/).
+host.medios.registrar("video", (ruta) => videoDe(ruta));
+const PAGINAS = new Set(["area", "barra", "burbuja", "cuenta", "grabadora", "teleprompter"].flatMap((n) => [`${n}.html`, `${n}.js`]).concat(["pcm.js"]));
+host.medios.registrar("app", (ruta) => (PAGINAS.has(ruta) ? path.join(__dirname, ruta) : null));
 
 // ───────────────────────── Salir y arranque ─────────────────────────
-let saliendo = false;
-async function salir() {
-  saliendo = true;
-  // Si estaba grabando se cierra bien el archivo; la conversión y el procesamiento se terminan al volver a abrir Graba.
+/** Si estaba grabando se cierra bien el archivo; la conversión y el procesamiento se terminan al volver a abrir Graba. */
+async function antesDeSalir() {
+  globalShortcut.unregisterAll();
   if (Estado.fase === "grabando" || Estado.fase === "cuenta") {
     const c = Estado.carpeta;
     ocultarFlotantes();
@@ -847,48 +779,47 @@ async function salir() {
     await pararGrabadora();
     if (c) Grabaciones.actualizarMeta(c, { duracion_seg: Math.round((Date.now() - Estado.inicio) / 1000) });
   }
-  app.exit(0);
 }
 
-app.on("second-instance", () => mostrar());
-app.on("window-all-closed", () => {}); // sigue viva en la bandeja
-app.on("will-quit", () => globalShortcut.unregisterAll());
-
-app.whenReady().then(() => {
-  fs.mkdirSync(INTERNO, { recursive: true });
-  registrarProtocolo();
-  // Pantalla bajo el mouse (la que se eligió al empezar a grabar). En Wayland el sistema pregunta qué pantalla compartir.
-  session.defaultSession.setDisplayMediaRequestHandler((_req, responder) => {
-    desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } }).then((fuentes) => {
-      const id = Estado.pantalla ? String(Estado.pantalla.id) : "";
-      // En Windows se puede sumar el sonido del computador ("loopback"); en Linux Chromium no lo ofrece.
-      const sonido = ES_WIN && Estado.sonidoSistema ? { audio: "loopback" } : {};
-      responder({ video: fuentes.find((f) => f.display_id === id) || fuentes[0], ...sonido });
-    }).catch(() => responder({}));
+// Lo que Chromium guarda (caché, preferencias del navegador) sigue en la carpeta de siempre (la del sistema para «Graba»): el host
+// la movería a ~/Graba/.graba/electron y quien ya usaba Graba empezaría de cero. Pendiente para Pieza: una opción para no moverla.
+const datosDeElectron = app.getPath("userData");
+migrarBienvenida();
+if (host.iniciar()) {
+  app.setPath("userData", datosDeElectron);
+  app.whenReady().then(() => {
+    // Pantalla bajo el mouse (la que se eligió al empezar a grabar). En Wayland el sistema pregunta qué pantalla compartir.
+    session.defaultSession.setDisplayMediaRequestHandler((_req, responder) => {
+      desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } }).then((fuentes) => {
+        const id = Estado.pantalla ? String(Estado.pantalla.id) : "";
+        // En Windows se puede sumar el sonido del computador ("loopback"); en Linux Chromium no lo ofrece.
+        const sonido = ES_WIN && Estado.sonidoSistema ? { audio: "loopback" } : {};
+        responder({ video: fuentes.find((f) => f.display_id === id) || fuentes[0], ...sonido });
+      }).catch(() => responder({}));
+    });
+    Procesamiento.alCambiar = () => enviarEstado();
+    // Al terminar bien una grabación nueva: a YouTube si la persona lo dejó activado.
+    Procesamiento.alTerminarBien = (c) => { if (Config.bool("youtube_auto") && YouTube.conectado && dentroDeBase(c)) subirAYouTube(c); };
+    // Si la app se cerró en medio de una grabación o de un procesamiento: se termina el video que faltaba o queda como error recuperable.
+    for (const c of Grabaciones.repararCortadas()) {
+      Grabaciones.escribirEstado(c, { estado: "procesando", paso: 0, total: 3, texto: "Preparando el video…" });
+      terminarVideo(c);
+    }
+    crearGrabadora();
+    crearBandeja();
+    // Atajos globales (como ⌃⌥⌘R / ⌃⌥⌘P en Mac). Si otro programa ya los usa, la app sigue funcionando sin ellos.
+    try { globalShortcut.register(ATAJOS.grabar, atajoGrabar); globalShortcut.register(ATAJOS.pausar, alternarPausa); } catch (e) { console.error("Graba: atajos", e.message); }
   });
-  // Cámara y micrófono para las páginas propias (Windows además respeta sus interruptores de privacidad).
-  const propia = (wc) => { try { return new URL(wc.getURL()).protocol === "graba:"; } catch { return false; } };
-  session.defaultSession.setPermissionRequestHandler((wc, permiso, ok) => ok(propia(wc) && ["media", "display-capture", "clipboard-sanitized-write"].includes(permiso)));
-  session.defaultSession.setPermissionCheckHandler((wc, permiso) => !!wc && propia(wc) && ["media", "display-capture", "clipboard-sanitized-write"].includes(permiso));
+}
 
-  Procesador.alCambiar = () => enviarEstado();
-  // Al terminar bien una grabación nueva: a YouTube si la persona lo dejó activado.
-  Procesador.alTerminarBien = (c) => { if (Config.bool("youtube_auto") && YouTube.conectado && dentroDeBase(c)) subirAYouTube(c); };
-  Procesador.alFallarInicio = (c, mensaje) => Grabaciones.escribirEstado(c, { estado: "error", error: `${t("No pude iniciar el procesamiento.")} ${mensaje}` });
-  // Si la app se cerró en medio de una grabación o de un procesamiento: se termina el video que faltaba o queda como error recuperable.
-  for (const c of Grabaciones.repararCortadas()) {
-    Grabaciones.escribirEstado(c, { estado: "procesando", paso: 0, total: 3, texto: "Preparando el video…" });
-    terminarVideo(c);
+/** Quien ya usaba Graba con todo listo y nunca eligió idioma sigue sin que se le pregunte: queda la bienvenida como hecha
+ *  (`bienvenida: true`, la clave de la pieza «bienvenida»), así el host revisa las actualizaciones y arma el menú como antes. */
+function migrarBienvenida() {
+  const c = host.config.leer();
+  if (!c.idioma_ui && c.bienvenida === undefined && !faltaAlgo()) {
+    Config.guardar({ bienvenida: true });
   }
-  crearGrabadora();
-  crearBandeja();
-  // Atajos globales (como ⌃⌥⌘R / ⌃⌥⌘P en Mac). Si otro programa ya los usa, la app sigue funcionando sin ellos.
-  try { globalShortcut.register(ATAJOS.grabar, atajoGrabar); globalShortcut.register(ATAJOS.pausar, alternarPausa); } catch (e) { console.error("Graba: atajos", e.message); }
-  if (!process.argv.includes("--oculta") || !Config.texto("ia") || !Modelos.hayAlguno()) mostrar();
-  // Versiones nuevas: al abrir y cada 6 horas (el aviso va dentro de la app, nunca una alerta del sistema).
-  setTimeout(revisarActualizacion, 15000);
-  setInterval(revisarActualizacion, 6 * 3600 * 1000);
-});
+}
 
 // Pruebas automáticas (escritorio/pruebas): acceso al estado y a las acciones desde Playwright.
-if (process.env.GRABA_PRUEBAS === "1") global.grabaPruebas = { Estado, ACCIONES, ACCIONES_BARRA, grabar, iniciar, detener, cancelar, alternarPausa, atajoGrabar, enviarEstado, mostrar, ventanas: () => ({ ventana, grabadora, barra, cuenta, burbuja, teleprompter }) };
+if (process.env.GRABA_PRUEBAS === "1") global.grabaPruebas = { Estado, ACCIONES, ACCIONES_BARRA, grabar, iniciar, detener, cancelar, alternarPausa, atajoGrabar, enviarEstado, mostrar, host, ventanas: () => ({ ventana: host.ventana(), grabadora, barra, cuenta, burbuja, teleprompter }) };

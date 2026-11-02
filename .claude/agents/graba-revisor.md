@@ -16,7 +16,7 @@ mira las pruebas de GitHub y aplica la lista de abajo. No reescribas el aporte: 
 
 ## Lista por tipo de cambio
 **Código (`bin/`, `ui/`, `app/`, `escritorio/`, `ejemplos/`)**
-- Pruebas de GitHub en verde (`comun`; `mac` si toca Swift). Una acción nueva de la interfaz está en Swift **y** en `ACCIONES` de Electron (lo revisa `pruebas/contrato.py`).
+- Pruebas de GitHub en verde (`comun`; `mac` si toca Swift). Una acción nueva de la interfaz o se declara en `app.json` → `acciones` (si solo corre un script; `pieza.py acciones .` arma `acciones.json`) o se registra en las dos apps: `p.registrar` en `app/Sources/Graba/Acciones.swift` **y** `ACCIONES` de `escritorio/src/main.js` (lo revisa `pruebas/contrato.py`). Los archivos de piezas (`app/Sources/Pieza*/`, `escritorio/src/host.js`, `enchufe.js`, `procesador.js`, `preload.js`…) no se cambian aquí: el cambio va a Pieza.
 - No cambia nombres de campos ni marcadores del formato de las grabaciones (README, "Formato de las grabaciones") sin compatibilidad.
 - Todo texto nuevo de la interfaz tiene su entrada en `ui/idiomas/en.json` (la prueba de la interfaz lo exige).
 - Python solo con la biblioteca estándar. Español en código, comentarios y textos.
