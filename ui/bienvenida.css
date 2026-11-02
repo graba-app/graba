@@ -22,6 +22,8 @@
 .pieza-bv .opcion-idioma:focus-visible { outline: 3px solid var(--bv-acento, #2f5bd3); outline-offset: 2px; }
 .pieza-bv .opcion-idioma .tecla { position: absolute; top: 8px; left: 8px; width: 24px; height: 24px; display: grid; place-items: center;
   border: 1px solid var(--bv-linea, #d6d6d6); border-radius: 6px; font-size: 12px; color: var(--bv-texto-suave, #666); }
+.pieza-bv .opcion-idioma .detalle-idioma { color: var(--bv-texto-suave, #666); font-size: 14px; }
+.pieza-bv .logo-bv { display: grid; place-items: center; margin-bottom: 8px; }
 .pieza-bv .nota-idioma { text-align: center; color: var(--bv-texto-suave, #666); font-size: 14px; margin-top: 18px; }
 .pieza-bv .nota-idioma span[lang] { display: block; }
 @media (max-width: 420px) { .pieza-bv .opciones-idioma { grid-template-columns: 1fr; } }

@@ -195,7 +195,8 @@ const Procesamiento = {
   alCambiar: () => {},
   /** Al terminar bien una grabación nueva (no un "Regenerar"): main.js la sube a YouTube si está activado. */
   alTerminarBien: () => {},
-  /** Lo que los scripts de Graba necesitan además de lo que pone el host: whisper-cli y ffmpeg, y el PATH con las IA. */
+  /** Lo que los scripts de Graba necesitan además de lo que pone el host: whisper-cli y ffmpeg, y el PATH con las IA. El host lo
+   *  pone en todos los scripts (`entorno` de crearHost en main.js), también en los declarados. */
   entorno() { return { GRABA_HERRAMIENTAS: herramientas(), PATH: IA.path() }; },
   encolar(carpeta, soloIA = false) {
     this.cola.push([carpeta, soloIA]);
@@ -203,7 +204,7 @@ const Procesamiento = {
   },
   /** Otro script de bin/ (corregir.py, guion.py) con el entorno de Graba. La IA de la persona puede tardar: 15 minutos como mucho. */
   correrJSON(script, args, { limite = 900, entorno = {} } = {}) {
-    return H.procesador.correrJSON(script, args, { limite, entorno: { ...this.entorno(), ...entorno } });
+    return H.procesador.correrJSON(script, args, { limite, entorno });
   },
   /** Sin tope de tiempo mientras procesar.py lata (pieza «trabajos»: `mantener_vivo()`): una grabación larga transcribe por mucho
    *  rato, pero si el proceso se cuelga (45 s sin latido) el host lo corta. */
@@ -211,7 +212,7 @@ const Procesamiento = {
     if (this.enCurso || !this.cola.length) return;
     const [carpeta, soloIA] = this.cola.shift();
     this.enCurso = carpeta;
-    const r = await H.procesador.correrJSON("procesar.py", [carpeta, ...(soloIA ? ["--solo-ia"] : [])], { latido: true, entorno: this.entorno() });
+    const r = await H.procesador.correrJSON("procesar.py", [carpeta, ...(soloIA ? ["--solo-ia"] : [])], { latido: true });
     // El script no alcanzó a dejar su error (lo cortó el host o no arrancó): queda como error recuperable.
     if (!r.ok && (leerJSON(path.join(carpeta, "estado.json"), {}) || {}).estado === "procesando") {
       try { escribirJSON(path.join(carpeta, "estado.json"), { estado: "error", error: Idioma.t("No pude terminar. Intenta de nuevo.") }); } catch {}

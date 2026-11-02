@@ -79,6 +79,14 @@ if "p.actualizaciones = .init(" not in swift:
     problemas.append("Mac: las actualizaciones las atiende el host (p.actualizaciones = .init(…), pieza «actualizaciones»)")
 if not re.search(r'registrarMedios\("video"\)\s*\{\s*ruta in Rutas\.videoDe\(ruta\)', swift):
     problemas.append("Mac: graba://video solo con Rutas.videoDe (un .mp4 dentro de ~/Graba)")
+for patron, que in [
+    (r"barraDeMenu: true", "Graba vive en la barra de menú (sin Dock con la ventana cerrada)"),
+    (r"abrirAlArrancar: \{ GrabaApp\.faltaAlgo \}", "la ventana se abre al arrancar solo si falta algo"),
+    (r"vidrio: true", "la ventana con vidrio (window.GRABA_VIDRIO)"),
+    (r'Procesador\.entornoApp\[Host\.prefijo \+ "HERRAMIENTAS"\]', "GRABA_HERRAMIENTAS para todos los scripts"),
+]:
+    if not re.search(patron, swift):
+        problemas.append(f"Mac: {que}")
 if 'Secretos(servicio: "Graba")' not in swift:
     problemas.append('Mac: el token de YouTube sigue en el Llavero con el servicio «Graba» (el de siempre)')
 
@@ -100,7 +108,8 @@ for patron, que in [
     (r'host\.medios\.registrar\("video", \(ruta\) => videoDe\(ruta\)\)', "graba://video solo con videoDe (un video dentro de ~/Graba)"),
     (r'PAGINAS\.has\(ruta\)', "graba://app solo sirve las páginas propias de su lista"),
     (r'alCerrar: "esconder"', "cerrar la ventana la esconde (Graba sigue en la bandeja)"),
-    (r'app\.setPath\("userData", datosDeElectron\)', "los datos de Chromium siguen en la carpeta de siempre"),
+    (r'userData: "sistema"', "los datos de Chromium (y la llave de safeStorage en Windows) siguen en la carpeta de siempre"),
+    (r'abrirAlArrancar: \(\) => !OCULTA \|\| faltaAlgo\(\)', "con --oculta y todo listo, Graba abre solo en la bandeja"),
 ]:
     if not re.search(patron, main):
         problemas.append(f"Windows/Linux: {que}")

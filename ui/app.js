@@ -19,6 +19,7 @@
     comunidad: "https://github.com/graba-app/graba/discussions", aportar: "https://github.com/graba-app/graba/blob/main/CONTRIBUTING.md",
     guiaIA: "https://graba-app.github.io/graba/ia.html" };
   const $ = (s, r = document) => r.querySelector(s);
+  const LOGO = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#17151c"/><rect x="12" y="15" width="40" height="28" rx="5" fill="none" stroke="#b9b0ff" stroke-width="4"/><circle cx="21" cy="44" r="10" fill="#6d5dfc" stroke="#17151c" stroke-width="3"/><circle cx="44" cy="22" r="3.2" fill="#ff5d5d"/></svg>`;
   const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // ───────────── Idiomas: pieza «i18n» (ui/i18n.js; las claves son el texto en español) ─────────────
@@ -54,7 +55,7 @@
   // Se abre mientras falte la IA o el transcriptor (cada vez que se abre Graba, hasta que esté todo); «Lo hago después» la cierra
   // por ahora. Elegir el idioma lo guarda con la acción `config`, igual que Ajustes.
   const bv = PiezaBienvenida.crear({
-    i18n, listo: false, pintar: () => render(), mostrarAviso: (...a) => toast(...a),
+    i18n, listo: false, logo: LOGO, pintar: () => render(), mostrarAviso: (...a) => toast(...a),
     guardarIdioma: (c) => { E.config.idioma_ui = c; host.enviar("config", { idioma_ui: c }); },
     cargarIdioma: (c) => cargarIdioma(c),
     terminar: () => { E.bvCerrada = true; E.config.bienvenida = true; host.enviar("config", { bienvenida: true }); },
@@ -134,7 +135,7 @@
     // Primer uso: lo primero es elegir el idioma, sola en la pantalla (sin la app detrás ni avisos).
     if (bv.soloIdioma) {
       const foco = document.activeElement?.dataset?.bvIdioma;
-      raiz.innerHTML = `<div class="pantalla-idioma"><div class="tarjeta-idioma">${LOGO}${bv.html()}</div></div>`;
+      raiz.innerHTML = `<div class="pantalla-idioma"><div class="tarjeta-idioma">${bv.html()}</div></div>`;
       document.documentElement.lang = E.idioma;
       if (foco) $(`[data-bv-idioma="${foco}"]`)?.focus(); else bv.enfocar();
       return;
@@ -689,7 +690,6 @@
     }
   }
 
-  const LOGO = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#17151c"/><rect x="12" y="15" width="40" height="28" rx="5" fill="none" stroke="#b9b0ff" stroke-width="4"/><circle cx="21" cy="44" r="10" fill="#6d5dfc" stroke="#17151c" stroke-width="3"/><circle cx="44" cy="22" r="3.2" fill="#ff5d5d"/></svg>`;
 
   /** Guarda lo escrito en el formulario del guion antes de repintar (si no, se perdería). */
   function leerCamposGuion() {

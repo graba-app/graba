@@ -34,6 +34,7 @@ import datetime
 import json
 import os
 import re
+import signal
 import threading
 import time
 
@@ -74,13 +75,38 @@ def latir_host():
         pass
 
 
-def mantener_vivo():
-    """Un hilo que late para el host mientras el script corre (algo largo que no es un Trabajo, en una acción "trabajo")."""
+def mantener_vivo(limpiar_al_cortar=True):
+    """Un hilo que late para el host mientras el script corre (algo largo que no es un Trabajo, en una acción "trabajo").
+
+    Además, si nadie lo hizo antes, al cerrar la app (el host manda SIGTERM a lo que siga corriendo) el script sale con
+    `SystemExit`: corren los `finally` y los `with`, así borra sus temporales en vez de morir en seco. `limpiar_al_cortar=False`
+    no toca la señal."""
+    if limpiar_al_cortar:
+        cortar_con_systemexit()
+
     def latido():
         while True:
             latir_host()
             time.sleep(LATIDO)
     threading.Thread(target=latido, daemon=True).start()
+
+
+def cortar_con_systemexit():
+    """SIGTERM → `SystemExit(143)` (limpia al salir). Solo desde el hilo principal y si la señal sigue con lo de siempre (un
+    manejador propio de la app gana). True si quedó puesto."""
+    if threading.current_thread() is not threading.main_thread() or not hasattr(signal, "SIGTERM"):
+        return False
+    try:
+        if signal.getsignal(signal.SIGTERM) not in (signal.SIG_DFL, None):
+            return False
+        signal.signal(signal.SIGTERM, _salir_por_senal)
+    except (ValueError, OSError):
+        return False
+    return True
+
+
+def _salir_por_senal(_senal, _marco):
+    raise SystemExit(128 + signal.SIGTERM)
 
 
 def emitir(evento):

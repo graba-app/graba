@@ -56,12 +56,19 @@ const host = crearHost({
   alCambiarConfig: () => { actualizarBandeja(); actualizarBarra(); enviarEstado(); },
   alCrearVentana: (v) => alCrearVentana(v),
   antesDeSalir: () => antesDeSalir(),
+  // Al abrir con --oculta (al iniciar sesión) y con todo listo, Graba queda solo en la bandeja; si falta algo, la bienvenida.
+  abrirAlArrancar: () => !OCULTA || faltaAlgo(),
+  // Lo que Chromium guarda (caché, permisos de cámara y micrófono) y la llave de safeStorage en Windows (los tokens de YouTube)
+  // siguen en la carpeta de siempre del sistema (~/.config/Graba, %APPDATA%\Graba).
+  userData: "sistema",
+  // Para todos los scripts de bin/ (también los declarados): dónde están whisper-cli y ffmpeg, y el PATH con las IA.
+  entorno: () => Procesamiento.entorno(),
 });
 S.usar(host);
 const llamar = (funcion, datos) => host.llamar(funcion, datos);
 
 // ───────────────────────── Ventana principal ─────────────────────────
-let pendiente = {}, refresco = null, bandeja = null, ultimaFirma = "", primeraVentana = true;
+let pendiente = {}, refresco = null, bandeja = null, ultimaFirma = "";
 let grabadora = null, burbuja = null, teleprompter = null;
 
 function mostrar({ seleccionar, aviso } = {}) {
@@ -73,18 +80,13 @@ function mostrar({ seleccionar, aviso } = {}) {
 }
 const ocultar = () => { const v = host.ventana(); if (v && !v.isDestroyed()) v.hide(); };
 
-/** Lo propio de la ventana de Graba: sin barra de menú a la vista (Alt la muestra), vidrio en Windows 11 y, al abrir con
- *  --oculta y todo listo, nada a la vista (solo la bandeja). */
+/** Lo propio de la ventana de Graba: sin barra de menú a la vista (Alt la muestra) y vidrio en Windows 11. Si se abre o no al
+ *  arrancar lo decide el host (`abrirAlArrancar`). */
 function alCrearVentana(v) {
   v.setMenuBarVisibility(false);
   v.setAutoHideMenuBar(true);
   if (VIDRIO) { try { v.setBackgroundMaterial("acrylic"); v.setBackgroundColor("#00000000"); } catch {} }
-  if (primeraVentana && OCULTA && !faltaAlgo()) {
-    v.removeAllListeners("ready-to-show");  // el host la muestra apenas carga: esta vez no
-  } else {
-    iniciarRefresco();
-  }
-  primeraVentana = false;
+  iniciarRefresco();
 }
 
 /** Mientras se procesa una grabación, la interfaz se actualiza sola cada segundo (avance por pasos), pero solo si el avance cambió
@@ -781,12 +783,8 @@ async function antesDeSalir() {
   }
 }
 
-// Lo que Chromium guarda (caché, preferencias del navegador) sigue en la carpeta de siempre (la del sistema para «Graba»): el host
-// la movería a ~/Graba/.graba/electron y quien ya usaba Graba empezaría de cero. Pendiente para Pieza: una opción para no moverla.
-const datosDeElectron = app.getPath("userData");
 migrarBienvenida();
 if (host.iniciar()) {
-  app.setPath("userData", datosDeElectron);
   app.whenReady().then(() => {
     // Pantalla bajo el mouse (la que se eligió al empezar a grabar). En Wayland el sistema pregunta qué pantalla compartir.
     session.defaultSession.setDisplayMediaRequestHandler((_req, responder) => {

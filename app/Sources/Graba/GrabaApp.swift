@@ -14,8 +14,12 @@ import PiezaHost
 @main
 enum GrabaApp {
     @MainActor static func main() {
+        // App de barra de menú (sin Dock mientras la ventana está cerrada) que abre la ventana al arrancar solo si falta algo (la
+        // bienvenida), con vidrio: el fondo translúcido de macOS, sin barra de título y una franja de 38 puntos arriba para moverla
+        // (la interfaz lo sabe por window.GRABA_VIDRIO, que pone el host).
         Host.arrancar(.init(ancho: 1120, alto: 740, minAncho: 760, minAlto: 520, sitio: "https://graba-app.github.io/graba/",
-                            codigo: "https://github.com/graba-app/graba", global: "Graba", estadoScript: nil)) { p in preparar(p) }
+                            codigo: "https://github.com/graba-app/graba", global: "Graba", estadoScript: nil,
+                            barraDeMenu: true, abrirAlArrancar: { GrabaApp.faltaAlgo }, altoFranja: 38, vidrio: true)) { p in preparar(p) }
     }
 
     @MainActor static func preparar(_ p: Puente) {
@@ -27,6 +31,8 @@ enum GrabaApp {
             Config.deLaApp(["idioma_audio": ["es", "en", "pt", "fr", "de", "it"].contains(sistema) ? sistema : "auto"])
         }
         Ventana.shared.preparar(p)
+        // Dónde está graba-transcribir: para todos los scripts de bin/ (también los declarados), con el Procesador del host.
+        Procesador.entornoApp[Host.prefijo + "HERRAMIENTAS"] = Rutas.herramientas.path
         p.estado = { base, listo in listo(Ventana.shared.estado(base)) }
         // Lo de la interfaz (idioma, cámara, IA elegida…) también lo leen la barra de menú y la barra de grabar.
         p.alCambiarConfig = { _, _ in BarraMenu.shared.actualizar(); Ventana.shared.enviarEstado() }
@@ -45,8 +51,6 @@ enum GrabaApp {
         Acciones.registrar(p)
         BarraMenu.shared.instalar()
         Atajos.instalar()
-        // La primera vez (o si falta algo para funcionar) se abre la ventana con el asistente; si no, Graba queda en la barra de menú.
-        Ventana.shared.alArrancar(abrir: GrabaApp.faltaAlgo)
     }
 
     /// Falta la IA o el transcriptor: se abre la bienvenida (pieza «bienvenida» en ui/).
