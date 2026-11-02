@@ -1,7 +1,7 @@
 {
   "name": "graba",
   "productName": "Graba",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Graba tu pantalla con tu cámara; tu IA te deja notas, guion, títulos, capítulos y subtítulos.",
   "homepage": "https://graba-app.github.io/graba/",
   "license": "AGPL-3.0-only",

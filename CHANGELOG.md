@@ -4,7 +4,7 @@ Lo que cambia para quien usa Graba, en palabras simples. Las versiones anteriore
 [Releases](https://github.com/graba-app/graba/releases).
 *What changes for people using Graba, in plain words. Earlier versions are listed in Releases.*
 
-## Sin publicar · Unreleased
+## 0.2.0 · 2026-11-02
 - **Abrir y cerrar sin tropiezos:** en Mac, Graba ya no muestra la ventana un instante al abrirse cuando no falta nada (queda
   directo en la barra de menú). En Linux, apagar el equipo o cerrar sesión con Graba en la bandeja guarda lo pendiente y la cierra,
   en vez de frenarlo. · *Opening and closing without hiccups: on Mac, Graba no longer flashes its window for an instant when nothing
