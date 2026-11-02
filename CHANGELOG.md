@@ -6,10 +6,10 @@ Lo que cambia para quien usa Graba, en palabras simples. Las versiones anteriore
 
 ## Sin publicar · Unreleased
 - **Abrir y cerrar sin tropiezos:** en Mac, Graba ya no muestra la ventana un instante al abrirse cuando no falta nada (queda
-  directo en la barra de menú). En Windows y Linux, apagar el equipo o cerrar sesión con Graba en la bandeja guarda lo pendiente y
-  la cierra, en vez de frenarlo. · *Opening and closing without hiccups: on Mac, Graba no longer flashes its window for an instant
-  when nothing is missing (it goes straight to the menu bar). On Windows and Linux, shutting down or logging out with Graba in the
-  tray saves what's pending and closes it, instead of holding it up.*
+  directo en la barra de menú). En Linux, apagar el equipo o cerrar sesión con Graba en la bandeja guarda lo pendiente y la cierra,
+  en vez de frenarlo. · *Opening and closing without hiccups: on Mac, Graba no longer flashes its window for an instant when nothing
+  is missing (it goes straight to the menu bar). On Linux, shutting down or logging out with Graba in the tray saves what's pending
+  and closes it, instead of holding it up.*
 - **Por dentro, más segura y más fácil de mantener:** Graba usa ahora la app nativa de Pieza en Mac, Windows y Linux. Para ti
   sigue igual: tus grabaciones, ajustes, idioma, atajos y la conexión con YouTube quedan donde estaban. Lo nuevo: si algo se cuelga
   mientras procesa, Graba lo corta y te deja reintentar en vez de quedarse esperando; en Mac la ventana trae los menús de siempre
