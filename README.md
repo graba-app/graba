@@ -32,6 +32,8 @@ Gratis, open source y sin fines de lucro. Mac, Windows y Linux. Todo pasa en tu 
 
 Todo queda en `~/Graba`, una carpeta por grabación, en archivos normales que puedes abrir, copiar o usar en tus propios scripts.
 Graba se **actualiza sola**: revisa al abrirse y cada 6 horas, y te avisa dentro de la app.
+Cerrar la ventana no cierra Graba: queda lista en la **barra de menú** del Mac (sin ocupar el Dock) o en la **bandeja** de Windows y
+Linux, para grabar, abrir la ventana o la carpeta de grabaciones.
 
 ### Open source y sin fines de lucro
 
@@ -157,6 +159,7 @@ the script for a teleprompter that isn't recorded, and afterwards writes notes, 
 Transcription is local; everything stays on your computer. Record the whole screen, a window, an area or just the camera, with your
 camera in any shape, your mic and, if you want, the Mac's sound; pause and resume without gaps, use global shortcuts (⌃⌥⌘R / ⌃⌥⌘P,
 Ctrl+Alt+Shift+R / P on Windows and Linux) and trim the start and end (transcript, subtitles and chapters shift on their own).
+Closing the window doesn't quit Graba: it stays ready in the Mac's menu bar (without taking up the Dock) or in the Windows and Linux tray.
 **Install:** Mac and Linux `curl -fsSL https://raw.githubusercontent.com/graba-app/graba/main/instalar.sh | bash` · Windows (PowerShell)
 `irm https://raw.githubusercontent.com/graba-app/graba/main/instalar.ps1 | iex` · or the [latest release](https://github.com/graba-app/graba/releases/latest).
 **Permissions:** on Mac, Screen Recording, Camera and Microphone (and the Keychain only if you connect YouTube). **Internet:** GitHub for
