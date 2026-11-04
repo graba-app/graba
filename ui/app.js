@@ -141,7 +141,12 @@
       return;
     }
     const scroll = $(".principal-area")?.scrollTop || 0;
+    const video = $("#video");
     raiz.innerHTML = `<div class="app">${lateral()}<main class="principal-area" data-pagina>${avisoActualizacion()}${principal()}</main></div>${dialogos()}${ui.capas()}`;
+    // El mismo video sigue siendo el mismo elemento: si otra grabación avanza (procesar, subir a YouTube) mientras miras uno, no
+    // vuelve a cargarse ni se detiene. Se devuelve en el mismo momento, antes de que el navegador alcance a pausarlo.
+    const nuevo = $("#video");
+    if (video && nuevo && video.getAttribute("src") === nuevo.getAttribute("src")) nuevo.replaceWith(video);
     traducirDOM(raiz);
     const area = $(".principal-area"); if (area) area.scrollTop = scroll;
     ui.despuesDePintar();

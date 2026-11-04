@@ -97,6 +97,32 @@ console.log("  ✓ El idioma va primero");
   if (!(await p.$(".pieza-bv[data-paso=hola]")) || (await p.$(".pantalla-idioma"))) falla("con el idioma ya elegido no debería volver a preguntarlo");
   await p.close();
 }
+// El video que se está viendo no se recarga cuando otra grabación avanza (el estado llega cada segundo mientras sube a YouTube).
+{
+  const p = await navegador.newPage();
+  p.on("pageerror", (e) => falla(`error de JavaScript (video): ${e.message}`));
+  await p.goto(BASE); await p.waitForSelector(".app");
+  const antes = errores.length;
+  const r = await p.evaluate(async () => {
+    window.Graba._probar((E) => { E.grabaciones[1].video = "video-de-prueba.mp4"; E.sel = E.grabaciones[1].ruta; });
+    const v = document.querySelector("#video"); let cargas = 0;
+    // Se espera la primera carga (la de abrir la grabación) antes de contar.
+    await new Promise((listo) => v.addEventListener("loadstart", listo, { once: true }));
+    document.addEventListener("loadstart", () => cargas++, true);
+    let base; window.Graba._probar((E) => { base = JSON.parse(JSON.stringify({ fase: E.fase, grabaciones: E.grabaciones, config: E.config, ias: E.ias, modelos: E.modelos, permisos: E.permisos, youtube: E.youtube })); });
+    for (const pct of [10, 20, 30]) { base.grabaciones[0].youtube = { estado: "subiendo", pct }; await window.Graba.estado(base); }
+    const mismo = document.querySelector("#video") === v;
+    // Otro video (otra grabación, o el mismo recortado: cambia su versión) sí es un elemento nuevo.
+    window.Graba._probar((E) => { E.grabaciones[1].version = 2; });
+    await new Promise((listo) => setTimeout(listo, 200));
+    const nuevas = cargas;
+    return { mismo, cargas: nuevas - 1, otro: document.querySelector("#video") !== v && /v=2/.test(document.querySelector("#video").getAttribute("src")) };
+  });
+  if (!r.mismo || r.cargas) falla(`el video se recargó mientras otra grabación subía a YouTube: ${JSON.stringify(r)}`);
+  if (!r.otro) falla("al cambiar el video (recorte) no se cargó el nuevo");
+  await p.close();
+  if (errores.length === antes) console.log("  ✓ El video sigue mientras otra grabación avanza");
+}
 // Contraste del botón Grabar en modo claro y oscuro.
 for (const esquema of ["light", "dark"]) {
   const p = await navegador.newPage({ colorScheme: esquema });
