@@ -4,6 +4,11 @@ Lo que cambia para quien usa Graba, en palabras simples. Las versiones anteriore
 [Releases](https://github.com/graba-app/graba/releases).
 *What changes for people using Graba, in plain words. Earlier versions are listed in Releases.*
 
+## Sin publicar
+- **El video sigue mientras otra grabación avanza:** si miras un video mientras otra grabación se procesa o sube a YouTube, ya no
+  vuelve al comienzo ni se detiene cada segundo. · *The video keeps playing while another recording moves along: if you watch a
+  video while another recording is processing or uploading to YouTube, it no longer jumps back to the start or stops every second.*
+
 ## 0.2.0 · 2026-11-02
 - **Abrir y cerrar sin tropiezos:** en Mac, Graba ya no muestra la ventana un instante al abrirse cuando no falta nada (queda
   directo en la barra de menú). En Linux, apagar el equipo o cerrar sesión con Graba en la bandeja guarda lo pendiente y la cierra,
