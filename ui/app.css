@@ -1,8 +1,6 @@
-/* Colores de Graba como pares de la pieza «tema» (ui/tema.css va antes y resuelve claro u oscuro).
+/* Graba pone solo su acento (violeta) y su rojo de grabar: los neutros son los de la familia (pieza «tema» 0.4.0).
    Rojo y verde con el mismo tono de antes, un poco más oscuros: pasan AA como texto. */
 :root {
-  --fondo-claro: #f6f5f9; --fondo-oscuro: #121116; --panel-claro: #ffffff; --panel-oscuro: #1b1a21; --panel-2-claro: #efedf4; --panel-2-oscuro: #16151b;
-  --linea-claro: #e3e0ea; --linea-oscuro: #2c2a35; --texto-claro: #17151c; --texto-oscuro: #f1eff6; --texto-suave-claro: #6b6876; --texto-suave-oscuro: #a19dae;
   --acento-claro: #5a48f5; --acento-oscuro: #8b7dff; --sobre-acento-oscuro: #111111;
   --rojo-claro: #d61e24; --rojo-oscuro: #e65156; --verde-claro: #247b53; --verde-oscuro: #2f9e6b;
   --sombra-claro: 0 1px 2px rgba(20, 16, 40, 0.06), 0 6px 20px rgba(20, 16, 40, 0.06); --sombra-oscuro: none;
@@ -37,8 +35,11 @@ html[data-host="mac"] .aviso-act { margin-top: 44px; }
 /* Estructura */
 .app { display: grid; grid-template-columns: 290px minmax(0, 1fr); height: 100vh; }
 .lateral { background: var(--panel-2); border-right: 1px solid var(--linea); display: flex; flex-direction: column; min-height: 0; }
+/* Sin vidrio, la barra lateral es oscura (pieza «componentes»: .pz-zona-oscura). */
+.lateral.pz-zona-oscura { border-right: 0; }
+.lateral.pz-zona-oscura .item[aria-current="true"] { box-shadow: inset 3px 0 0 var(--acento); }
 .cabeza { padding: 40px 18px 14px; -webkit-app-region: drag; display: flex; align-items: center; gap: 10px; }
-.marca { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; }
+.marca { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
 .logo { width: 26px; height: 26px; }
 .cabeza .icono { margin-left: auto; -webkit-app-region: no-drag; }
 .grabar-caja { padding: 0 14px 14px; }
@@ -89,7 +90,7 @@ html[data-host="mac"] .aviso-act { margin-top: 44px; }
 .aviso-act.error { background: var(--rojo-suave); }
 .contenido { max-width: 920px; margin: 0 auto; padding: 40px 32px 60px; }
 .titulo-graba { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 4px; }
-.titulo-graba h1 { font-size: 24px; flex: 1; }
+.titulo-graba h1 { font-size: 28px; line-height: 1.15; flex: 1; }
 .meta { color: var(--texto-suave); margin-bottom: 18px; }
 .acciones { display: flex; gap: 6px; flex-wrap: wrap; }
 video { width: 100%; border-radius: var(--radio); background: #000; aspect-ratio: 16 / 9; display: block; box-shadow: var(--sombra); }
@@ -116,10 +117,10 @@ pre.bloque { white-space: pre-wrap; font: 13px/1.6 ui-monospace, SFMono-Regular,
 
 /* Estados */
 .vacio { text-align: center; padding: 90px 20px; max-width: 520px; margin: 0 auto; }
-.vacio h1 { font-size: 26px; margin: 14px 0 8px; }
+.vacio h1 { font-size: 32px; line-height: 1.15; margin: 14px 0 8px; }
 .vacio p { color: var(--texto-suave); line-height: 1.6; }
 .pasos-vacio { text-align: left; display: grid; gap: 10px; margin: 26px 0; }
-.pasos-vacio div { display: flex; gap: 12px; align-items: flex-start; background: var(--panel); border: 1px solid var(--linea); border-radius: 10px; padding: 12px 14px; }
+.pasos-vacio div { display: flex; gap: 12px; align-items: flex-start; background: var(--panel); border: 1px solid var(--linea); border-radius: var(--radio); padding: 14px 16px; }
 .pasos-vacio b { color: var(--acento); }
 .progreso { background: var(--panel); border: 1px solid var(--linea); border-radius: var(--radio); padding: 22px; margin-top: 18px; }
 .progreso p { margin: 0 0 12px; font-weight: 600; }
