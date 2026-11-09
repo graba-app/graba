@@ -197,7 +197,7 @@
         <span class="t" data-sin-traducir>${esc(tituloDe(t))}</span>
         <span class="m"><span data-sin-traducir>${esc(fechaCorta(m.inicio))}${m.duracion_seg ? " · " + reloj(m.duracion_seg) : ""}</span>${chip}</span></button>`;
     }).join("");
-    return `<aside class="lateral">
+    return `<aside class="lateral${document.documentElement.classList.contains("vidrio") ? "" : " pz-zona-oscura"}">
       <div class="cabeza"><span class="marca">${LOGO}<span>Graba</span></span>
         <button class="icono" data-accion="ajustes" title="Ajustes" aria-label="Ajustes">⚙︎</button></div>
       <div class="grabar-caja">
