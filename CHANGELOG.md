@@ -5,6 +5,8 @@ Lo que cambia para quien usa Graba, en palabras simples. Las versiones anteriore
 *What changes for people using Graba, in plain words. Earlier versions are listed in Releases.*
 
 ## Sin publicar
+
+## 0.3.0 · 2026-11-09
 - Graba tiene el estilo nuevo de la familia: barra lateral oscura, fondo cálido y títulos más claros (con vidrio, todo sigue translúcido). · *Graba has the family's new look: a dark sidebar, a warm background and clearer titles (with glass, everything stays translucent).*
 - **El video sigue mientras otra grabación avanza:** si miras un video mientras otra grabación se procesa o sube a YouTube, ya no
   vuelve al comienzo ni se detiene cada segundo. · *The video keeps playing while another recording moves along: if you watch a
