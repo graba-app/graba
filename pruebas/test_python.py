@@ -683,6 +683,26 @@ class Recortar(unittest.TestCase):
         self.assertFalse(self.correr("textos", c, "50", "20")["ok"])
 
 
+class EjemploWebVTT(unittest.TestCase):
+    def test_convertir_carpeta(self):
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as temporal:
+            carpeta = Path(temporal)
+            procesar.escribir_srt(carpeta, [
+                {"desde": 0.25, "hasta": 1, "texto": "¡Hola, Ana!"},
+                {"desde": 62, "hasta": 65.5, "texto": "A & B\n2 < 3"},
+            ])
+            srt = carpeta / "subtitulos.srt"
+            original = srt.read_bytes()
+            subprocess.run([sys.executable, os.path.join(RAIZ, "ejemplos", "srt_a_vtt.py"),
+                            temporal], check=True, capture_output=True)
+            self.assertEqual(srt.read_bytes(), original)
+            self.assertEqual((carpeta / "subtitulos.vtt").read_text(encoding="utf-8"),
+                             "WEBVTT\n\n00:00:00.250 --> 00:00:01.000\n¡Hola, Ana!\n\n"
+                             "00:01:02.000 --> 00:01:05.500\nA &amp; B\n2 &lt; 3\n")
+
+
 if __name__ == "__main__":
     try:
         unittest.main(verbosity=2)

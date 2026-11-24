@@ -5,6 +5,7 @@ Lo que cambia para quien usa Graba, en palabras simples. Las versiones anteriore
 *What changes for people using Graba, in plain words. Earlier versions are listed in Releases.*
 
 ## Sin publicar
+- [Ejemplo para exportar los subtítulos a WebVTT](ejemplos/README.md). · *Example for exporting captions to WebVTT.*
 
 ## 0.3.0 · 2026-11-09
 - Graba tiene el estilo nuevo de la familia: barra lateral oscura, fondo cálido y títulos más claros (con vidrio, todo sigue translúcido). · *Graba has the family's new look: a dark sidebar, a warm background and clearer titles (with glass, everything stays translucent).*

@@ -106,6 +106,8 @@ Nada más. Graba no tiene servidores propios ni analítica.
 
 ## Formato de las grabaciones
 
+Si una plataforma te pide WebVTT, puedes [convertir el SRT de la grabación](ejemplos/README.md).
+
 ```
 ~/Graba/
   2026-10-20 1015 - Cómo armar un presupuesto/
